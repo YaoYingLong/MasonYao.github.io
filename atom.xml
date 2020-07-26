@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://yaoyinglong.github.io/"/>
-  <updated>2020-07-07T03:37:41.145Z</updated>
+  <updated>2020-07-26T10:11:29.795Z</updated>
   <id>https://yaoyinglong.github.io/</id>
   
   <author>
@@ -17,30 +17,53 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>Maven编译后文件损坏</title>
-    <link href="https://yaoyinglong.github.io/Blog/%E6%A1%86%E6%9E%B6/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98/Maven%E7%BC%96%E8%AF%91%E5%90%8E%E6%96%87%E4%BB%B6%E6%8D%9F%E5%9D%8F/"/>
-    <id>https://yaoyinglong.github.io/Blog/框架/常见问题/Maven编译后文件损坏/</id>
-    <published>2020-07-05T16:00:00.000Z</published>
-    <updated>2020-07-07T03:37:41.145Z</updated>
+    <title>设计基本原则</title>
+    <link href="https://yaoyinglong.github.io/Blog/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/%E8%AE%BE%E8%AE%A1%E5%9F%BA%E6%9C%AC%E5%8E%9F%E5%88%99/"/>
+    <id>https://yaoyinglong.github.io/Blog/设计模式/设计基本原则/</id>
+    <published>2020-07-25T16:00:00.000Z</published>
+    <updated>2020-07-26T10:11:29.795Z</updated>
     
-    <content type="html"><![CDATA[<p>在一般Maven项目中的<code>build</code>标签下通常会有如下配置：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resources</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.yml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">excludes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>application-test.yml<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">excludes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/java<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.xml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></table></figure><p>以上的配置本身是没有问题的，但在某些需要需要将一些文件存放在项目中直接提供下载时，以上配置就回有问题，如果是将文件放到<code>resources</code>目录下，由于<code>filtering</code>设置为<code>true</code>，开启了过滤，会用指定的参数替换<code>directory</code>下的文件中的参数(<code>eg. ${name}</code>)。从而导致文件可能会损坏。</p><p>若配置文件需要传参数将<code>filtering</code>设置为<code>false</code>显然是不行的。使用<code>exclude</code>排除想下载的文件打包时都不会将文件打到<code>jar</code>包中，显然也是不行的。然后尝试做了如下调整，但并没有生效：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.yml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">excludes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>application-test.yml<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>src/main/resources/download<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">excludes</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources/download<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>false<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br></pre></td></tr></table></figure><p>最终只能将下载的文件单独放到其他目录，然后做如下配置：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resources</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.yml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">excludes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>application-test.yml<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">excludes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>download<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>false<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/java<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.xml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></table></figure>]]></content>
+    <content type="html"><![CDATA[<p>6大设计基本原则：<strong>单一职责原则</strong>、<strong>里氏替换原则</strong>、<strong>依赖倒置原则</strong>、<strong>接口隔离原则</strong>、<strong>迪米特法则</strong>、<strong>开闭原则</strong></p><h3 id="单一职责原则SRP"><a href="#单一职责原则SRP" class="headerlink" title="单一职责原则SRP"></a>单一职责原则SRP</h3><p>​    单一职责原则提出了一个编写程序的标准，用<strong>职责</strong>或<strong>变化原因</strong>来衡量接口或类设计得是否优良，但职责和变化原因都是不可度量得，因项目和环境而异。单一职责适用于<strong>接口、类、方法</strong>。</p><p><strong>定义</strong>：应该<strong>有且仅有一个原因引起类的变更</strong>。</p><p><strong>优点</strong>：<strong>类复杂性降低</strong>，实现<strong>职责清晰明确</strong>；<strong>可读性高</strong>；<strong>可维护性高</strong>；<strong>变更引起的风险低</strong>；</p><h3 id="里氏替换原则LSP"><a href="#里氏替换原则LSP" class="headerlink" title="里氏替换原则LSP"></a>里氏替换原则LSP</h3><p><strong>定义</strong>：<strong>每一个类型为<code>S</code>的对象<code>s</code>，都有类型为<code>T</code>的对象<code>t</code>，使得以<code>T</code>定义的所有程序<code>P</code>在所有的对象<code>s</code>都代替成<code>t</code>时，程序<code>P</code>的行为无变化，则类型<code>S</code>时类型<code>T</code>的子类；所有引用基类的地方必须能透明的使用其子类的对象。</strong></p><ul><li><strong>子类必须完全实现父类的方法</strong>：若子类<strong>不能完全实现父类方法</strong>，或某些方法在子类种已<strong>发生畸变</strong>，建议断开父子继承关系。</li><li><strong>子类可以有自己的个性</strong>：子类出现的地方父类未必能出现</li><li><strong>覆盖或实现父类方法时输入参数可以被放大</strong></li><li><strong>覆写或实现父类的方法时输出结果可以被缩小</strong></li></ul><p>在类中调用其他类时<strong>务必使用父类或接口</strong>，否则即是违背<code>LSP</code>原则。</p>]]></content>
     
     <summary type="html">
     
       
       
-        &lt;p&gt;在一般Maven项目中的&lt;code&gt;build&lt;/code&gt;标签下通常会有如下配置：&lt;/p&gt;
-&lt;figure class=&quot;highlight xml&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/spa
+        &lt;p&gt;6大设计基本原则：&lt;strong&gt;单一职责原则&lt;/strong&gt;、&lt;strong&gt;里氏替换原则&lt;/strong&gt;、&lt;strong&gt;依赖倒置原则&lt;/strong&gt;、&lt;strong&gt;接口隔离原则&lt;/strong&gt;、&lt;strong&gt;迪米特法则&lt;/strong&gt;、&lt;strong&gt;开
       
     
     </summary>
     
-      <category term="框架" scheme="https://yaoyinglong.github.io/categories/%E6%A1%86%E6%9E%B6/"/>
-    
-      <category term="常见问题" scheme="https://yaoyinglong.github.io/categories/%E6%A1%86%E6%9E%B6/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98/"/>
+      <category term="设计模式" scheme="https://yaoyinglong.github.io/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/"/>
     
     
-      <category term="Maven" scheme="https://yaoyinglong.github.io/tags/Maven/"/>
+      <category term="设计模式" scheme="https://yaoyinglong.github.io/tags/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>面试准备大纲</title>
+    <link href="https://yaoyinglong.github.io/Blog/Interview/%E5%A4%A7%E7%BA%B2/"/>
+    <id>https://yaoyinglong.github.io/Blog/Interview/大纲/</id>
+    <published>2020-07-25T16:00:00.000Z</published>
+    <updated>2020-07-26T09:45:19.919Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="Spring"><a href="#Spring" class="headerlink" title="Spring"></a>Spring</h3><ul><li><code>AOP</code></li><li><code>IOC</code></li><li>源码</li><li><code>SpringBoot</code></li><li><code>SpringCloud</code></li></ul><h3 id="数据库"><a href="#数据库" class="headerlink" title="数据库"></a>数据库</h3><ul><li>常见面试笔试内容</li></ul><h3 id="算法"><a href="#算法" class="headerlink" title="算法"></a>算法</h3><ul><li>树（前序遍历、中序遍历、后序遍历、层序遍历）</li><li>图（广度优先遍历BFS、深度优先遍历DFS）</li><li><code>leetcode</code>题（<strong>前期每周5道，中期每周10道，后期每周15道</strong>）</li><li>常见排序总结</li></ul><h3 id="设计模式"><a href="#设计模式" class="headerlink" title="设计模式"></a>设计模式</h3><ul><li>6大基本原则（<strong>一周</strong>）</li><li>23种设计模式（<strong>一周5个</strong>）</li><li>设计模式对比</li></ul><h3 id="Java基础"><a href="#Java基础" class="headerlink" title="Java基础"></a>Java基础</h3><ul><li><code>JVM</code></li><li>源码</li><li>多线程</li></ul><h3 id="消息队列"><a href="#消息队列" class="headerlink" title="消息队列"></a>消息队列</h3><ul><li><code>RabbitMQ</code></li><li>常见面试笔试内容</li></ul><h3 id="Reids"><a href="#Reids" class="headerlink" title="Reids"></a>Reids</h3><ul><li>常见面试笔试内容</li></ul><h3 id="Linux"><a href="#Linux" class="headerlink" title="Linux"></a>Linux</h3><ul><li>常用命令</li></ul><h3 id="Go"><a href="#Go" class="headerlink" title="Go"></a>Go</h3><ul><li>常见面试笔试内容</li></ul><h3 id="Maven"><a href="#Maven" class="headerlink" title="Maven"></a>Maven</h3><ul><li>常见面试笔试内容</li></ul><h3 id="单元测试"><a href="#单元测试" class="headerlink" title="单元测试"></a>单元测试</h3>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h3 id=&quot;Spring&quot;&gt;&lt;a href=&quot;#Spring&quot; class=&quot;headerlink&quot; title=&quot;Spring&quot;&gt;&lt;/a&gt;Spring&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;AOP&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;IOC&lt;/code&gt;&lt;/li&gt;
+
+      
+    
+    </summary>
+    
+      <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
+    
     
   </entry>
   
@@ -69,6 +92,34 @@
     
     
       <category term="HBase" scheme="https://yaoyinglong.github.io/tags/HBase/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Maven编译后文件损坏</title>
+    <link href="https://yaoyinglong.github.io/Blog/%E6%A1%86%E6%9E%B6/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98/Maven%E7%BC%96%E8%AF%91%E5%90%8E%E6%96%87%E4%BB%B6%E6%8D%9F%E5%9D%8F/"/>
+    <id>https://yaoyinglong.github.io/Blog/框架/常见问题/Maven编译后文件损坏/</id>
+    <published>2020-07-05T16:00:00.000Z</published>
+    <updated>2020-07-07T03:37:41.145Z</updated>
+    
+    <content type="html"><![CDATA[<p>在一般Maven项目中的<code>build</code>标签下通常会有如下配置：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resources</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.yml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">excludes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>application-test.yml<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">excludes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/java<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.xml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></table></figure><p>以上的配置本身是没有问题的，但在某些需要需要将一些文件存放在项目中直接提供下载时，以上配置就回有问题，如果是将文件放到<code>resources</code>目录下，由于<code>filtering</code>设置为<code>true</code>，开启了过滤，会用指定的参数替换<code>directory</code>下的文件中的参数(<code>eg. ${name}</code>)。从而导致文件可能会损坏。</p><p>若配置文件需要传参数将<code>filtering</code>设置为<code>false</code>显然是不行的。使用<code>exclude</code>排除想下载的文件打包时都不会将文件打到<code>jar</code>包中，显然也是不行的。然后尝试做了如下调整，但并没有生效：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.yml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">excludes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>application-test.yml<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>src/main/resources/download<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">excludes</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources/download<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>false<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br></pre></td></tr></table></figure><p>最终只能将下载的文件单独放到其他目录，然后做如下配置：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">resources</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/resources<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.properties<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.yml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">excludes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">exclude</span>&gt;</span>application-test.yml<span class="tag">&lt;/<span class="name">exclude</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">excludes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>download<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.*<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>false<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">resource</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">directory</span>&gt;</span>src/main/java<span class="tag">&lt;/<span class="name">directory</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">includes</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">include</span>&gt;</span>**/*.xml<span class="tag">&lt;/<span class="name">include</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">includes</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">filtering</span>&gt;</span>true<span class="tag">&lt;/<span class="name">filtering</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">resource</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">resources</span>&gt;</span></span><br></pre></td></tr></table></figure>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;在一般Maven项目中的&lt;code&gt;build&lt;/code&gt;标签下通常会有如下配置：&lt;/p&gt;
+&lt;figure class=&quot;highlight xml&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/spa
+      
+    
+    </summary>
+    
+      <category term="框架" scheme="https://yaoyinglong.github.io/categories/%E6%A1%86%E6%9E%B6/"/>
+    
+      <category term="常见问题" scheme="https://yaoyinglong.github.io/categories/%E6%A1%86%E6%9E%B6/%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98/"/>
+    
+    
+      <category term="Maven" scheme="https://yaoyinglong.github.io/tags/Maven/"/>
     
   </entry>
   
@@ -149,6 +200,31 @@
   </entry>
   
   <entry>
+    <title>图</title>
+    <link href="https://yaoyinglong.github.io/Blog/%E7%AE%97%E6%B3%95/%E5%9B%BE/"/>
+    <id>https://yaoyinglong.github.io/Blog/算法/图/</id>
+    <published>2020-06-21T16:00:00.000Z</published>
+    <updated>2020-06-22T03:02:29.144Z</updated>
+    
+    <content type="html"><![CDATA[<p>​    图可分为<strong>有向图</strong>和<strong>无向图</strong>，一般用<code>G=(V,E)</code>来表示图，<code>V</code>表示顶点，<code>E</code>表示通过图的边，常用<strong>邻接矩阵</strong>或者<strong>邻接表</strong>来描述一副图。图的遍历算法，根据访问节点的顺序，可分为<strong>广度优先搜索</strong>（<code>BFS</code>：Breadth First Search）和<strong>深度优先搜索</strong>（<code>DFS</code>：）</p><h3 id="广度优先搜索（BFS）"><a href="#广度优先搜索（BFS）" class="headerlink" title="广度优先搜索（BFS）"></a>广度优先搜索（BFS）</h3><p>​    广度优先搜索在进一步遍历图中顶点之前，<strong>先访问当前顶点的所有邻接结点</strong>。</p><ol><li>首先选择一个顶点作为起始结点</li><li>将起始结点放入队列中</li><li>从队列首部选出一个顶点，并找出所有与之邻接的结点，将找到的邻接结点放入队列尾部</li><li>按照同样的方法处理队列中的下一个结点</li></ol><h3 id="深度优先搜索（DFS）"><a href="#深度优先搜索（DFS）" class="headerlink" title="深度优先搜索（DFS）"></a>深度优先搜索（DFS）</h3><p>​    深度优先搜索在搜索过程中访问某个顶点后，需要<strong>递归</strong>地访问此顶点的<strong>所有未访问过的相邻顶点</strong>，<code>DFS</code>在<strong>环监测</strong>和<strong>拓扑排序</strong>中都有不错的应用。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;​    图可分为&lt;strong&gt;有向图&lt;/strong&gt;和&lt;strong&gt;无向图&lt;/strong&gt;，一般用&lt;code&gt;G=(V,E)&lt;/code&gt;来表示图，&lt;code&gt;V&lt;/code&gt;表示顶点，&lt;code&gt;E&lt;/code&gt;表示通过图的边，常用&lt;strong&gt;邻接矩阵&lt;/s
+      
+    
+    </summary>
+    
+      <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
+    
+    
+      <category term="算法" scheme="https://yaoyinglong.github.io/tags/%E7%AE%97%E6%B3%95/"/>
+    
+  </entry>
+  
+  <entry>
     <title>树</title>
     <link href="https://yaoyinglong.github.io/Blog/%E7%AE%97%E6%B3%95/%E6%A0%91/"/>
     <id>https://yaoyinglong.github.io/Blog/算法/树/</id>
@@ -165,31 +241,6 @@
 &lt;li&gt;每个节点有零个火多个子节点；&lt;/li&gt;
 &lt;li&gt;没有父节点的节点称为根节点；&lt;/li&gt;
 &lt;li&gt;每个非根节点有且仅有一个父节点；
-      
-    
-    </summary>
-    
-      <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
-    
-    
-      <category term="算法" scheme="https://yaoyinglong.github.io/tags/%E7%AE%97%E6%B3%95/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>图</title>
-    <link href="https://yaoyinglong.github.io/Blog/%E7%AE%97%E6%B3%95/%E5%9B%BE/"/>
-    <id>https://yaoyinglong.github.io/Blog/算法/图/</id>
-    <published>2020-06-21T16:00:00.000Z</published>
-    <updated>2020-06-22T03:02:29.144Z</updated>
-    
-    <content type="html"><![CDATA[<p>​    图可分为<strong>有向图</strong>和<strong>无向图</strong>，一般用<code>G=(V,E)</code>来表示图，<code>V</code>表示顶点，<code>E</code>表示通过图的边，常用<strong>邻接矩阵</strong>或者<strong>邻接表</strong>来描述一副图。图的遍历算法，根据访问节点的顺序，可分为<strong>广度优先搜索</strong>（<code>BFS</code>：Breadth First Search）和<strong>深度优先搜索</strong>（<code>DFS</code>：）</p><h3 id="广度优先搜索（BFS）"><a href="#广度优先搜索（BFS）" class="headerlink" title="广度优先搜索（BFS）"></a>广度优先搜索（BFS）</h3><p>​    广度优先搜索在进一步遍历图中顶点之前，<strong>先访问当前顶点的所有邻接结点</strong>。</p><ol><li>首先选择一个顶点作为起始结点</li><li>将起始结点放入队列中</li><li>从队列首部选出一个顶点，并找出所有与之邻接的结点，将找到的邻接结点放入队列尾部</li><li>按照同样的方法处理队列中的下一个结点</li></ol><h3 id="深度优先搜索（DFS）"><a href="#深度优先搜索（DFS）" class="headerlink" title="深度优先搜索（DFS）"></a>深度优先搜索（DFS）</h3><p>​    深度优先搜索在搜索过程中访问某个顶点后，需要<strong>递归</strong>地访问此顶点的<strong>所有未访问过的相邻顶点</strong>，<code>DFS</code>在<strong>环监测</strong>和<strong>拓扑排序</strong>中都有不错的应用。</p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;p&gt;​    图可分为&lt;strong&gt;有向图&lt;/strong&gt;和&lt;strong&gt;无向图&lt;/strong&gt;，一般用&lt;code&gt;G=(V,E)&lt;/code&gt;来表示图，&lt;code&gt;V&lt;/code&gt;表示顶点，&lt;code&gt;E&lt;/code&gt;表示通过图的边，常用&lt;strong&gt;邻接矩阵&lt;/s
       
     
     </summary>
@@ -309,53 +360,6 @@
   </entry>
   
   <entry>
-    <title>后悔药</title>
-    <link href="https://yaoyinglong.github.io/Blog/%E8%87%AA%E5%BA%A6/%E5%90%8E%E6%82%94%E8%8D%AF/"/>
-    <id>https://yaoyinglong.github.io/Blog/自度/后悔药/</id>
-    <published>2020-05-25T16:00:00.000Z</published>
-    <updated>2020-07-03T02:40:20.845Z</updated>
-    
-    <content type="html"><![CDATA[<h3 id="挽回心态"><a href="#挽回心态" class="headerlink" title="挽回心态"></a>挽回心态</h3><p>​    没有一个好的挽回心态，任何技巧都等于零，挽回是一个长期的过程，是一次真正的<strong>自我成长</strong>和<strong>救赎</strong>，是不是自己确实掌握了经营好感情的能力、是不是已经真正的获得了成长、是不是你们之间的根本问题已经得到了解决、是不是他真的重新爱上你了、是不是以后你们真的能好好的在一起了；</p><h5 id="心态建设"><a href="#心态建设" class="headerlink" title="心态建设"></a>心态建设</h5><ul><li><strong>最重要的一点</strong>控制你的挽回需求感，难度越大的任务，<strong>动机因素反而越敏感</strong></li><li>避免过度自责</li><li><strong>稳住心态。 不要手贱</strong></li><li><strong>转移注意力 不要把全部心思放在挽回上 那样只会让自己更苦逼。 充实自己的生活 提升自己。</strong></li><li><strong>反撇</strong>：<strong>前期阶段进行讨好策略（是的你没看错），然后突然后撤表示放弃，从而激发起对方损失厌恶的心理，变被动为主动，变低位为高位</strong></li></ul><h5 id="思维重塑"><a href="#思维重塑" class="headerlink" title="思维重塑"></a>思维重塑</h5><h5 id="打破思维墙"><a href="#打破思维墙" class="headerlink" title="打破思维墙"></a>打破思维墙</h5><h3 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h3><h3 id="技巧"><a href="#技巧" class="headerlink" title="技巧"></a>技巧</h3><h3 id="举例"><a href="#举例" class="headerlink" title="举例"></a>举例</h3>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;h3 id=&quot;挽回心态&quot;&gt;&lt;a href=&quot;#挽回心态&quot; class=&quot;headerlink&quot; title=&quot;挽回心态&quot;&gt;&lt;/a&gt;挽回心态&lt;/h3&gt;&lt;p&gt;​    没有一个好的挽回心态，任何技巧都等于零，挽回是一个长期的过程，是一次真正的&lt;strong&gt;自我成长&lt;/strong
-      
-    
-    </summary>
-    
-      <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>自度</title>
-    <link href="https://yaoyinglong.github.io/Blog/%E8%87%AA%E5%BA%A6/%E8%87%AA%E5%BA%A6/"/>
-    <id>https://yaoyinglong.github.io/Blog/自度/自度/</id>
-    <published>2020-05-25T16:00:00.000Z</published>
-    <updated>2020-07-16T10:10:20.301Z</updated>
-    
-    <content type="html"><![CDATA[<p>人生不如意事常八九，不爱了或者爱而不得才是人生常态</p><p>人在道理面前，总以为自己明白了，但是只有被真正教训过才会知道明白，就像之前我被天气教育那样，把伞放家里下班的时候下雨，把伞放公司上班的时候下雨，最终我买了两把伞。<br>以前我总以为真诚相待才是相处的根本，被教训过才发现，并不是这样，人与人是不同的，你认知里的真诚在别人眼里或许是污言秽语恶意中伤。</p><p>总是在第一经历某种痛苦或者说苦难的时候，是最煎熬的，也才会学会不要轻易的寄托</p><p>人总是在逆境中快速成长，才会对人生有所感悟</p><p>我是一个平凡孤独平凡且无趣的人，没有伟大的梦想，尽量热爱生活</p><p>渐渐的就发现没有什么特别热爱的东西了</p><p>其实我觉得人生最好的状态就是无欲无求，对任何事都不抱什么什么特别的期待</p><p>其实有一群经常一起玩的好朋友是真的很幸福。</p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;p&gt;人生不如意事常八九，不爱了或者爱而不得才是人生常态&lt;/p&gt;
-&lt;p&gt;人在道理面前，总以为自己明白了，但是只有被真正教训过才会知道明白，就像之前我被天气教育那样，把伞放家里下班的时候下雨，把伞放公司上班的时候下雨，最终我买了两把伞。&lt;br&gt;以前我总以为真诚相待才是相处的根本，被
-      
-    
-    </summary>
-    
-      <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
-    
-    
-  </entry>
-  
-  <entry>
     <title>和女孩子相处</title>
     <link href="https://yaoyinglong.github.io/Blog/%E8%87%AA%E5%BA%A6/%E5%92%8C%E5%A5%B3%E5%AD%A9%E5%AD%90%E7%9B%B8%E5%A4%84/"/>
     <id>https://yaoyinglong.github.io/Blog/自度/和女孩子相处/</id>
@@ -405,20 +409,20 @@
   </entry>
   
   <entry>
-    <title>斐波那契</title>
-    <link href="https://yaoyinglong.github.io/Blog/%E7%AE%97%E6%B3%95/%E6%8E%92%E5%BA%8F/%E6%96%90%E6%B3%A2%E9%82%A3%E5%A5%91/"/>
-    <id>https://yaoyinglong.github.io/Blog/算法/排序/斐波那契/</id>
-    <published>2020-05-24T16:00:00.000Z</published>
-    <updated>2020-06-19T01:57:12.128Z</updated>
+    <title>自度</title>
+    <link href="https://yaoyinglong.github.io/Blog/%E8%87%AA%E5%BA%A6/%E8%87%AA%E5%BA%A6/"/>
+    <id>https://yaoyinglong.github.io/Blog/自度/自度/</id>
+    <published>2020-05-25T16:00:00.000Z</published>
+    <updated>2020-07-16T10:10:20.301Z</updated>
     
-    <content type="html"><![CDATA[<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>比较两个相邻的元素，将值大或者小的的元素交换到一边。</p><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><p>每进行一趟排序，下一趟排序就会少比较一次。</p><h3 id="时间复杂度"><a href="#时间复杂度" class="headerlink" title="时间复杂度"></a>时间复杂度</h3><p>若数据是顺序的，只需一趟即可完成排序，所需比较次数<code>C</code>和记录移动次数均<code>M</code>达到最小值，即<code>C = n -1；M = 0</code> ，所以冒泡排序的最好的时间复杂度为<code>O(n)</code></p><p>若数据是反序，则需要进行<code>n - 1</code>躺排序，且每趟排序需要<code>n - i</code>此比较（<code>0 &lt;  i &lt; n</code>）,且每次比较必须移动记录三次来达到交换记录位置，这时比较和移动次数均达到最大值，该种情况下冒泡排序得时间复杂度为<code>O(n^2)</code></p><p>综上所述冒泡排序得平均<strong>时间复杂度</strong>：<code>O(n^2)</code></p><p><strong>空间复杂度</strong>：<code>O(1)</code></p><p><strong>稳定性</strong>：<strong>稳定</strong></p><h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">bubblerSort</span><span class="params">(<span class="keyword">int</span>[] arr)</span></span>&#123;</span><br><span class="line">    <span class="keyword">boolean</span> flag = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>; i &lt; arr.length &amp;&amp; flag; i++)&#123;</span><br><span class="line">        flag = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j = arr.length - i; j &gt; i ; j--)&#123;</span><br><span class="line">            <span class="keyword">if</span>(arr[j - <span class="number">1</span>] &gt; arr[j])&#123;</span><br><span class="line">                <span class="keyword">int</span> temp = arr[j];</span><br><span class="line">                arr[j] = arr[j - <span class="number">1</span>];</span><br><span class="line">                arr[j - <span class="number">1</span>] = temp;</span><br><span class="line">                flag = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>]]></content>
+    <content type="html"><![CDATA[<p>人生不如意事常八九，不爱了或者爱而不得才是人生常态</p><p>人在道理面前，总以为自己明白了，但是只有被真正教训过才会知道明白，就像之前我被天气教育那样，把伞放家里下班的时候下雨，把伞放公司上班的时候下雨，最终我买了两把伞。<br>以前我总以为真诚相待才是相处的根本，被教训过才发现，并不是这样，人与人是不同的，你认知里的真诚在别人眼里或许是污言秽语恶意中伤。</p><p>总是在第一经历某种痛苦或者说苦难的时候，是最煎熬的，也才会学会不要轻易的寄托</p><p>人总是在逆境中快速成长，才会对人生有所感悟</p><p>我是一个平凡孤独平凡且无趣的人，没有伟大的梦想，尽量热爱生活</p><p>渐渐的就发现没有什么特别热爱的东西了</p><p>其实我觉得人生最好的状态就是无欲无求，对任何事都不抱什么什么特别的期待</p><p>其实有一群经常一起玩的好朋友是真的很幸福。</p>]]></content>
     
     <summary type="html">
     
       
       
-        &lt;h3 id=&quot;原理&quot;&gt;&lt;a href=&quot;#原理&quot; class=&quot;headerlink&quot; title=&quot;原理&quot;&gt;&lt;/a&gt;原理&lt;/h3&gt;&lt;p&gt;比较两个相邻的元素，将值大或者小的的元素交换到一边。&lt;/p&gt;
-&lt;h3 id=&quot;优点&quot;&gt;&lt;a href=&quot;#优点&quot; class=&quot;header
+        &lt;p&gt;人生不如意事常八九，不爱了或者爱而不得才是人生常态&lt;/p&gt;
+&lt;p&gt;人在道理面前，总以为自己明白了，但是只有被真正教训过才会知道明白，就像之前我被天气教育那样，把伞放家里下班的时候下雨，把伞放公司上班的时候下雨，最终我买了两把伞。&lt;br&gt;以前我总以为真诚相待才是相处的根本，被
       
     
     </summary>
@@ -426,7 +430,28 @@
       <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
     
     
-      <category term="算法，排序" scheme="https://yaoyinglong.github.io/tags/%E7%AE%97%E6%B3%95%EF%BC%8C%E6%8E%92%E5%BA%8F/"/>
+  </entry>
+  
+  <entry>
+    <title>后悔药</title>
+    <link href="https://yaoyinglong.github.io/Blog/%E8%87%AA%E5%BA%A6/%E5%90%8E%E6%82%94%E8%8D%AF/"/>
+    <id>https://yaoyinglong.github.io/Blog/自度/后悔药/</id>
+    <published>2020-05-25T16:00:00.000Z</published>
+    <updated>2020-07-03T02:40:20.845Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="挽回心态"><a href="#挽回心态" class="headerlink" title="挽回心态"></a>挽回心态</h3><p>​    没有一个好的挽回心态，任何技巧都等于零，挽回是一个长期的过程，是一次真正的<strong>自我成长</strong>和<strong>救赎</strong>，是不是自己确实掌握了经营好感情的能力、是不是已经真正的获得了成长、是不是你们之间的根本问题已经得到了解决、是不是他真的重新爱上你了、是不是以后你们真的能好好的在一起了；</p><h5 id="心态建设"><a href="#心态建设" class="headerlink" title="心态建设"></a>心态建设</h5><ul><li><strong>最重要的一点</strong>控制你的挽回需求感，难度越大的任务，<strong>动机因素反而越敏感</strong></li><li>避免过度自责</li><li><strong>稳住心态。 不要手贱</strong></li><li><strong>转移注意力 不要把全部心思放在挽回上 那样只会让自己更苦逼。 充实自己的生活 提升自己。</strong></li><li><strong>反撇</strong>：<strong>前期阶段进行讨好策略（是的你没看错），然后突然后撤表示放弃，从而激发起对方损失厌恶的心理，变被动为主动，变低位为高位</strong></li></ul><h5 id="思维重塑"><a href="#思维重塑" class="headerlink" title="思维重塑"></a>思维重塑</h5><h5 id="打破思维墙"><a href="#打破思维墙" class="headerlink" title="打破思维墙"></a>打破思维墙</h5><h3 id="原因分析"><a href="#原因分析" class="headerlink" title="原因分析"></a>原因分析</h3><h3 id="技巧"><a href="#技巧" class="headerlink" title="技巧"></a>技巧</h3><h3 id="举例"><a href="#举例" class="headerlink" title="举例"></a>举例</h3>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h3 id=&quot;挽回心态&quot;&gt;&lt;a href=&quot;#挽回心态&quot; class=&quot;headerlink&quot; title=&quot;挽回心态&quot;&gt;&lt;/a&gt;挽回心态&lt;/h3&gt;&lt;p&gt;​    没有一个好的挽回心态，任何技巧都等于零，挽回是一个长期的过程，是一次真正的&lt;strong&gt;自我成长&lt;/strong
+      
+    
+    </summary>
+    
+      <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
+    
     
   </entry>
   
@@ -459,55 +484,28 @@
   </entry>
   
   <entry>
-    <title>Java中调用Groovy脚本</title>
-    <link href="https://yaoyinglong.github.io/Blog/Java/%E5%B7%A5%E5%85%B7/Java%E4%B8%AD%E8%B0%83%E7%94%A8Groovy%E8%84%9A%E6%9C%AC/"/>
-    <id>https://yaoyinglong.github.io/Blog/Java/工具/Java中调用Groovy脚本/</id>
-    <published>2019-12-24T16:00:00.000Z</published>
-    <updated>2019-12-26T07:48:30.432Z</updated>
+    <title>斐波那契</title>
+    <link href="https://yaoyinglong.github.io/Blog/%E7%AE%97%E6%B3%95/%E6%8E%92%E5%BA%8F/%E6%96%90%E6%B3%A2%E9%82%A3%E5%A5%91/"/>
+    <id>https://yaoyinglong.github.io/Blog/算法/排序/斐波那契/</id>
+    <published>2020-05-24T16:00:00.000Z</published>
+    <updated>2020-06-19T01:57:12.128Z</updated>
     
-    <content type="html"><![CDATA[<p><code>Groovy</code>是构建在<code>JVM</code>上的一个轻量级动态语言，其是<code>Java</code>实现的，与<code>Java</code>语法类是，能很好的与<code>Java</code>代码结合，及扩展现有代码。</p><p><code>Java</code>在语音动态性方面只能通过反射，且参数传递格式很严格不是很灵活，而<code>Groovy</code>是构建在<code>JVM</code>上的一个轻量级动态语言，其是<code>Java</code>实现的，与<code>Java</code>语法类是，能很好的与<code>Java</code>代码结合，及动态扩展现有代码。</p><p><code>Java</code>中可以通过<strong><code>GroovyScriptEngine</code></strong>、<strong><code>GroovyClassLoader</code></strong>、<strong><code>GroovyShell</code></strong>、<strong><code>ScriptEngineManager</code></strong>等方式调用<code>Groovy</code>，以及在实际项目中的运用。<code>Maven</code>依赖：</p><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.codehaus.groovy<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>groovy-all<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;groovy.version&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">type</span>&gt;</span>pom<span class="tag">&lt;/<span class="name">type</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure><h3 id="GroovyScriptEngine"><a href="#GroovyScriptEngine" class="headerlink" title="GroovyScriptEngine"></a>GroovyScriptEngine</h3><p>从指定的位置（文件系统，URL，数据库等）加载<code>Groovy</code>脚本，并且随着脚本变化而重新加载。在相互关联的多个脚本情况下使用<code>GroovyScriptEngine</code>更好些。</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">GroovyScriptEngine engine = <span class="keyword">new</span> GroovyScriptEngine(<span class="string">"src/test/resources/groovy/"</span>);</span><br><span class="line"></span><br><span class="line">Map&lt;String, Object&gt; param = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">param.put(<span class="string">"id"</span>, <span class="string">"KKKKKKKKKKKKKK"</span>);</span><br><span class="line">param.put(<span class="string">"aa"</span>, <span class="number">45</span>);</span><br><span class="line">Binding binding = <span class="keyword">new</span> Binding(param);</span><br><span class="line">Object result = engine.run(<span class="string">"Mixed.groovy"</span>, binding);</span><br></pre></td></tr></table></figure><h3 id="GroovyClassLoader"><a href="#GroovyClassLoader" class="headerlink" title="GroovyClassLoader"></a>GroovyClassLoader</h3><p><code>GroovyClassLoader</code>是一个定制的类装载器，负责解释加载<code>Java</code>类中用到的<code>Groovy</code>类。</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">GroovyClassLoader loader = <span class="keyword">new</span> GroovyClassLoader();</span><br><span class="line">Class aClass = loader.parseClass(<span class="keyword">new</span> File(<span class="string">"src/test/resources/groovy/Mixed.groovy"</span>));</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    GroovyObject instance = (GroovyObject) aClass.newInstance();</span><br><span class="line">    Object result = instance.invokeMethod(<span class="string">"Mixed"</span>, <span class="keyword">new</span> Object[]&#123;<span class="string">"KKKKKKKKKKKKKK"</span>, <span class="number">45</span>&#125;);</span><br><span class="line">     System.out.println(result);</span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">     e.printStackTrace();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><h3 id="GroovyShell"><a href="#GroovyShell" class="headerlink" title="GroovyShell"></a>GroovyShell</h3><p><code>GroovyShell</code>允许在<code>Java</code>类甚至<code>Groovy</code>类中求任意Groovy表达式的值。可用<code>Binding</code>对象输入参数给表达式，并最终通过<code>GroovyShell</code>返回<code>Groovy</code>表达式的计算结果。多用于推求独立的脚本或表达式。</p><p>即使使用<code>GroovyShell</code>也有多种实现方式，使用<code>invokeMethod</code>方法调用：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">GroovyShell loader = <span class="keyword">new</span> GroovyShell();</span><br><span class="line">Script script = loader.parse(<span class="keyword">new</span> File(<span class="string">"src/test/resources/groovy/Mixed.groovy"</span>));</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    Object result = script.invokeMethod(<span class="string">"Mixed"</span>, <span class="keyword">new</span> Object[]&#123;<span class="string">"KKKKKKKKKKKKKK"</span>, <span class="number">45</span>&#125;);</span><br><span class="line">    System.out.println(result);</span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    e.printStackTrace();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>通过<code>GroovyShell</code>得<code>evaluate</code>方式直接调用脚本：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Map&lt;String, Object&gt; param = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">param.put(<span class="string">"id"</span>, <span class="string">"KKKKKKKKKKKKKK"</span>);</span><br><span class="line">param.put(<span class="string">"aa"</span>, <span class="number">45</span>);</span><br><span class="line">param.put(<span class="string">"bb"</span>, <span class="number">55L</span>);</span><br><span class="line">param.put(<span class="string">"cc"</span>, <span class="number">9.9999</span>);</span><br><span class="line">Binding binding = <span class="keyword">new</span> Binding(param);</span><br><span class="line">GroovyShell loader = <span class="keyword">new</span> GroovyShell(binding);</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    Object result = loader.evaluate(<span class="string">"return id + (aa + bb + cc)"</span>);</span><br><span class="line">    System.out.println(result);</span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    e.printStackTrace();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><p>通过<code>InvokerHelper</code>类来调用：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">Map&lt;String, Object&gt; param = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">param.put(<span class="string">"id"</span>, <span class="string">"KKKKKKKKKKKKKK"</span>);</span><br><span class="line">param.put(<span class="string">"aa"</span>, <span class="number">45</span>);</span><br><span class="line">param.put(<span class="string">"bb"</span>, <span class="number">55L</span>);</span><br><span class="line">param.put(<span class="string">"cc"</span>, <span class="number">9.9999</span>);</span><br><span class="line">Binding binding = <span class="keyword">new</span> Binding(param);</span><br><span class="line"></span><br><span class="line">GroovyShell shell = <span class="keyword">new</span> GroovyShell();</span><br><span class="line">Script script = shell.parse(<span class="keyword">new</span> File(<span class="string">"src/test/resources/groovy/Mixed.groovy"</span>));</span><br><span class="line"></span><br><span class="line">Object result = InvokerHelper.createScript(script.getClass(), binding).run();</span><br><span class="line">System.out.println(result);</span><br></pre></td></tr></table></figure><p>还可以通过<code>GroovyShell</code>来直接<code>parse</code>脚本内容：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Map&lt;String, Object&gt; param = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">param.put(<span class="string">"id"</span>, <span class="string">"KKKKKKKKKKKKKK"</span>);</span><br><span class="line">param.put(<span class="string">"aa"</span>, <span class="number">45</span>);</span><br><span class="line">param.put(<span class="string">"bb"</span>, <span class="number">55L</span>);</span><br><span class="line">param.put(<span class="string">"cc"</span>, <span class="number">9.9999</span>);</span><br><span class="line">Binding binding = <span class="keyword">new</span> Binding(param);</span><br><span class="line"></span><br><span class="line">GroovyShell shell = <span class="keyword">new</span> GroovyShell();</span><br><span class="line">Script script = shell.parse(<span class="string">"def Mixed(String id, int aa, Long bb, double cc) &#123;\n"</span> +</span><br><span class="line">                    <span class="string">"    return id + (aa + bb + cc)\n"</span> +</span><br><span class="line">                    <span class="string">"&#125;\n"</span> +</span><br><span class="line">                    <span class="string">"Mixed(id, aa, bb, cc)"</span>);</span><br><span class="line"></span><br><span class="line">Object result = InvokerHelper.createScript(script.getClass(), binding).run();</span><br><span class="line">System.out.println(result);</span><br></pre></td></tr></table></figure><h3 id="ScriptEngineManager"><a href="#ScriptEngineManager" class="headerlink" title="ScriptEngineManager"></a>ScriptEngineManager</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">ScriptEngineManager manager = <span class="keyword">new</span> ScriptEngineManager();</span><br><span class="line">ScriptEngine engine = manager.getEngineByName(<span class="string">"groovy"</span>);</span><br><span class="line"></span><br><span class="line">Bindings binding = engine.createBindings();</span><br><span class="line">binding.put(<span class="string">"id"</span>, <span class="string">"KKKKKKKKKKKKKK"</span>);</span><br><span class="line">binding.put(<span class="string">"aa"</span>, <span class="number">45</span>);</span><br><span class="line">binding.put(<span class="string">"bb"</span>, <span class="number">55L</span>);</span><br><span class="line">binding.put(<span class="string">"cc"</span>, <span class="number">9.9999</span>);</span><br><span class="line"></span><br><span class="line">Object result = engine.eval(<span class="string">"return id + (aa + bb + cc)"</span>, binding);</span><br><span class="line">System.out.println(result);</span><br></pre></td></tr></table></figure><h3 id="集成常见问题"><a href="#集成常见问题" class="headerlink" title="集成常见问题"></a>集成常见问题</h3><h5 id="使用GroovyShell的parse方法导致perm区爆满的问题"><a href="#使用GroovyShell的parse方法导致perm区爆满的问题" class="headerlink" title="使用GroovyShell的parse方法导致perm区爆满的问题"></a>使用GroovyShell的parse方法导致perm区爆满的问题</h5><p>若应用中内嵌Groovy引擎，会动态执行传入的表达式并返回执行结果，而<code>Groovy</code>每执行一次脚本，都会生成一个脚本对应的<code>class</code>对象，并<code>new</code>一个<code>InnerLoader</code>去加载这个对象，而<code>InnerLoader</code>和脚本对象都无法在gc的时候被回收运行一段时间后将<code>perm</code>占满，一直触发<code>fullgc</code>。</p><p>对于同一个<code>Groovy</code>脚本，<code>Groovy</code>执行引擎都会不同的命名，且命名与时间戳有关。当传入text时，<code>class</code>对象的命名规则为：<code>&quot;script&quot; + System.currentTimeMillis() + Math.abs(text.hashCode()) + &quot;.groovy&quot;</code>。这就导致就算<code>Groovy</code>脚本未发生任何变化，每次执行<code>parse</code>方法都会新生成一个脚本对应的<code>class</code>对象，且由<code>GroovyClassLoader</code>进行加载，不断增大<code>perm</code>区。</p><p><code>JVM</code>中的<code>Class</code>只有满足以下三个条件，才能被<code>GC</code>回收，也就是该<code>Class</code>被卸载：</p><ul><li><p>该类所有的实例都已经被<code>GC</code>，也就是<code>JVM</code>中不存在该<code>Class</code>的任何实例；</p></li><li><p>加载该类的<code>ClassLoader</code>已经被<code>GC</code>；</p></li><li>该类的<code>java.lang.Class</code>对象没有在任何地方被引用，如不能在任何地方通过反射访问该类的方法。</li></ul><p>在<code>GroovyClassLoader</code>代码中有一个<code>class</code>对象的缓存，每次编译脚本时都会在<code>Map</code>中缓存这个对象，即：<code>setClassCacheEntry(clazz)</code>。每次<code>groovy</code>编译脚本后，都会缓存该脚本的<code>Class</code>对象，下次编译该脚本时，会优先从缓存中读取，这样节省掉编译的时间。这个缓存的<code>Map</code>由<code>GroovyClassLoader</code>持有，<code>key</code>是脚本的类名，这就导致每个脚本对应的<code>class</code>对象都存在引用，无法被<code>GC</code>清理掉。</p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;p&gt;&lt;code&gt;Groovy&lt;/code&gt;是构建在&lt;code&gt;JVM&lt;/code&gt;上的一个轻量级动态语言，其是&lt;code&gt;Java&lt;/code&gt;实现的，与&lt;code&gt;Java&lt;/code&gt;语法类是，能很好的与&lt;code&gt;Java&lt;/code&gt;代码结合，及扩展现有代码。&lt;/p&gt;
-
-      
-    
-    </summary>
-    
-      <category term="Java" scheme="https://yaoyinglong.github.io/categories/Java/"/>
-    
-      <category term="工具" scheme="https://yaoyinglong.github.io/categories/Java/%E5%B7%A5%E5%85%B7/"/>
-    
-    
-      <category term="Groovy" scheme="https://yaoyinglong.github.io/tags/Groovy/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>国债逆回购</title>
-    <link href="https://yaoyinglong.github.io/Blog/%E7%90%86%E8%B4%A2/%E5%9B%BD%E5%80%BA%E9%80%86%E5%9B%9E%E8%B4%AD/"/>
-    <id>https://yaoyinglong.github.io/Blog/理财/国债逆回购/</id>
-    <published>2019-12-09T16:00:00.000Z</published>
-    <updated>2019-12-10T03:23:41.248Z</updated>
-    
-    <content type="html"><![CDATA[<h3 id="购买技巧"><a href="#购买技巧" class="headerlink" title="购买技巧"></a>购买技巧</h3><ul><li>每到年中，年底，长的节假日前，国债逆回购利息都会比较高</li><li>国债逆回购收益最高一般出现在节假日前的第二天，一般是周四，此时逆回购收益是最高的</li><li>每年1月初的市场资金面通常会比较宽松</li></ul>]]></content>
+    <content type="html"><![CDATA[<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>比较两个相邻的元素，将值大或者小的的元素交换到一边。</p><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><p>每进行一趟排序，下一趟排序就会少比较一次。</p><h3 id="时间复杂度"><a href="#时间复杂度" class="headerlink" title="时间复杂度"></a>时间复杂度</h3><p>若数据是顺序的，只需一趟即可完成排序，所需比较次数<code>C</code>和记录移动次数均<code>M</code>达到最小值，即<code>C = n -1；M = 0</code> ，所以冒泡排序的最好的时间复杂度为<code>O(n)</code></p><p>若数据是反序，则需要进行<code>n - 1</code>躺排序，且每趟排序需要<code>n - i</code>此比较（<code>0 &lt;  i &lt; n</code>）,且每次比较必须移动记录三次来达到交换记录位置，这时比较和移动次数均达到最大值，该种情况下冒泡排序得时间复杂度为<code>O(n^2)</code></p><p>综上所述冒泡排序得平均<strong>时间复杂度</strong>：<code>O(n^2)</code></p><p><strong>空间复杂度</strong>：<code>O(1)</code></p><p><strong>稳定性</strong>：<strong>稳定</strong></p><h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">bubblerSort</span><span class="params">(<span class="keyword">int</span>[] arr)</span></span>&#123;</span><br><span class="line">    <span class="keyword">boolean</span> flag = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i=<span class="number">0</span>; i &lt; arr.length &amp;&amp; flag; i++)&#123;</span><br><span class="line">        flag = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j = arr.length - i; j &gt; i ; j--)&#123;</span><br><span class="line">            <span class="keyword">if</span>(arr[j - <span class="number">1</span>] &gt; arr[j])&#123;</span><br><span class="line">                <span class="keyword">int</span> temp = arr[j];</span><br><span class="line">                arr[j] = arr[j - <span class="number">1</span>];</span><br><span class="line">                arr[j - <span class="number">1</span>] = temp;</span><br><span class="line">                flag = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>]]></content>
     
     <summary type="html">
     
       
       
-        &lt;h3 id=&quot;购买技巧&quot;&gt;&lt;a href=&quot;#购买技巧&quot; class=&quot;headerlink&quot; title=&quot;购买技巧&quot;&gt;&lt;/a&gt;购买技巧&lt;/h3&gt;&lt;ul&gt;
-&lt;li&gt;每到年中，年底，长的节假日前，国债逆回购利息都会比较高&lt;/li&gt;
-&lt;li&gt;国债逆回购收益最高一般出现在节假日前的
+        &lt;h3 id=&quot;原理&quot;&gt;&lt;a href=&quot;#原理&quot; class=&quot;headerlink&quot; title=&quot;原理&quot;&gt;&lt;/a&gt;原理&lt;/h3&gt;&lt;p&gt;比较两个相邻的元素，将值大或者小的的元素交换到一边。&lt;/p&gt;
+&lt;h3 id=&quot;优点&quot;&gt;&lt;a href=&quot;#优点&quot; class=&quot;header
       
     
     </summary>
     
       <category term="hide" scheme="https://yaoyinglong.github.io/categories/hide/"/>
     
+    
+      <category term="算法，排序" scheme="https://yaoyinglong.github.io/tags/%E7%AE%97%E6%B3%95%EF%BC%8C%E6%8E%92%E5%BA%8F/"/>
     
   </entry>
   
