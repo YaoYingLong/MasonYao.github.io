@@ -4,23 +4,26 @@
     <meta charset="utf-8">
     
     <title>
-        HashMap源码分析 |
+        MySQL锁机制 |
         
         YingLong</title>
     
     
-        <meta name="keywords" content="HashMap">
+        <meta name="keywords" content="MySQL">
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <meta name="keywords" content="HashMap">
+    <meta name="description" content="表级锁行级锁页面锁">
+<meta name="keywords" content="MySQL">
 <meta property="og:type" content="article">
-<meta property="og:title" content="HashMap源码分析">
-<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Java/基础/HashMap源码分析/index.html">
+<meta property="og:title" content="MySQL锁机制">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/DB/MySQL锁机制/index.html">
 <meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="表级锁行级锁页面锁">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2020-09-02T12:12:54.411Z">
+<meta property="og:updated_time" content="2020-09-07T01:22:32.465Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="HashMap源码分析">
+<meta name="twitter:title" content="MySQL锁机制">
+<meta name="twitter:description" content="表级锁行级锁页面锁">
     
 
     
@@ -158,9 +161,9 @@
         
             <ul class="unstyled" id="tree">
                 
-                    <li class="directory">
+                    <li class="directory open">
                         <a href="#" data-role="directory">
-                            <i class="fa fa-folder"></i>
+                            <i class="fa fa-folder-open"></i>
                             &nbsp;
                             DB
                         </a>
@@ -170,6 +173,12 @@
                     <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
                 
                     <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务/">MySQL事务</a></li>
+                
+                    <li class="file active"><a href="/Blog/DB/MySQL锁机制/">MySQL锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
                 
             </ul>
         
@@ -209,9 +218,9 @@
         
                     </li>
                 
-                    <li class="directory open">
+                    <li class="directory">
                         <a href="#" data-role="directory">
-                            <i class="fa fa-folder-open"></i>
+                            <i class="fa fa-folder"></i>
                             &nbsp;
                             Java
                         </a>
@@ -269,9 +278,9 @@
         
                     </li>
                 
-                    <li class="directory open">
+                    <li class="directory">
                         <a href="#" data-role="directory">
-                            <i class="fa fa-folder-open"></i>
+                            <i class="fa fa-folder"></i>
                             &nbsp;
                             基础
                         </a>
@@ -282,13 +291,11 @@
                 
                     <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
                 
-                    <li class="file active"><a href="/Blog/Java/基础/HashMap源码分析/">HashMap源码分析</a></li>
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
                 
-                    <li class="file"><a href="/Blog/Java/基础/ConcurrentHashMap源码分析/">ConcurrentHashMap源码分析</a></li>
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
                 
-                    <li class="file"><a href="/Blog/Java/基础/Synchronized总结/">Synchronized总结</a></li>
-                
-                    <li class="file"><a href="/Blog/Java/基础/Volatile源码分析/">Volatile源码分析</a></li>
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
                 
             </ul>
         
@@ -322,17 +329,11 @@
                         
             <ul class="unstyled" id="tree">
                 
-                    <li class="file"><a href="/Blog/Java/并发/CAS原理及使用场景/">CAS原理及使用场景</a></li>
-                
-                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
-                
-                    <li class="file"><a href="/Blog/Java/并发/Volatile源码分析/">Volatile源码分析</a></li>
-                
-                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
                 
                     <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
                 
-                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
                 
             </ul>
         
@@ -558,11 +559,11 @@
                 
                     <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
                 
-                    <li class="file"><a href="/Blog/算法/时间&空间复杂/">时间&空间复杂</a></li>
-                
                     <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
                 
                     <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
                 
             </ul>
         
@@ -659,7 +660,7 @@
     <div id="toTop" class="fa fa-angle-up"></div>
 </aside>
         
-        <section id="main"><article id="post-Java/基础/HashMap源码分析" class="article article-type-post" itemscope itemprop="blogPost">
+        <section id="main"><article id="post-DB/MySQL锁机制" class="article article-type-post" itemscope itemprop="blogPost">
     <div class="article-inner">
         
         
@@ -669,20 +670,20 @@
                         
     <div class="article-category">
         <i class="fa fa-folder"></i>
-        <a class="article-category-link" href="/categories/Java/">Java</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Java/基础/">基础</a>
+        <a class="article-category-link" href="/categories/DB/">DB</a>
     </div>
 
                         
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/HashMap/">HashMap</a>
+        <a class="tag-link" href="/tags/MySQL/">MySQL</a>
     </div>
 
                         
     <div class="article-date">
         <i class="fa fa-calendar"></i>
-        <a href="/Blog/Java/基础/HashMap源码分析/">
-            <time datetime="2019-09-01T16:00:00.000Z" itemprop="datePublished">2019-09-02</time>
+        <a href="/Blog/DB/MySQL锁机制/">
+            <time datetime="2019-09-04T16:00:00.000Z" itemprop="datePublished">2019-09-05</time>
         </a>
     </div>
 
@@ -693,7 +694,7 @@
                 
     
         <h1 class="article-title" itemprop="name">
-            HashMap源码分析
+            MySQL锁机制
         </h1>
     
 
@@ -706,7 +707,7 @@
                     
             
             
-                
+                <h3 id="表级锁"><a href="#表级锁" class="headerlink" title="表级锁"></a>表级锁</h3><h3 id="行级锁"><a href="#行级锁" class="headerlink" title="行级锁"></a>行级锁</h3><h3 id="页面锁"><a href="#页面锁" class="headerlink" title="页面锁"></a>页面锁</h3>
         </div>
         
     <footer class="article-footer">
@@ -718,19 +719,19 @@
     
     <nav id="article-nav">
         
-            <a href="/Blog/Java/基础/ConcurrentHashMap源码分析/" id="article-nav-newer" class="article-nav-link-wrap">
+            <a href="/Blog/DB/索引的原理与使用/" id="article-nav-newer" class="article-nav-link-wrap">
                 <strong class="article-nav-caption">Newer</strong>
                 <div class="article-nav-title">
                     
-                        ConcurrentHashMap源码分析
+                        索引的原理与使用
                     
                 </div>
             </a>
         
         
-            <a href="/Blog/杂记/Win实用工具/" id="article-nav-older" class="article-nav-link-wrap">
+            <a href="/Blog/DB/MySQL事务/" id="article-nav-older" class="article-nav-link-wrap">
                 <strong class="article-nav-caption">Older</strong>
-                <div class="article-nav-title">Win实用工具</div>
+                <div class="article-nav-title">MySQL事务</div>
             </a>
         
     </nav>
