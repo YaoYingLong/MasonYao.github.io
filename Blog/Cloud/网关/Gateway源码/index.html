@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Gateway源码 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="网关,Gateway">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="网关作为流量的入口，常用的功能包括路由转发，权限校验，限流等，Spring Cloud Gateway是Spring Cloud官方推出的由WebFlux + Netty + Reactor实现的响应式的第二代API网关框架，定位于取代Netflix Zuul。 Spring Cloud Gateway的核心概念：路由Route、断言、过滤器。路由是网关中最基础的部分，路由信息包括一个ID、一个目">
+<meta name="keywords" content="网关,Gateway">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Gateway源码">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/网关/Gateway源码/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="网关作为流量的入口，常用的功能包括路由转发，权限校验，限流等，Spring Cloud Gateway是Spring Cloud官方推出的由WebFlux + Netty + Reactor实现的响应式的第二代API网关框架，定位于取代Netflix Zuul。 Spring Cloud Gateway的核心概念：路由Route、断言、过滤器。路由是网关中最基础的部分，路由信息包括一个ID、一个目">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/网关/Gateway工作原理.png">
+<meta property="og:updated_time" content="2021-11-10T16:11:29.406Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Gateway源码">
+<meta name="twitter:description" content="网关作为流量的入口，常用的功能包括路由转发，权限校验，限流等，Spring Cloud Gateway是Spring Cloud官方推出的由WebFlux + Netty + Reactor实现的响应式的第二代API网关框架，定位于取代Netflix Zuul。 Spring Cloud Gateway的核心概念：路由Route、断言、过滤器。路由是网关中最基础的部分，路由信息包括一个ID、一个目">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Cloud/网关/Gateway工作原理.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file active"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-Cloud/网关/Gateway源码" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/网关/">网关</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Gateway/">Gateway</a>, <a class="tag-link" href="/tags/网关/">网关</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/网关/Gateway源码/">
+            <time datetime="2021-11-09T16:00:00.000Z" itemprop="datePublished">2021-11-10</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Gateway源码
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>网关作为流量的入口，常用的功能包括<strong>路由转发</strong>，<strong>权限校验</strong>，<strong>限流</strong>等，Spring Cloud Gateway是Spring Cloud官方推出的由<strong><code>WebFlux + Netty + Reactor</code></strong>实现的<strong>响应式</strong>的<strong>第二代<code>API</code>网关</strong>框架，定位于取代Netflix Zuul。</p>
+<p>Spring Cloud Gateway的核心概念：<strong>路由<code>Route</code></strong>、<strong>断言</strong>、<strong>过滤器</strong>。路由是网关中最基础的部分，路由信息包括一个ID、一个目的URI、一组断言工厂、一组Filter组成，若断言为真则说明请求的URL和配置的路由匹配；Spring Cloud Gateway中的断言函数类型是Spring5.0框架中的<strong><code>ServerWebExchange</code></strong>，允许开发者去定义匹配Http Request中的任何信息，如请求头和参数等；Spring Cloud Gateway的过滤器分为<strong><code>GatewayFilIer</code></strong>和<strong><code>GlobalFilter</code></strong>，<strong>可对请求和响应进行处理</strong>。</p>
+<p><img src="../../../../../images/Cloud/网关/Gateway工作原理.png" alt></p>
+<p>Spring Cloud Gateway工作原理跟Zuul的差不多，最大的区别就是Gateway的Filter只有<strong><code>pre</code></strong>和<strong><code>post</code></strong>两种，客户端向Spring Cloud Gateway发出请求，若请求与网关定义的路由匹配，则该请求会被发送到网关Web处理程序，此时处理程序运行特定的请求过滤器链。过滤器之间用虚线分开的原因是<strong>过滤器可能会在发送代理请求的前后执行逻辑</strong>。所有<strong><code>pre</code>过滤器逻辑先执行</strong>，然后<strong>执行代理请求</strong>；代理请求完成后<strong>执行post过滤器逻辑</strong>。</p>
+<p>Gateway对<strong>请求处理</strong>的核心逻辑是在<strong><code>DispatcherHandler</code></strong>中，在<strong><code>DispatcherHandler</code></strong>中依次调用<strong><code>HandlerMapping</code></strong>、<strong><code>HandlerAdapter</code></strong>、<strong><code>HandlerResultHandler</code></strong>三个核心接口</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DispatcherHandler</span> <span class="keyword">implements</span> <span class="title">WebHandler</span>, <span class="title">ApplicationContextAware</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Mono&lt;Void&gt; <span class="title">handle</span><span class="params">(ServerWebExchange exchange)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.handlerMappings == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> createNotFoundError();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> Flux.fromIterable(<span class="keyword">this</span>.handlerMappings)</span><br><span class="line">            .concatMap(mapping -&gt; mapping.getHandler(exchange)) <span class="comment">// 获取具体的HandlerMapping，这里返回FilteringWebHandler</span></span><br><span class="line">            .next()</span><br><span class="line">            .switchIfEmpty(createNotFoundError()) <span class="comment">// 若路由断言匹配未匹配到，则返回Empty，这里对Empty进行处理</span></span><br><span class="line">            .flatMap(handler -&gt; invokeHandler(exchange, handler)) <span class="comment">// 调用具体的HandlerAdapter的handle</span></span><br><span class="line">            .flatMap(result -&gt; handleResult(exchange, result));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Mono&lt;HandlerResult&gt; <span class="title">invokeHandler</span><span class="params">(ServerWebExchange exchange, Object handler)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.handlerAdapters != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">for</span> (HandlerAdapter handlerAdapter : <span class="keyword">this</span>.handlerAdapters) &#123;</span><br><span class="line">                <span class="keyword">if</span> (handlerAdapter.supports(handler)) &#123;</span><br><span class="line">                    <span class="keyword">return</span> handlerAdapter.handle(exchange, handler);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> Mono.error(<span class="keyword">new</span> IllegalStateException(<span class="string">"No HandlerAdapter: "</span> + handler));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Mono&lt;Void&gt; <span class="title">handleResult</span><span class="params">(ServerWebExchange exchange, HandlerResult result)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getResultHandler(result).handleResult(exchange, result)</span><br><span class="line">            .checkpoint(<span class="string">"Handler "</span> + result.getHandler() + <span class="string">" [DispatcherHandler]"</span>)</span><br><span class="line">            .onErrorResume(ex -&gt; result.applyExceptionHandler(ex).flatMap(exResult -&gt; &#123;</span><br><span class="line">                String text = <span class="string">"Exception handler "</span> + exResult.getHandler() + <span class="string">", error=\""</span> + ex.getMessage() + <span class="string">"\" [DispatcherHandler]"</span>;</span><br><span class="line">                <span class="keyword">return</span> getResultHandler(exResult).handleResult(exchange, exResult).checkpoint(text);</span><br><span class="line">            &#125;));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> HandlerResultHandler <span class="title">getResultHandler</span><span class="params">(HandlerResult handlerResult)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.resultHandlers != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">for</span> (HandlerResultHandler resultHandler : <span class="keyword">this</span>.resultHandlers) &#123;</span><br><span class="line">                <span class="keyword">if</span> (resultHandler.supports(handlerResult)) &#123;</span><br><span class="line">                    <span class="keyword">return</span> resultHandler;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"No HandlerResultHandler for "</span> + handlerResult.getReturnValue());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> &lt;R&gt; <span class="function">Mono&lt;R&gt; <span class="title">createNotFoundError</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Mono.defer(() -&gt; &#123;</span><br><span class="line">            Exception ex = <span class="keyword">new</span> ResponseStatusException(HttpStatus.NOT_FOUND, <span class="string">"No matching handler"</span>);</span><br><span class="line">            <span class="keyword">return</span> Mono.error(ex);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="HandlerMapping"><a href="#HandlerMapping" class="headerlink" title="HandlerMapping"></a>HandlerMapping</h4><p><strong><code>HandlerMapping</code></strong>负责路径到<strong><code>Handler</code></strong>的映射，Gateway中<strong><code>RoutePredicateHandlerMapping</code></strong>实现了<strong><code>AbstractHandlerMapping</code></strong>，其作用是执行所有的<strong><code>Route</code></strong>的断言工厂<strong><code>PredicateFactory</code>匹配路由信息</strong>，<strong>通过断言判断路由是否可用</strong>，且将<strong>路由信息</strong>绑定到<strong>请求上下文中</strong>，最终返回<strong><code>FilteringWebHandler</code></strong>。</p>
+<p>也可自定义断言工厂需<strong>继承<code>AbstractRoutePredicateFactory</code>类重写<code>apply</code>方法</strong>的逻辑。在apply方法中可以<strong>通过<code>exchange.getRequest()</code>拿到<code>ServerHttpRequest</code>对象</strong>，从而可获取到请求的参数、请求方式、请求头等信息。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractHandlerMapping</span> <span class="keyword">extends</span> <span class="title">ApplicationObjectSupport</span> <span class="keyword">implements</span> <span class="title">HandlerMapping</span>, <span class="title">Ordered</span>, <span class="title">BeanNameAware</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Mono&lt;Object&gt; <span class="title">getHandler</span><span class="params">(ServerWebExchange exchange)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getHandlerInternal(exchange).map(handler -&gt; &#123;</span><br><span class="line">            ServerHttpRequest request = exchange.getRequest();</span><br><span class="line">            <span class="keyword">if</span> (hasCorsConfigurationSource(handler) || CorsUtils.isPreFlightRequest(request)) &#123; <span class="comment">// 处理跨域问题</span></span><br><span class="line">                CorsConfiguration config = (<span class="keyword">this</span>.corsConfigurationSource != <span class="keyword">null</span> ? <span class="keyword">this</span>.corsConfigurationSource.getCorsConfiguration(exchange) : <span class="keyword">null</span>);</span><br><span class="line">                CorsConfiguration handlerConfig = getCorsConfiguration(handler, exchange);</span><br><span class="line">                config = (config != <span class="keyword">null</span> ? config.combine(handlerConfig) : handlerConfig);</span><br><span class="line">                <span class="keyword">if</span> (!<span class="keyword">this</span>.corsProcessor.process(config, exchange) || CorsUtils.isPreFlightRequest(request)) &#123;</span><br><span class="line">                    <span class="keyword">return</span> REQUEST_HANDLED_HANDLER;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> handler;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先通过<strong><code>lookupRoute</code></strong>方法找出所有与当前请求<strong>匹配的<code>Route</code></strong>，在匹配之前从<strong><code>RouteLocator</code></strong>的实现类<strong><code>CachingRouteLocator</code></strong>中已经转换好的<strong><code>Route</code></strong>，在应用启动时会通过<strong><code>RouteLocator</code></strong>的实现类<strong><code>RouteDefinitionRouteLocator</code></strong>通过<strong><code>PropertiesRouteDefinitionLocator</code></strong>从<strong><code>GatewayProperties</code></strong>中读取路由配置<strong><code>RouteDefinition</code></strong>且将其转换为<strong><code>Route</code></strong>并缓存到<strong><code>CachingRouteLocator</code></strong>中。除此之外若在<strong><code>DiscoveryClientRouteDefinitionLocator</code></strong>会获取集群中所有的实例并将其构建成<strong><code>RouteDefinition</code></strong>，最终转换并合并到<strong><code>CachingRouteLocator</code></strong>中。</p>
+<p>在<strong><code>lookupRoute</code></strong>中通过遍历所有的<strong><code>Route</code></strong>，并遍历调用其具体的<strong><code>PredicateFactory</code></strong>的<strong><code>test</code></strong>方法，过滤出其<strong><code>test</code></strong>方法放回<strong><code>true</code></strong>的<strong><code>route</code></strong>。然后将匹配的路由<strong>绑定到请求上下文中</strong>。最终返回<strong><code>FilteringWebHandler</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RoutePredicateHandlerMapping</span> <span class="keyword">extends</span> <span class="title">AbstractHandlerMapping</span> </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> Mono&lt;?&gt; getHandlerInternal(ServerWebExchange exchange) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.managementPortType == DIFFERENT &amp;&amp; <span class="keyword">this</span>.managementPort != <span class="keyword">null</span> &amp;&amp; exchange.getRequest().getURI().getPort() == <span class="keyword">this</span>.managementPort) &#123;</span><br><span class="line">            <span class="keyword">return</span> Mono.empty();</span><br><span class="line">        &#125;</span><br><span class="line">        exchange.getAttributes().put(GATEWAY_HANDLER_MAPPER_ATTR, getSimpleName());</span><br><span class="line">        <span class="keyword">return</span> lookupRoute(exchange).flatMap((Function&lt;Route, Mono&lt;?&gt;&gt;) r -&gt; &#123;</span><br><span class="line">            exchange.getAttributes().remove(GATEWAY_PREDICATE_ROUTE_ATTR);</span><br><span class="line">            exchange.getAttributes().put(GATEWAY_ROUTE_ATTR, r); <span class="comment">// 将匹配的路由绑定到请求上下文中，以便FilteringWebHandler的handle方法中使用</span></span><br><span class="line">            <span class="keyword">return</span> Mono.just(webHandler); <span class="comment">// 最终返回FilteringWebHandler</span></span><br><span class="line">        &#125;).switchIfEmpty(Mono.empty().then(Mono.fromRunnable(() -&gt; &#123; <span class="comment">// 未找到匹配的路由</span></span><br><span class="line">            exchange.getAttributes().remove(GATEWAY_PREDICATE_ROUTE_ATTR);</span><br><span class="line">        &#125;)));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> Mono&lt;Route&gt; <span class="title">lookupRoute</span><span class="params">(ServerWebExchange exchange)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.routeLocator.getRoutes().concatMap(route -&gt; Mono.just(route).filterWhen(r -&gt; &#123;</span><br><span class="line">            exchange.getAttributes().put(GATEWAY_PREDICATE_ROUTE_ATTR, r.getId());</span><br><span class="line">            <span class="keyword">return</span> r.getPredicate().apply(exchange); <span class="comment">// 调用具体的PredicateFactory的test方法，过滤出test方法放回true的route</span></span><br><span class="line">        &#125;).doOnError(e -&gt; logger.error(<span class="string">"Error applying predicate for route: "</span> + route.getId(), e)).onErrorResume(e -&gt; Mono.empty()))</span><br><span class="line">            .next()</span><br><span class="line">            .map(route -&gt; &#123;</span><br><span class="line">                validateRoute(route, exchange);</span><br><span class="line">                <span class="keyword">return</span> route;</span><br><span class="line">            &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="HandlerAdapter调用"><a href="#HandlerAdapter调用" class="headerlink" title="HandlerAdapter调用"></a>HandlerAdapter调用</h4><p>具体的<strong><code>HandlerAdapter</code></strong>的调用，在<strong><code>DelegatingWebFluxConfiguration</code></strong>配置类的超类<strong><code>WebFluxConfigurationSupport</code></strong>中注入了<strong><code>SimpleHandlerAdapter</code></strong>。而<strong><code>FilteringWebHandler</code></strong>是<strong><code>WebHandler</code></strong>的子类。在<strong><code>SimpleHandlerAdapter</code></strong>的<strong><code>handle</code></strong>方法中调用<strong><code>FilteringWebHandler</code></strong>的<strong><code>handle</code></strong>方法。由于<strong><code>SimpleHandlerAdapter</code></strong>返回的是<strong><code>Mono.empty()</code></strong>故不会触发<strong><code>handleResult</code></strong>方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleHandlerAdapter</span> <span class="keyword">implements</span> <span class="title">HandlerAdapter</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">supports</span><span class="params">(Object handler)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> WebHandler<span class="class">.<span class="keyword">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">handler</span>.<span class="title">getClass</span>())</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Mono&lt;HandlerResult&gt; <span class="title">handle</span><span class="params">(ServerWebExchange exchange, Object handler)</span> </span>&#123;</span><br><span class="line">        WebHandler webHandler = (WebHandler) handler;</span><br><span class="line">        Mono&lt;Void&gt; mono = webHandler.handle(exchange);</span><br><span class="line">        <span class="keyword">return</span> mono.then(Mono.empty());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>GatewayAutoConfiguration</code></strong>配置类中注入了<strong><code>FilteringWebHandler</code></strong>，由于全局的过滤器<strong><code>GlobalFilter</code></strong>与<strong><code>GatewayFilter</code></strong>故在其构造方法中通过适配器模式将<strong><code>GlobalFilter</code></strong>转换成了<strong><code>GatewayFilter</code></strong>。然后通过责任链模式挨个调用<strong><code>GatewayFilter</code></strong>的<strong><code>filter</code></strong>方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span>(proxyBeanMethods = <span class="keyword">false</span>)</span><br><span class="line"><span class="meta">@ConditionalOnProperty</span>(name = <span class="string">"spring.cloud.gateway.enabled"</span>, matchIfMissing = <span class="keyword">true</span>)</span><br><span class="line"><span class="meta">@EnableConfigurationProperties</span></span><br><span class="line"><span class="meta">@AutoConfigureBefore</span>(&#123; HttpHandlerAutoConfiguration<span class="class">.<span class="keyword">class</span>, <span class="title">WebFluxAutoConfiguration</span>.<span class="title">class</span> &#125;)</span></span><br><span class="line"><span class="class">@<span class="title">AutoConfigureAfter</span>(</span>&#123; GatewayLoadBalancerClientAutoConfiguration<span class="class">.<span class="keyword">class</span>, <span class="title">GatewayClassPathWarningAutoConfiguration</span>.<span class="title">class</span> &#125;)</span></span><br><span class="line"><span class="class">@<span class="title">ConditionalOnClass</span>(<span class="title">DispatcherHandler</span>.<span class="title">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> <span class="title">class</span> <span class="title">GatewayAutoConfiguration</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> FilteringWebHandler <span class="title">filteringWebHandler</span><span class="params">(List&lt;GlobalFilter&gt; globalFilters)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> FilteringWebHandler(globalFilters);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FilteringWebHandler</span> <span class="keyword">implements</span> <span class="title">WebHandler</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> List&lt;GatewayFilter&gt; globalFilters;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FilteringWebHandler</span><span class="params">(List&lt;GlobalFilter&gt; globalFilters)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.globalFilters = loadFilters(globalFilters);<span class="comment">// 通过适配器模式将GlobalFilter转换为GatewayFilter</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> List&lt;GatewayFilter&gt; <span class="title">loadFilters</span><span class="params">(List&lt;GlobalFilter&gt; filters)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> filters.stream().map(filter -&gt; &#123;</span><br><span class="line">            GatewayFilterAdapter gatewayFilter = <span class="keyword">new</span> GatewayFilterAdapter(filter);</span><br><span class="line">            <span class="keyword">if</span> (filter <span class="keyword">instanceof</span> Ordered) &#123;</span><br><span class="line">                <span class="keyword">int</span> order = ((Ordered) filter).getOrder();</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> OrderedGatewayFilter(gatewayFilter, order);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> gatewayFilter;</span><br><span class="line">        &#125;).collect(Collectors.toList());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Mono&lt;Void&gt; <span class="title">handle</span><span class="params">(ServerWebExchange exchange)</span> </span>&#123;</span><br><span class="line">        Route route = exchange.getRequiredAttribute(GATEWAY_ROUTE_ATTR); <span class="comment">// 从请求上下文中取出前面绑定的Route</span></span><br><span class="line">        List&lt;GatewayFilter&gt; gatewayFilters = route.getFilters(); <span class="comment">// 获取Route中配置的filters</span></span><br><span class="line">        List&lt;GatewayFilter&gt; combined = <span class="keyword">new</span> ArrayList&lt;&gt;(<span class="keyword">this</span>.globalFilters);</span><br><span class="line">        combined.addAll(gatewayFilters); <span class="comment">// 合并配置的filters和自动注入的全局的filters</span></span><br><span class="line">        AnnotationAwareOrderComparator.sort(combined); <span class="comment">// 对GatewayFilter列表排序</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> DefaultGatewayFilterChain(combined).filter(exchange);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultGatewayFilterChain</span> <span class="keyword">implements</span> <span class="title">GatewayFilterChain</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">int</span> index;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> List&lt;GatewayFilter&gt; filters;</span><br><span class="line"></span><br><span class="line">    DefaultGatewayFilterChain(List&lt;GatewayFilter&gt; filters) &#123;</span><br><span class="line">        <span class="keyword">this</span>.filters = filters;</span><br><span class="line">        <span class="keyword">this</span>.index = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">DefaultGatewayFilterChain</span><span class="params">(DefaultGatewayFilterChain parent, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.filters = parent.getFilters();</span><br><span class="line">        <span class="keyword">this</span>.index = index;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Mono&lt;Void&gt; <span class="title">filter</span><span class="params">(ServerWebExchange exchange)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Mono.defer(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span>.index &lt; filters.size()) &#123;</span><br><span class="line">                GatewayFilter filter = filters.get(<span class="keyword">this</span>.index);</span><br><span class="line">                DefaultGatewayFilterChain chain = <span class="keyword">new</span> DefaultGatewayFilterChain(<span class="keyword">this</span>, <span class="keyword">this</span>.index + <span class="number">1</span>);</span><br><span class="line">                <span class="keyword">return</span> filter.filter(exchange, chain);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">return</span> Mono.empty(); <span class="comment">// complete</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>也可自定义<strong><code>GatewayFilter</code></strong>，自定义<strong><code>GatewayFilter</code></strong>是通过自定义过滤器工厂来完成的，自定义工厂可集成一些列的<strong><code>AbstractGatewayFilterFactory</code></strong>来完成响应的功能，还可通过实现<strong><code>GlobalFilter</code></strong>来自定义全局的过滤器。对于<strong><code>uri</code></strong>支持<strong><code>lb://</code></strong>的方式类配置目标微服务的请求地址，就是通过<strong><code>LoadBalancerClientFilter</code></strong>过滤器来完成的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LoadBalancerClientFilter</span> <span class="keyword">implements</span> <span class="title">GlobalFilter</span>, <span class="title">Ordered</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> LOAD_BALANCER_CLIENT_FILTER_ORDER = <span class="number">10100</span>;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> LoadBalancerClient loadBalancer;</span><br><span class="line">    <span class="keyword">private</span> LoadBalancerProperties properties;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LoadBalancerClientFilter</span><span class="params">(LoadBalancerClient loadBalancer, LoadBalancerProperties properties)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.loadBalancer = loadBalancer;</span><br><span class="line">        <span class="keyword">this</span>.properties = properties;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getOrder</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> LOAD_BALANCER_CLIENT_FILTER_ORDER;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="meta">@SuppressWarnings</span>(<span class="string">"Duplicates"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Mono&lt;Void&gt; <span class="title">filter</span><span class="params">(ServerWebExchange exchange, GatewayFilterChain chain)</span> </span>&#123;</span><br><span class="line">        URI url = exchange.getAttribute(GATEWAY_REQUEST_URL_ATTR);</span><br><span class="line">        String schemePrefix = exchange.getAttribute(GATEWAY_SCHEME_PREFIX_ATTR);</span><br><span class="line">        <span class="keyword">if</span> (url == <span class="keyword">null</span> || (!<span class="string">"lb"</span>.equals(url.getScheme()) &amp;&amp; !<span class="string">"lb"</span>.equals(schemePrefix))) &#123;</span><br><span class="line">            <span class="keyword">return</span> chain.filter(exchange);</span><br><span class="line">        &#125;</span><br><span class="line">        addOriginalRequestUrl(exchange, url);</span><br><span class="line">        <span class="keyword">final</span> ServiceInstance instance = choose(exchange);</span><br><span class="line">        <span class="keyword">if</span> (instance == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> NotFoundException.create(properties.isUse404(), <span class="string">"Unable to find instance for "</span> + url.getHost());</span><br><span class="line">        &#125;</span><br><span class="line">        URI uri = exchange.getRequest().getURI();</span><br><span class="line">        String overrideScheme = instance.isSecure() ? <span class="string">"https"</span> : <span class="string">"http"</span>;</span><br><span class="line">        <span class="keyword">if</span> (schemePrefix != <span class="keyword">null</span>) &#123;</span><br><span class="line">            overrideScheme = url.getScheme();</span><br><span class="line">        &#125;</span><br><span class="line">        URI requestUrl = loadBalancer.reconstructURI(<span class="keyword">new</span> DelegatingServiceInstance(instance, overrideScheme), uri);</span><br><span class="line">        exchange.getAttributes().put(GATEWAY_REQUEST_URL_ATTR, requestUrl);</span><br><span class="line">        <span class="keyword">return</span> chain.filter(exchange);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> ServiceInstance <span class="title">choose</span><span class="params">(ServerWebExchange exchange)</span> </span>&#123; <span class="comment">// 通过负载均衡算法获取具体的实例对象</span></span><br><span class="line">        <span class="keyword">return</span> loadBalancer.choose(((URI) exchange.getAttribute(GATEWAY_REQUEST_URL_ATTR)).getHost());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/Feign集成原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Feign集成原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/seata/Seata分布式事务原理/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Seata分布式事务原理</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

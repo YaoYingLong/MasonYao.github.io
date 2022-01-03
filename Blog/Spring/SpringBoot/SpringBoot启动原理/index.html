@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        SpringBoot启动原理 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Spring,SpringBoot">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="SpringBoot的启动是SpringApplication.run(ElevenApplication.class, args)来完成的，首先在实例化SpringApplication时会去加载项目中所有的spring.factories配置文件数据到缓存中，并将所有的ApplicationContextInitializer和ApplicationListener筛选出来并实例化，其作用是对">
+<meta name="keywords" content="Spring,SpringBoot">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SpringBoot启动原理">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Spring/SpringBoot/SpringBoot启动原理/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="SpringBoot的启动是SpringApplication.run(ElevenApplication.class, args)来完成的，首先在实例化SpringApplication时会去加载项目中所有的spring.factories配置文件数据到缓存中，并将所有的ApplicationContextInitializer和ApplicationListener筛选出来并实例化，其作用是对">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Spring/SpringBoot/WebApplicationInitializer类图.png">
+<meta property="og:updated_time" content="2021-10-17T10:59:31.376Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SpringBoot启动原理">
+<meta name="twitter:description" content="SpringBoot的启动是SpringApplication.run(ElevenApplication.class, args)来完成的，首先在实例化SpringApplication时会去加载项目中所有的spring.factories配置文件数据到缓存中，并将所有的ApplicationContextInitializer和ApplicationListener筛选出来并实例化，其作用是对">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Spring/SpringBoot/WebApplicationInitializer类图.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file active"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-Spring/SpringBoot/SpringBoot启动原理" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Spring/">Spring</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Spring/SpringBoot/">SpringBoot</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Spring/">Spring</a>, <a class="tag-link" href="/tags/SpringBoot/">SpringBoot</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">
+            <time datetime="2021-10-14T16:00:00.000Z" itemprop="datePublished">2021-10-15</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            SpringBoot启动原理
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>SpringBoot的启动是<strong><code>SpringApplication.run(ElevenApplication.class, args)</code></strong>来完成的，首先在实例化SpringApplication时会去加载项目中所有的<strong><code>spring.factories</code></strong>配置文件数据到缓存中，并将所有的<strong><code>ApplicationContextInitializer</code></strong>和<strong><code>ApplicationListener</code></strong>筛选出来并实例化，其作用是对外扩张，以及对内的解耦，全局配置文件以及热部署插件就是通过这两个Initializer和Listener来完成的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringApplication</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> List&lt;ApplicationContextInitializer&lt;?&gt;&gt; initializers;</span><br><span class="line">    <span class="keyword">private</span> List&lt;ApplicationListener&lt;?&gt;&gt; listeners;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SpringApplication</span><span class="params">(Class&lt;?&gt;... primarySources)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(<span class="keyword">null</span>, primarySources);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SpringApplication</span><span class="params">(ResourceLoader resourceLoader, Class&lt;?&gt;... primarySources)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.resourceLoader = resourceLoader;</span><br><span class="line">        Assert.notNull(primarySources, <span class="string">"PrimarySources must not be null"</span>);</span><br><span class="line">        <span class="keyword">this</span>.primarySources = <span class="keyword">new</span> LinkedHashSet&lt;&gt;(Arrays.asList(primarySources));/ 将启动类放入primarySources</span><br><span class="line">        <span class="keyword">this</span>.webApplicationType = WebApplicationType.deduceFromClasspath(); <span class="comment">// 根据classpath下的类确定Web类型NONE、SERVLET、REACTIVE</span></span><br><span class="line">        <span class="keyword">this</span>.bootstrapRegistryInitializers = getBootstrapRegistryInitializersFromSpringFactories();</span><br><span class="line">        <span class="comment">// 去spring.factories中去获取所有key:org.springframework.context.ApplicationContextInitializer</span></span><br><span class="line">        setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer<span class="class">.<span class="keyword">class</span>))</span>;</span><br><span class="line">        <span class="comment">// 去spring.factories中去获取所有key: org.springframework.context.ApplicationListener</span></span><br><span class="line">        setListeners((Collection) getSpringFactoriesInstances(ApplicationListener<span class="class">.<span class="keyword">class</span>))</span>;</span><br><span class="line">        <span class="keyword">this</span>.mainApplicationClass = deduceMainApplicationClass(); <span class="comment">// 根据main方法推算出mainApplicationClass </span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> &lt;T&gt; <span class="function">Collection&lt;T&gt; <span class="title">getSpringFactoriesInstances</span><span class="params">(Class&lt;T&gt; type)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getSpringFactoriesInstances(type, <span class="keyword">new</span> Class&lt;?&gt;[] &#123;&#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> &lt;T&gt; <span class="function">Collection&lt;T&gt; <span class="title">getSpringFactoriesInstances</span><span class="params">(Class&lt;T&gt; type, Class&lt;?&gt;[] parameterTypes, Object... args)</span> </span>&#123;</span><br><span class="line">        ClassLoader classLoader = getClassLoader();</span><br><span class="line">        <span class="comment">// 根据类型筛选出spring.factories中配置的满足条件的类名列表</span></span><br><span class="line">        Set&lt;String&gt; names = <span class="keyword">new</span> LinkedHashSet&lt;&gt;(SpringFactoriesLoader.loadFactoryNames(type, classLoader));</span><br><span class="line">        <span class="comment">// 将满足条件的类实例化</span></span><br><span class="line">        List&lt;T&gt; instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);</span><br><span class="line">        AnnotationAwareOrderComparator.sort(instances);</span><br><span class="line">        <span class="keyword">return</span> instances;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringFactoriesLoader</span> </span>&#123; <span class="comment">// 加载Jar包中所有的spring.factories文件中配置的数据到缓存中</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String FACTORIES_RESOURCE_LOCATION = <span class="string">"META-INF/spring.factories"</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> List&lt;String&gt; <span class="title">loadFactoryNames</span><span class="params">(Class&lt;?&gt; factoryType, @Nullable ClassLoader classLoader)</span> </span>&#123;</span><br><span class="line">        ClassLoader classLoaderToUse = classLoader;</span><br><span class="line">        <span class="keyword">if</span> (classLoaderToUse == <span class="keyword">null</span>) &#123;</span><br><span class="line">            classLoaderToUse = SpringFactoriesLoader<span class="class">.<span class="keyword">class</span>.<span class="title">getClassLoader</span>()</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        String factoryTypeName = factoryType.getName();</span><br><span class="line">        <span class="keyword">return</span> loadSpringFactories(classLoaderToUse).getOrDefault(factoryTypeName, Collections.emptyList());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Map&lt;String, List&lt;String&gt;&gt; loadSpringFactories(ClassLoader classLoader) &#123;</span><br><span class="line">        Map&lt;String, List&lt;String&gt;&gt; result = cache.get(classLoader);</span><br><span class="line">        <span class="keyword">if</span> (result != <span class="keyword">null</span>) &#123; <span class="comment">// 若已加载过直接跳过</span></span><br><span class="line">            <span class="keyword">return</span> result;</span><br><span class="line">        &#125;</span><br><span class="line">        result = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Enumeration&lt;URL&gt; urls = classLoader.getResources(FACTORIES_RESOURCE_LOCATION);</span><br><span class="line">            <span class="keyword">while</span> (urls.hasMoreElements()) &#123;</span><br><span class="line">                URL url = urls.nextElement();</span><br><span class="line">                UrlResource resource = <span class="keyword">new</span> UrlResource(url);</span><br><span class="line">                Properties properties = PropertiesLoaderUtils.loadProperties(resource);</span><br><span class="line">                <span class="keyword">for</span> (Map.Entry&lt;?, ?&gt; entry : properties.entrySet()) &#123;</span><br><span class="line">                    String factoryTypeName = ((String) entry.getKey()).trim();</span><br><span class="line">                    String[] factoryImplementationNames = StringUtils.commaDelimitedListToStringArray((String) entry.getValue());</span><br><span class="line">                    <span class="keyword">for</span> (String factoryImplementationName : factoryImplementationNames) &#123;</span><br><span class="line">                        result.computeIfAbsent(factoryTypeName, key -&gt; <span class="keyword">new</span> ArrayList&lt;&gt;()).add(factoryImplementationName.trim());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            result.replaceAll((factoryType, implementations) -&gt; implementations.stream().distinct().collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList)));</span><br><span class="line">            cache.put(classLoader, result);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException ex) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Unable to load factories from location ["</span> + FACTORIES_RESOURCE_LOCATION + <span class="string">"]"</span>, ex);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过run方法完成SpringBoot的启动</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ConfigurableApplicationContext <span class="title">run</span><span class="params">(String... args)</span> </span>&#123;</span><br><span class="line">    StopWatch stopWatch = <span class="keyword">new</span> StopWatch(); <span class="comment">// 用来记录当前springboot启动耗时</span></span><br><span class="line">    stopWatch.start(); <span class="comment">// 记录启动开始时间</span></span><br><span class="line">    DefaultBootstrapContext bootstrapContext = createBootstrapContext();</span><br><span class="line">    ConfigurableApplicationContext context = <span class="keyword">null</span>; <span class="comment">// // 它是任何spring上下文的接口，可接收任何ApplicationContext实现</span></span><br><span class="line">    configureHeadlessProperty(); <span class="comment">// 开启了Headless模式</span></span><br><span class="line">    SpringApplicationRunListeners listeners = getRunListeners(args); <span class="comment">// 去spring.factroies中读取SpringApplicationRunListener组件，用来发布事件或者运行监听器</span></span><br><span class="line">    listeners.starting(bootstrapContext, <span class="keyword">this</span>.mainApplicationClass); <span class="comment">// ApplicationStartingEvent事件，在运行开始时发送</span></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 根据命令行参数实例化一个ApplicationArguments</span></span><br><span class="line">        ApplicationArguments applicationArguments = <span class="keyword">new</span> DefaultApplicationArguments(args); </span><br><span class="line">        <span class="comment">// 基于监听器预初始化环境：读取环境变量，读取配置文件信息</span></span><br><span class="line">        ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);</span><br><span class="line">        configureIgnoreBeanInfo(environment); <span class="comment">// 忽略beaninfo的bean</span></span><br><span class="line">        Banner printedBanner = printBanner(environment); <span class="comment">// 打印Banner横幅</span></span><br><span class="line">        context = createApplicationContext();</span><br><span class="line">        context.setApplicationStartup(<span class="keyword">this</span>.applicationStartup);</span><br><span class="line">        <span class="comment">// 预初始化spring上下文</span></span><br><span class="line">        prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);</span><br><span class="line">        refreshContext(context); <span class="comment">// 加载spring ioc容器</span></span><br><span class="line">        afterRefresh(context, applicationArguments);</span><br><span class="line">        stopWatch.stop();</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.logStartupInfo) &#123;</span><br><span class="line">            <span class="keyword">new</span> StartupInfoLogger(<span class="keyword">this</span>.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);</span><br><span class="line">        &#125;</span><br><span class="line">        listeners.started(context);</span><br><span class="line">        callRunners(context, applicationArguments);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">        handleRunFailure(context, ex, listeners);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(ex);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        listeners.running(context);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">        handleRunFailure(context, ex, <span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(ex);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> context;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>预初始化环境是<strong>基于监听器</strong>来读取<strong>环境变量</strong>和<strong>读取配置文件</strong>信息，首先根据<strong><code>webApplicationType</code></strong>创建<strong><code>Environment</code></strong>，创建就会读取<strong>Java环境变量</strong>和<strong>系统环境变量</strong>。然后将<strong>命令行参数</strong>读取环境变量中，通过发布<strong><code>ApplicationEnvironmentPreparedEvent</code></strong>监听器<strong>读取全局配置文件</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> ConfigurableEnvironment <span class="title">prepareEnvironment</span><span class="params">(SpringApplicationRunListeners listeners, DefaultBootstrapContext bootstrapContext, ApplicationArguments applicationArguments)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 根据webApplicationType创建Environment，创建就会读取：java环境变量和系统环境变量</span></span><br><span class="line">    ConfigurableEnvironment environment = getOrCreateEnvironment();</span><br><span class="line">    <span class="comment">// 将命令行参数读取环境变量中</span></span><br><span class="line">    configureEnvironment(environment, applicationArguments.getSourceArgs());</span><br><span class="line">    <span class="comment">// 将@PropertieSource的配置信息放在第一位，读取配置文件@PropertieSource优先级是最低的</span></span><br><span class="line">    ConfigurationPropertySources.attach(environment);</span><br><span class="line">    <span class="comment">// 发布了ApplicationEnvironmentPreparedEvent的监听器读取全局配置文件</span></span><br><span class="line">    listeners.environmentPrepared(bootstrapContext, environment);</span><br><span class="line">    <span class="comment">// 将所有spring.main开头的配置信息绑定SpringApplication</span></span><br><span class="line">    DefaultPropertiesPropertySource.moveToEnd(environment);</span><br><span class="line">    Assert.state(!environment.containsProperty(<span class="string">"spring.main.environment-prefix"</span>), <span class="string">"Environment prefix cannot be set via properties."</span>);</span><br><span class="line">    bindToSpringApplication(environment);</span><br><span class="line">    <span class="keyword">if</span> (!<span class="keyword">this</span>.isCustomEnvironment) &#123;</span><br><span class="line">        environment = <span class="keyword">new</span> EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment, deduceEnvironmentClass());</span><br><span class="line">    &#125;</span><br><span class="line">    ConfigurationPropertySources.attach(environment); <span class="comment">// 更新PropertySources</span></span><br><span class="line">    <span class="keyword">return</span> environment;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>根据应用类型<strong>创建Spring IoC上下文</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> ConfigurableApplicationContext <span class="title">createApplicationContext</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.applicationContextFactory.create(<span class="keyword">this</span>.webApplicationType);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ApplicationContextFactory</span> </span>&#123;</span><br><span class="line">    ApplicationContextFactory DEFAULT = (webApplicationType) -&gt; &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">switch</span> (webApplicationType) &#123;</span><br><span class="line">                <span class="keyword">case</span> SERVLET:</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> AnnotationConfigServletWebServerApplicationContext();</span><br><span class="line">                <span class="keyword">case</span> REACTIVE:</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> AnnotationConfigReactiveWebServerApplicationContext();</span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> AnnotationConfigApplicationContext();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unable create a default ApplicationContext instance, "</span> + <span class="string">"you may need a custom ApplicationContextFactory"</span>, ex);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line">    <span class="function">ConfigurableApplicationContext <span class="title">create</span><span class="params">(WebApplicationType webApplicationType)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>预初始化上下文，这里会发布<strong><code>ApplicationContextInitializedEvent</code></strong>事件，且设置<strong>重名的Bean不允许覆盖直接抛出异常</strong>，设置当前Spring容器<strong>是否</strong>要将<strong>所有bean设置为懒加载</strong>，然后通过<strong><code>AnnotatedBeanDefinitionReader</code></strong>的<strong><code>register</code></strong>方法将<strong><code>SpringApplication#run</code></strong>中传入的类注册到IoC容器中，读取完配置类后发布<strong><code>ApplicationPreparedEvent</code></strong>事件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">prepareContext</span><span class="params">(DefaultBootstrapContext bootstrapContext, ConfigurableApplicationContext context, ConfigurableEnvironment environment, SpringApplicationRunListeners listeners, ApplicationArguments applicationArguments, Banner printedBanner)</span> </span>&#123;</span><br><span class="line">    context.setEnvironment(environment);</span><br><span class="line">    postProcessApplicationContext(context);</span><br><span class="line">    applyInitializers(context); <span class="comment">// 拿到之前读取到所有ApplicationContextInitializer的组件， 循环调用initialize方法</span></span><br><span class="line">    listeners.contextPrepared(context); <span class="comment">// 发布了ApplicationContextInitializedEvent</span></span><br><span class="line">    bootstrapContext.close(context);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.logStartupInfo) &#123;</span><br><span class="line">        logStartupInfo(context.getParent() == <span class="keyword">null</span>);</span><br><span class="line">        logStartupProfileInfo(context);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 获取当前spring上下文beanFactory，负责创建bean</span></span><br><span class="line">    ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();</span><br><span class="line">    beanFactory.registerSingleton(<span class="string">"springApplicationArguments"</span>, applicationArguments);</span><br><span class="line">    <span class="keyword">if</span> (printedBanner != <span class="keyword">null</span>) &#123;</span><br><span class="line">        beanFactory.registerSingleton(<span class="string">"springBootBanner"</span>, printedBanner);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 若Spring下出现2个重名的bean, 则后读取到的会覆盖前面，SpringBoot在这里设置了不允许覆盖，当出现2个重名的bean会抛出异常</span></span><br><span class="line">    <span class="keyword">if</span> (beanFactory <span class="keyword">instanceof</span> DefaultListableBeanFactory) &#123;</span><br><span class="line">        ((DefaultListableBeanFactory) beanFactory).setAllowBeanDefinitionOverriding(<span class="keyword">this</span>.allowBeanDefinitionOverriding);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 设置当前spring容器是不是要将所有的bean设置为懒加载</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.lazyInitialization) &#123;</span><br><span class="line">        context.addBeanFactoryPostProcessor(<span class="keyword">new</span> LazyInitializationBeanFactoryPostProcessor());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 即传入的ElevenApplication</span></span><br><span class="line">    Set&lt;Object&gt; sources = getAllSources();</span><br><span class="line">    Assert.notEmpty(sources, <span class="string">"Sources must not be empty"</span>);</span><br><span class="line">    <span class="comment">// 读取主启动类将它注册为BD、就和以前register启动类一个意思，因为后续要根据配置类解析配置的所有bean</span></span><br><span class="line">    load(context, sources.toArray(<span class="keyword">new</span> Object[<span class="number">0</span>])); </span><br><span class="line">    listeners.contextLoaded(context); <span class="comment">// 读取完配置类后发送ApplicationPreparedEvent</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最后调用容器启动最重要的<strong><code>refresh()</code></strong>方法来完成Bean的扫描注册和实例化等工作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">refreshContext</span><span class="params">(ConfigurableApplicationContext context)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.registerShutdownHook) &#123;</span><br><span class="line">        shutdownHook.registerApplicationContext(context);</span><br><span class="line">    &#125;</span><br><span class="line">    refresh(context);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">refresh</span><span class="params">(ConfigurableApplicationContext applicationContext)</span> </span>&#123;</span><br><span class="line">    applicationContext.refresh();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="内嵌Web容器启动"><a href="#内嵌Web容器启动" class="headerlink" title="内嵌Web容器启动"></a>内嵌Web容器启动</h4><p>内嵌Web容器的启动是在<strong><code>refresh()</code></strong>中的<strong><code>onRefresh()</code></strong>中完成的，最终调用子容器<strong><code>ServletWebServerApplicationContext</code></strong>的<strong><code>onRefresh()</code></strong>方法，从而调用<strong><code>createWebServer()</code></strong>创建Web容器。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ServletWebServerApplicationContext</span> <span class="keyword">extends</span> <span class="title">GenericWebApplicationContext</span> <span class="keyword">implements</span> <span class="title">ConfigurableWebServerApplicationContext</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onRefresh</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onRefresh();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            createWebServer();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ApplicationContextException(<span class="string">"Unable to start web server"</span>, ex);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">createWebServer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        WebServer webServer = <span class="keyword">this</span>.webServer;</span><br><span class="line">        ServletContext servletContext = getServletContext();</span><br><span class="line">        <span class="keyword">if</span> (webServer == <span class="keyword">null</span> &amp;&amp; servletContext == <span class="keyword">null</span>) &#123;</span><br><span class="line">            StartupStep createWebServer = <span class="keyword">this</span>.getApplicationStartup().start(<span class="string">"spring.boot.webserver.create"</span>);</span><br><span class="line">            ServletWebServerFactory factory = getWebServerFactory();</span><br><span class="line">            createWebServer.tag(<span class="string">"factory"</span>, factory.getClass().toString());</span><br><span class="line">            <span class="keyword">this</span>.webServer = factory.getWebServer(getSelfInitializer());</span><br><span class="line">            createWebServer.end();</span><br><span class="line">            getBeanFactory().registerSingleton(<span class="string">"webServerGracefulShutdown"</span>, <span class="keyword">new</span> WebServerGracefulShutdownLifecycle(<span class="keyword">this</span>.webServer));</span><br><span class="line">            getBeanFactory().registerSingleton(<span class="string">"webServerStartStop"</span>, <span class="keyword">new</span> WebServerStartStopLifecycle(<span class="keyword">this</span>, <span class="keyword">this</span>.webServer));</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (servletContext != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                getSelfInitializer().onStartup(servletContext);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ServletException ex) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> ApplicationContextException(<span class="string">"Cannot initialize servlet context"</span>, ex);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        initPropertySources();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TomcatServletWebServerFactory</span> <span class="keyword">extends</span> <span class="title">AbstractServletWebServerFactory</span> <span class="keyword">implements</span> <span class="title">ConfigurableTomcatWebServerFactory</span>, <span class="title">ResourceLoaderAware</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> WebServer <span class="title">getWebServer</span><span class="params">(ServletContextInitializer... initializers)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.disableMBeanRegistry) &#123;</span><br><span class="line">            Registry.disableRegistry();</span><br><span class="line">        &#125;</span><br><span class="line">        Tomcat tomcat = <span class="keyword">new</span> Tomcat();</span><br><span class="line">        File baseDir = (<span class="keyword">this</span>.baseDirectory != <span class="keyword">null</span>) ? <span class="keyword">this</span>.baseDirectory : createTempDir(<span class="string">"tomcat"</span>);</span><br><span class="line">        tomcat.setBaseDir(baseDir.getAbsolutePath());</span><br><span class="line">        Connector connector = <span class="keyword">new</span> Connector(<span class="keyword">this</span>.protocol);</span><br><span class="line">        connector.setThrowOnFailure(<span class="keyword">true</span>);</span><br><span class="line">        tomcat.getService().addConnector(connector);</span><br><span class="line">        customizeConnector(connector);</span><br><span class="line">        tomcat.setConnector(connector);</span><br><span class="line">        tomcat.getHost().setAutoDeploy(<span class="keyword">false</span>);</span><br><span class="line">        configureEngine(tomcat.getEngine());</span><br><span class="line">        <span class="keyword">for</span> (Connector additionalConnector : <span class="keyword">this</span>.additionalTomcatConnectors) &#123;</span><br><span class="line">            tomcat.getService().addConnector(additionalConnector);</span><br><span class="line">        &#125;</span><br><span class="line">        prepareContext(tomcat.getHost(), initializers);</span><br><span class="line">        <span class="keyword">return</span> getTomcatWebServer(tomcat);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> TomcatWebServer <span class="title">getTomcatWebServer</span><span class="params">(Tomcat tomcat)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> TomcatWebServer(tomcat, getPort() &gt;= <span class="number">0</span>, getShutdown());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TomcatWebServer</span> <span class="keyword">implements</span> <span class="title">WebServer</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">TomcatWebServer</span><span class="params">(Tomcat tomcat, <span class="keyword">boolean</span> autoStart, Shutdown shutdown)</span> </span>&#123;</span><br><span class="line">        Assert.notNull(tomcat, <span class="string">"Tomcat Server must not be null"</span>);</span><br><span class="line">        <span class="keyword">this</span>.tomcat = tomcat;</span><br><span class="line">        <span class="keyword">this</span>.autoStart = autoStart;</span><br><span class="line">        <span class="keyword">this</span>.gracefulShutdown = (shutdown == Shutdown.GRACEFUL) ? <span class="keyword">new</span> GracefulShutdown(tomcat) : <span class="keyword">null</span>;</span><br><span class="line">        initialize();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initialize</span><span class="params">()</span> <span class="keyword">throws</span> WebServerException </span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>.monitor) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                addInstanceIdToEngineName();</span><br><span class="line">                Context context = findContext();</span><br><span class="line">                context.addLifecycleListener((event) -&gt; &#123;</span><br><span class="line">                    <span class="keyword">if</span> (context.equals(event.getSource()) &amp;&amp; Lifecycle.START_EVENT.equals(event.getType())) &#123;</span><br><span class="line">                        removeServiceConnectors();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line">                <span class="keyword">this</span>.tomcat.start();</span><br><span class="line">                rethrowDeferredStartupExceptions();</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    ContextBindings.bindClassLoader(context, context.getNamingToken(), getClass().getClassLoader());</span><br><span class="line">                &#125; <span class="keyword">catch</span> (NamingException ex) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">                startDaemonAwaitThread();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">                stopSilently();</span><br><span class="line">                destroySilently();</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> WebServerException(<span class="string">"Unable to start embedded Tomcat"</span>, ex);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startDaemonAwaitThread</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        Thread awaitThread = <span class="keyword">new</span> Thread(<span class="string">"container-"</span> + (containerCounter.get())) &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                TomcatWebServer.<span class="keyword">this</span>.tomcat.getServer().await();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        awaitThread.setContextClassLoader(getClass().getClassLoader());</span><br><span class="line">        awaitThread.setDaemon(<span class="keyword">false</span>);</span><br><span class="line">        awaitThread.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="外部Servlet容器启动"><a href="#外部Servlet容器启动" class="headerlink" title="外部Servlet容器启动"></a>外部Servlet容器启动</h4><p>外部Servlet容器启动是通过war包以及<strong><code>SPI</code>机制</strong>来完成的，<strong><code>SPI</code>是一种服务发现机制</strong>，它通过在ClassPath路径下的<strong><code>META-INF/services</code></strong>文件夹查找文件，自动加载文件里所定义的类。需要将打包方式改成war包，然后将POM中Tomcat的依赖设置为不参与打包。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-boot-starter-tomcat<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">scope</span>&gt;</span>provided<span class="tag">&lt;/<span class="name">scope</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>当<strong><code>Servlet</code></strong>启动时回去<strong><code>META-INF/services</code></strong>文件夹中找到<strong><code>javax.servlet.ServletContainerInitializer</code></strong>，当Servlet容器启动时会去找到ServletContainerInitializer的实现类，从而创建它的实例调用<strong><code>onStartup</code></strong>方法。在Spring中ServletContainerInitializer 的实现类为<strong><code>SpringServletContainerInitializer</code></strong>，且通过<strong><code>@HandlesTypes(WebApplicationInitializer.class)</code>注解</strong>将<strong><code>ServletContainerInitializer</code></strong>感兴趣的类<strong><code>WebApplicationInitializer</code></strong>传入到<strong><code>onStartup</code></strong>方法的参数中。</p>
+<p><img src="../../../../../images/Spring/SpringBoot/WebApplicationInitializer类图.png" alt></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringBootServletInitializer</span> <span class="keyword">implements</span> <span class="title">WebApplicationInitializer</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> WebApplicationContext <span class="title">createRootApplicationContext</span><span class="params">(ServletContext servletContext)</span> </span>&#123;</span><br><span class="line">        SpringApplicationBuilder builder = createSpringApplicationBuilder();</span><br><span class="line">        builder.main(getClass());</span><br><span class="line">        ApplicationContext parent = getExistingRootWebApplicationContext(servletContext);</span><br><span class="line">        <span class="keyword">if</span> (parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">            servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, <span class="keyword">null</span>);</span><br><span class="line">            builder.initializers(<span class="keyword">new</span> ParentContextApplicationContextInitializer(parent));</span><br><span class="line">        &#125;</span><br><span class="line">        builder.initializers(<span class="keyword">new</span> ServletContextApplicationContextInitializer(servletContext));</span><br><span class="line">        builder.contextFactory((webApplicationType) -&gt; <span class="keyword">new</span> AnnotationConfigServletWebServerApplicationContext());</span><br><span class="line">        builder = configure(builder);</span><br><span class="line">        builder.listeners(<span class="keyword">new</span> WebEnvironmentPropertySourceInitializer(servletContext));</span><br><span class="line">        SpringApplication application = builder.build();</span><br><span class="line">        <span class="keyword">if</span> (application.getAllSources().isEmpty() &amp;&amp; MergedAnnotations.from(getClass(), SearchStrategy.TYPE_HIERARCHY).isPresent(Configuration<span class="class">.<span class="keyword">class</span>)) </span>&#123;</span><br><span class="line">            application.addPrimarySources(Collections.singleton(getClass()));</span><br><span class="line">        &#125;</span><br><span class="line">        Assert.state(!application.getAllSources().isEmpty(), <span class="string">"No SpringApplication sources have been defined. Either override the "</span> + <span class="string">"configure method or add an @Configuration annotation"</span>);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.registerErrorPageFilter) &#123;</span><br><span class="line">            application.addPrimarySources(Collections.singleton(ErrorPageFilterConfiguration<span class="class">.<span class="keyword">class</span>))</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        application.setRegisterShutdownHook(<span class="keyword">false</span>);</span><br><span class="line">        <span class="keyword">return</span> run(application);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> SpringApplicationBuilder <span class="title">createSpringApplicationBuilder</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> SpringApplicationBuilder();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringApplicationBuilder</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SpringApplicationBuilder</span><span class="params">(Class&lt;?&gt;... sources)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.application = createSpringApplication(sources);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> SpringApplication <span class="title">createSpringApplication</span><span class="params">(Class&lt;?&gt;... sources)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> SpringApplication(sources);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由代码可以明显看到Tomcat不会主动去启动SpringBoot应用，而默认创建SpringApplication时什么都没有传入，故需要通过继承<strong><code>SpringBootServletInitializer</code></strong>重写<strong><code>configure</code></strong>来指定SpringBoot启动类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TomcatStartSpringBoot</span> <span class="keyword">extends</span> <span class="title">SpringBootServletInitializer</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> SpringApplicationBuilder <span class="title">configure</span><span class="params">(SpringApplicationBuilder builder)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> builder.sources(ElevenSpringbootApplication<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/nacos/Nacos Client原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Nacos Client原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">SpringBoot自动装配原理</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Mybatis集成到Spring原理 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Mybatis">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Spring中集成Mybatis主要有两个难点，一是事务的集成，二是Mapper接口注册到Spring容器中，Spring中集成Mybatis需要引入mybatis和mybatis-spring依赖包。 12345678910&amp;lt;dependency&amp;gt;    &amp;lt;groupId&amp;gt;org.mybatis&amp;lt;/groupId&amp;gt;    &amp;lt;artifactId&amp;gt;m">
+<meta name="keywords" content="Mybatis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mybatis集成到Spring原理">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/中间件/Mybatis/Mybatis集成到Spring原理/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Spring中集成Mybatis主要有两个难点，一是事务的集成，二是Mapper接口注册到Spring容器中，Spring中集成Mybatis需要引入mybatis和mybatis-spring依赖包。 12345678910&amp;lt;dependency&amp;gt;    &amp;lt;groupId&amp;gt;org.mybatis&amp;lt;/groupId&amp;gt;    &amp;lt;artifactId&amp;gt;m">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2021-10-14T12:22:22.406Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mybatis集成到Spring原理">
+<meta name="twitter:description" content="Spring中集成Mybatis主要有两个难点，一是事务的集成，二是Mapper接口注册到Spring容器中，Spring中集成Mybatis需要引入mybatis和mybatis-spring依赖包。 12345678910&amp;lt;dependency&amp;gt;    &amp;lt;groupId&amp;gt;org.mybatis&amp;lt;/groupId&amp;gt;    &amp;lt;artifactId&amp;gt;m">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file active"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-中间件/Mybatis/Mybatis集成到Spring原理" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/中间件/">中间件</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/中间件/Mybatis/">Mybatis</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Mybatis/">Mybatis</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">
+            <time datetime="2021-10-12T16:00:00.000Z" itemprop="datePublished">2021-10-13</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Mybatis集成到Spring原理
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>Spring中集成<strong><code>Mybatis</code></strong>主要有两个难点，一是<strong>事务的集成</strong>，二是<strong><code>Mapper</code>接口注册到Spring容器中</strong>，Spring中集成Mybatis需要引入<strong><code>mybatis</code></strong>和<strong><code>mybatis-spring</code></strong>依赖包。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.mybatis<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>mybatis<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>3.5.3<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.mybatis<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>mybatis-spring<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.0.3<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>通过配置导入将<strong><code>SqlSessionFactoryBean</code></strong>注册到Spring容器中，以及通过<strong><code>@MapperScan</code></strong>或<strong><code>@MapperScans</code></strong>确定将哪些Mapper接口注册到Spring容器中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@MapperScan</span>(basePackages = &#123;<span class="string">"com.eleven.icode.ispring.mapper"</span>&#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyBatisConfig</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> SqlSessionFactoryBean <span class="title">sqlSessionFactory</span><span class="params">(DataSource dataSource)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        SqlSessionFactoryBean factoryBean = <span class="keyword">new</span> SqlSessionFactoryBean();</span><br><span class="line">        factoryBean.setDataSource(dataSource);</span><br><span class="line">        factoryBean.setConfigLocation(<span class="keyword">new</span> ClassPathResource(<span class="string">"mybatis-config.xml"</span>));</span><br><span class="line">        factoryBean.setMapperLocations(<span class="keyword">new</span> PathMatchingResourcePatternResolver().getResources(<span class="string">"classpath:mapper/*.xml"</span>));</span><br><span class="line">        <span class="keyword">return</span> factoryBean;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>SqlSessionFactoryBean</code></strong>是一个<strong><code>FactoryBean</code></strong>，且重写了<strong><code>getObjectType</code></strong>方法将代理的Bean的类型设置为了原始的<strong><code>SqlSessionFactory</code></strong>类型，且其实现了<strong><code>InitializingBean</code></strong>接口，主要逻辑都在其实例化完成时调用的<strong><code>afterPropertiesSet()</code></strong>，其作用就是创建Mybatis的<strong><code>SqlSessionFactory</code></strong>，其可以<strong>代替全局配置</strong>文件，若设置了配置文件可<strong>对配置文件内容做一个补充</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SqlSessionFactoryBean</span> <span class="keyword">implements</span> <span class="title">FactoryBean</span>&lt;<span class="title">SqlSessionFactory</span>&gt;, <span class="title">InitializingBean</span>, <span class="title">ApplicationListener</span>&lt;<span class="title">ApplicationEvent</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> SqlSessionFactoryBuilder sqlSessionFactoryBuilder = <span class="keyword">new</span> SqlSessionFactoryBuilder();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterPropertiesSet</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        notNull(dataSource, <span class="string">"Property 'dataSource' is required"</span>);</span><br><span class="line">        notNull(sqlSessionFactoryBuilder, <span class="string">"Property 'sqlSessionFactoryBuilder' is required"</span>);</span><br><span class="line">        state((configuration == <span class="keyword">null</span> &amp;&amp; configLocation == <span class="keyword">null</span>) || !(configuration != <span class="keyword">null</span> &amp;&amp; configLocation != <span class="keyword">null</span>),</span><br><span class="line">              <span class="string">"Property 'configuration' and 'configLocation' can not specified with together"</span>);</span><br><span class="line">        <span class="keyword">this</span>.sqlSessionFactory = buildSqlSessionFactory(); <span class="comment">// 通过sqlSessionFactoryBuilder来构建我们的sqlSessionFactory</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> SqlSessionFactory <span class="title">buildSqlSessionFactory</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> Configuration targetConfiguration; <span class="comment">// 声明一个Configuration对象用于保存mybatis的所有的配置信息</span></span><br><span class="line">        XMLConfigBuilder xmlConfigBuilder = <span class="keyword">null</span>;</span><br><span class="line">        <span class="comment">// 初始化configuration对象，和设置其 `configuration.variables` 属性</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.configuration != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">// 把配置的SqlSessionFactoryBean配置的configuration赋值给targetConfiguration</span></span><br><span class="line">            targetConfiguration = <span class="keyword">this</span>.configuration;</span><br><span class="line">            <span class="keyword">if</span> (targetConfiguration.getVariables() == <span class="keyword">null</span>) &#123;</span><br><span class="line">                targetConfiguration.setVariables(<span class="keyword">this</span>.configurationProperties);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">this</span>.configurationProperties != <span class="keyword">null</span>) &#123;</span><br><span class="line">                targetConfiguration.getVariables().putAll(<span class="keyword">this</span>.configurationProperties);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">this</span>.configLocation != <span class="keyword">null</span>) &#123; <span class="comment">// 创建xml配置构建器对象，对全局配置文件mybatis-config.xml配置文件进行解析</span></span><br><span class="line">            xmlConfigBuilder = <span class="keyword">new</span> XMLConfigBuilder(<span class="keyword">this</span>.configLocation.getInputStream(), <span class="keyword">null</span>, <span class="keyword">this</span>.configurationProperties);</span><br><span class="line">            targetConfiguration = xmlConfigBuilder.getConfiguration();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            targetConfiguration = <span class="keyword">new</span> Configuration();</span><br><span class="line">            <span class="comment">// 判断configurationProperties不为空，则调用targetConfiguration.set方法把configurationProperties注入到Configuration对象中</span></span><br><span class="line">            Optional.ofNullable(<span class="keyword">this</span>.configurationProperties).ifPresent(targetConfiguration::setVariables);</span><br><span class="line">        &#125;</span><br><span class="line">        Optional.ofNullable(<span class="keyword">this</span>.objectFactory).ifPresent(targetConfiguration::setObjectFactory);</span><br><span class="line">        Optional.ofNullable(<span class="keyword">this</span>.objectWrapperFactory).ifPresent(targetConfiguration::setObjectWrapperFactory);</span><br><span class="line">        Optional.ofNullable(<span class="keyword">this</span>.vfs).ifPresent(targetConfiguration::setVfsImpl);</span><br><span class="line">        <span class="comment">// typeAliasesPackage配置情况分为二种：在mybaits-config.xml中配置，在配置SqlSessionFactoryBean时配置</span></span><br><span class="line">        <span class="keyword">if</span> (hasLength(<span class="keyword">this</span>.typeAliasesPackage)) &#123;</span><br><span class="line">            <span class="comment">// 扫描typeAliasesPackage包路径下所有实体类class类型进行过滤注册到Configuration的别名映射器中</span></span><br><span class="line">            scanClasses(<span class="keyword">this</span>.typeAliasesPackage, <span class="keyword">this</span>.typeAliasesSuperType).stream()</span><br><span class="line">                .filter(clazz -&gt; !clazz.isAnonymousClass()).filter(clazz -&gt; !clazz.isInterface())</span><br><span class="line">                .filter(clazz -&gt; !clazz.isMemberClass()).forEach(targetConfiguration.getTypeAliasRegistry()::registerAlias);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 判断SqlSessionFactory是否配置了typeAliases，一般typeAliasesPackage配置了就没有必要配置typeAliases，注册到Configuration的别名映射器中</span></span><br><span class="line">        <span class="keyword">if</span> (!isEmpty(<span class="keyword">this</span>.typeAliases)) &#123;</span><br><span class="line">            Stream.of(<span class="keyword">this</span>.typeAliases).forEach(typeAlias -&gt; &#123; targetConfiguration.getTypeAliasRegistry().registerAlias(typeAlias);&#125;);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 把自定义的插件注册到的mybatis的配置类上</span></span><br><span class="line">        <span class="keyword">if</span> (!isEmpty(<span class="keyword">this</span>.plugins)) &#123;</span><br><span class="line">            Stream.of(<span class="keyword">this</span>.plugins).forEach(plugin -&gt; &#123; targetConfiguration.addInterceptor(plugin);&#125;);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 扫描自定义的类型处理器(用来处理的java类型和数据库类型的转化) 并且注册到的 targetConfiguration(批量注册)</span></span><br><span class="line">        <span class="keyword">if</span> (hasLength(<span class="keyword">this</span>.typeHandlersPackage)) &#123;</span><br><span class="line">            scanClasses(<span class="keyword">this</span>.typeHandlersPackage, TypeHandler<span class="class">.<span class="keyword">class</span>).<span class="title">stream</span>().<span class="title">filter</span>(<span class="title">clazz</span> -&gt; !<span class="title">clazz</span>.<span class="title">isAnonymousClass</span>())</span></span><br><span class="line"><span class="class">                .<span class="title">filter</span>(<span class="title">clazz</span> -&gt; !<span class="title">clazz</span>.<span class="title">isInterface</span>()).<span class="title">filter</span>(<span class="title">clazz</span> -&gt; !<span class="title">Modifier</span>.<span class="title">isAbstract</span>(<span class="title">clazz</span>.<span class="title">getModifiers</span>()))</span></span><br><span class="line">                .forEach(targetConfiguration.getTypeHandlerRegistry()::register);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!isEmpty(<span class="keyword">this</span>.typeHandlers)) &#123; <span class="comment">// 通过配置&lt;TypeHandlers&gt;&lt;/TypeHandlers&gt;的形式来注册的类型处理器对象</span></span><br><span class="line">            Stream.of(<span class="keyword">this</span>.typeHandlers).forEach(typeHandler -&gt; &#123; targetConfiguration.getTypeHandlerRegistry().register(typeHandler);&#125;);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Mybatis从3.2开始支持可插拔的脚本语言，因此可插入一种语言的驱动来写基于这种语言的动态SQL查询</span></span><br><span class="line">        <span class="keyword">if</span> (!isEmpty(<span class="keyword">this</span>.scriptingLanguageDrivers)) &#123;</span><br><span class="line">            Stream.of(<span class="keyword">this</span>.scriptingLanguageDrivers).forEach(languageDriver -&gt; &#123; targetConfiguration.getLanguageRegistry().register(languageDriver);&#125;);</span><br><span class="line">        &#125;</span><br><span class="line">        Optional.ofNullable(<span class="keyword">this</span>.defaultScriptingLanguageDriver).ifPresent(targetConfiguration::setDefaultScriptingLanguage);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.databaseIdProvider != <span class="keyword">null</span>) &#123; <span class="comment">// 设置数据库厂商</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                targetConfiguration.setDatabaseId(<span class="keyword">this</span>.databaseIdProvider.getDatabaseId(<span class="keyword">this</span>.dataSource));</span><br><span class="line">            &#125; <span class="keyword">catch</span> (SQLException e) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> NestedIOException(<span class="string">"Failed getting a databaseId"</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        Optional.ofNullable(<span class="keyword">this</span>.cache).ifPresent(targetConfiguration::addCache); <span class="comment">// 若二级缓存不为空，注册二级缓存</span></span><br><span class="line">        <span class="keyword">if</span> (xmlConfigBuilder != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                xmlConfigBuilder.parse(); <span class="comment">// 真正的解析的配置(mybatis-config.xml)的document对象</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> NestedIOException(<span class="string">"Failed to parse config resource: "</span> + <span class="keyword">this</span>.configLocation, ex);</span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                ErrorContext.instance().reset();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 为的configuration设置一个环境变量</span></span><br><span class="line">        targetConfiguration.setEnvironment(<span class="keyword">new</span> Environment(<span class="keyword">this</span>.environment, <span class="keyword">this</span>.transactionFactory == <span class="keyword">null</span> ? <span class="keyword">new</span> SpringManagedTransactionFactory() : <span class="keyword">this</span>.transactionFactory, <span class="keyword">this</span>.dataSource));</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.mapperLocations != <span class="keyword">null</span>) &#123; <span class="comment">// 循环遍历解析mapper.xml文件</span></span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span>.mapperLocations.length == <span class="number">0</span>) &#123;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">for</span> (Resource mapperLocation : <span class="keyword">this</span>.mapperLocations) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (mapperLocation == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        XMLMapperBuilder xmlMapperBuilder = <span class="keyword">new</span> XMLMapperBuilder(mapperLocation.getInputStream(), targetConfiguration, mapperLocation.toString(), targetConfiguration.getSqlFragments());</span><br><span class="line">                        xmlMapperBuilder.parse(); <span class="comment">// 真正的解析mapper.xml文件</span></span><br><span class="line">                    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> NestedIOException(<span class="string">"Failed to parse mapping resource: '"</span> + mapperLocation + <span class="string">"'"</span>, e);</span><br><span class="line">                    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                        ErrorContext.instance().reset();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.sqlSessionFactoryBuilder.build(targetConfiguration); <span class="comment">// 通过建造者模式构建的SqlSessionFactory对象 默认是DefaultSqlSessionFactory</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> Set&lt;Class&lt;?&gt;&gt; scanClasses(String packagePatterns, Class&lt;?&gt; assignableType) <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">        Set&lt;Class&lt;?&gt;&gt; classes = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">        <span class="comment">// 把的多个配置报路径转换成字符串数组</span></span><br><span class="line">        String[] packagePatternArray = tokenizeToStringArray(packagePatterns, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS);</span><br><span class="line">        <span class="keyword">for</span> (String packagePattern : packagePatternArray) &#123; <span class="comment">// 循环的包路径</span></span><br><span class="line">            <span class="comment">// 把包路径下的class解析成的Resouce数组</span></span><br><span class="line">            Resource[] resources = RESOURCE_PATTERN_RESOLVER.getResources(ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX + ClassUtils.convertClassNameToResourcePath(packagePattern) + <span class="string">"/**/*.class"</span>);</span><br><span class="line">            <span class="keyword">for</span> (Resource resource : resources) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;<span class="comment">// 挨个解析成的class类型</span></span><br><span class="line">                    ClassMetadata classMetadata = METADATA_READER_FACTORY.getMetadataReader(resource).getClassMetadata();</span><br><span class="line">                    Class&lt;?&gt; clazz = Resources.classForName(classMetadata.getClassName());</span><br><span class="line">                    <span class="keyword">if</span> (assignableType == <span class="keyword">null</span> || assignableType.isAssignableFrom(clazz)) &#123; <span class="comment">// 判断当前的class类型是不是被支持</span></span><br><span class="line">                        classes.add(clazz); <span class="comment">// 加入到结合中</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                    LOGGER.warn(() -&gt; <span class="string">"Cannot load the '"</span> + resource + <span class="string">"'. Cause by "</span> + e.toString());</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> classes;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> Class&lt;? extends SqlSessionFactory&gt; getObjectType() &#123;</span><br><span class="line">        return this.sqlSessionFactory == null ? SqlSessionFactory.class : this.sqlSessionFactory.getClass();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="事务集成"><a href="#事务集成" class="headerlink" title="事务集成"></a>事务集成</h4><p>事务集成是在<strong><code>SqlSessionFactoryBean</code></strong>中完成的，在为configuration设置环境变量时创建传入<strong><code>SpringManagedTransactionFactory</code></strong>，在Mybatis中是使用的<strong><code>ManagedTransactionFactory</code></strong>创建一个<strong><code>ManagedTransaction</code></strong>，其是直接从<strong><code>DataSource</code></strong>中获取的<strong><code>Connection</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultSqlSessionFactory</span> <span class="keyword">implements</span> <span class="title">SqlSessionFactory</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> TransactionFactory <span class="title">getTransactionFactoryFromEnvironment</span><span class="params">(Environment environment)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (environment == <span class="keyword">null</span> || environment.getTransactionFactory() == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ManagedTransactionFactory();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> environment.getTransactionFactory();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ManagedTransactionFactory</span> <span class="keyword">implements</span> <span class="title">TransactionFactory</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Transaction <span class="title">newTransaction</span><span class="params">(Connection conn)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ManagedTransaction(conn, closeConnection);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Transaction <span class="title">newTransaction</span><span class="params">(DataSource ds, TransactionIsolationLevel level, <span class="keyword">boolean</span> autoCommit)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ManagedTransaction(ds, level, closeConnection);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ManagedTransaction</span> <span class="keyword">implements</span> <span class="title">Transaction</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Connection <span class="title">getConnection</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.connection == <span class="keyword">null</span>) &#123;</span><br><span class="line">            openConnection();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.connection;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">openConnection</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.connection = <span class="keyword">this</span>.dataSource.getConnection();</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.level != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">this</span>.connection.setTransactionIsolation(<span class="keyword">this</span>.level.getLevel());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>SpringManagedTransactionFactory</code></strong>中创建的是<strong><code>SpringManagedTransaction</code></strong>，起获取的数据库连接是通过DataSourceUtils工具类从<strong>事务同步管理器<code>TransactionSynchronizationManager</code></strong>中获取的连接，从而达到与Spring事务集成的目的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringManagedTransactionFactory</span> <span class="keyword">implements</span> <span class="title">TransactionFactory</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Transaction <span class="title">newTransaction</span><span class="params">(DataSource dataSource, TransactionIsolationLevel level, <span class="keyword">boolean</span> autoCommit)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> SpringManagedTransaction(dataSource);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringManagedTransaction</span> <span class="keyword">implements</span> <span class="title">Transaction</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Connection <span class="title">getConnection</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.connection == <span class="keyword">null</span>) &#123;</span><br><span class="line">            openConnection();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.connection;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">openConnection</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.connection = DataSourceUtils.getConnection(<span class="keyword">this</span>.dataSource);</span><br><span class="line">        <span class="keyword">this</span>.autoCommit = <span class="keyword">this</span>.connection.getAutoCommit();</span><br><span class="line">        <span class="keyword">this</span>.isConnectionTransactional = DataSourceUtils.isConnectionTransactional(<span class="keyword">this</span>.connection, <span class="keyword">this</span>.dataSource);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Mapper接口注册"><a href="#Mapper接口注册" class="headerlink" title="Mapper接口注册"></a>Mapper接口注册</h4><p><strong>Mapper接口扫描</strong>是通过<strong><code>@MapperScan</code></strong>和<strong><code>@MapperScans</code></strong>注解中导入了<strong><code>MapperScannerRegistrar</code></strong>来完成的，<strong>Mapper接口注册</strong>到Spring容器中是借助<strong><code>FactoryBean</code></strong>来完成的，注解中设置了<strong><code>factoryBean</code></strong>注册Mapper接口的默认值为<strong><code>MapperFactoryBean</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="meta">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Import</span>(MapperScannerRegistrar<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">@<span class="title">Repeatable</span>(<span class="title">MapperScans</span>.<span class="title">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> @<span class="title">interface</span> <span class="title">MapperScan</span> </span>&#123;</span><br><span class="line">    String[] value() <span class="keyword">default</span> &#123;&#125;;</span><br><span class="line">    String[] basePackages() <span class="keyword">default</span> &#123;&#125;;</span><br><span class="line">    Class&lt;?&gt;[] basePackageClasses() <span class="keyword">default</span> &#123;&#125;;</span><br><span class="line">    Class&lt;? extends BeanNameGenerator&gt; nameGenerator() <span class="keyword">default</span> BeanNameGenerator<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">    Class&lt;? extends Annotation&gt; annotationClass() <span class="keyword">default</span> Annotation<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">    Class&lt;?&gt; markerInterface() <span class="keyword">default</span> Class<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">    <span class="function">String <span class="title">sqlSessionTemplateRef</span><span class="params">()</span> <span class="keyword">default</span> ""</span>;</span><br><span class="line">    <span class="function">String <span class="title">sqlSessionFactoryRef</span><span class="params">()</span> <span class="keyword">default</span> ""</span>;</span><br><span class="line">    Class&lt;? extends MapperFactoryBean&gt; factoryBean() <span class="keyword">default</span> MapperFactoryBean<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">    <span class="function">String <span class="title">lazyInitialization</span><span class="params">()</span> <span class="keyword">default</span> ""</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="meta">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Import</span>(MapperScannerRegistrar.RepeatingRegistrar<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> @<span class="title">interface</span> <span class="title">MapperScans</span> </span>&#123;</span><br><span class="line">    MapperScan[] value();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>MapperScannerRegistrar</code></strong>实现了<strong><code>ImportBeanDefinitionRegistrar</code></strong>在容器扫描BeanDefinition时会调用<strong><code>registerBeanDefinitions</code></strong>。其作用其实就是为容器注册一个或多个<strong><code>MapperScannerConfigurer</code></strong>以及给该类设置一些从<strong><code>@MapperScan</code>注解</strong>上解析出来的属性。<strong><code>@MapperScans</code></strong>注解上可以配置多个<strong><code>@MapperScan</code>注解</strong>在导入时通过<strong><code>RepeatingRegistrar</code></strong>遍历注册多个<strong><code>MapperScannerConfigurer</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MapperScannerRegistrar</span> <span class="keyword">implements</span> <span class="title">ImportBeanDefinitionRegistrar</span>, <span class="title">ResourceLoaderAware</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerBeanDefinitions</span><span class="params">(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 从传入的配置类中解析@MapperScan注解信息，把MapperScan注解的属性转化为AnnotationAttributes类型</span></span><br><span class="line">        AnnotationAttributes mapperScanAttrs = AnnotationAttributes.fromMap(importingClassMetadata.getAnnotationAttributes(MapperScan<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>()))</span>;</span><br><span class="line">        <span class="keyword">if</span> (mapperScanAttrs != <span class="keyword">null</span>) &#123; <span class="comment">// 若上一步解析出来的mapperScanAttrs不为空，说明配置类上加了@MapperScan注解</span></span><br><span class="line">            <span class="comment">// 调用重写的方法registerBeanDefinitions#generateBaseBeanName(importingClassMetadata, 0)即将注册的bean定义的名称进行处理</span></span><br><span class="line">            registerBeanDefinitions(mapperScanAttrs, registry, generateBaseBeanName(importingClassMetadata, <span class="number">0</span>));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerBeanDefinitions</span><span class="params">(AnnotationAttributes annoAttrs, BeanDefinitionRegistry registry, String beanName)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 创建bean定义构造器通过够构造器来构建出的bean定义&lt;MapperScannerConfigurer&gt;应用到的设计模式[建造者模式]</span></span><br><span class="line">        BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MapperScannerConfigurer<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        <span class="comment">// 手动为MapperScannerConfigurer开启processPropertyPlaceHolders属性为true，需要着重研究下MapperScannerConfigurer类的继承结构</span></span><br><span class="line">        builder.addPropertyValue(<span class="string">"processPropertyPlaceHolders"</span>, <span class="keyword">true</span>);</span><br><span class="line">        <span class="comment">// 为的MapperScannerConfigurer解析@MapperScanner指定扫描的的注解类型</span></span><br><span class="line">        Class&lt;? extends Annotation&gt; annotationClass = annoAttrs.getClass(<span class="string">"annotationClass"</span>);</span><br><span class="line">        <span class="keyword">if</span> (!Annotation<span class="class">.<span class="keyword">class</span>.<span class="title">equals</span>(<span class="title">annotationClass</span>)) </span>&#123;</span><br><span class="line">            builder.addPropertyValue(<span class="string">"annotationClass"</span>, annotationClass);</span><br><span class="line">        &#125;</span><br><span class="line">        Class&lt;?&gt; markerInterface = annoAttrs.getClass(<span class="string">"markerInterface"</span>);</span><br><span class="line">        <span class="keyword">if</span> (!Class<span class="class">.<span class="keyword">class</span>.<span class="title">equals</span>(<span class="title">markerInterface</span>)) </span>&#123; <span class="comment">// 是否配置了标记接口</span></span><br><span class="line">            builder.addPropertyValue(<span class="string">"markerInterface"</span>, markerInterface);</span><br><span class="line">        &#125;</span><br><span class="line">        Class&lt;? extends BeanNameGenerator&gt; generatorClass = annoAttrs.getClass(<span class="string">"nameGenerator"</span>);</span><br><span class="line">        <span class="keyword">if</span> (!BeanNameGenerator<span class="class">.<span class="keyword">class</span>.<span class="title">equals</span>(<span class="title">generatorClass</span>)) </span>&#123; <span class="comment">// 是否设置了MapperScannerConfigurer的beanName生成器对象</span></span><br><span class="line">            builder.addPropertyValue(<span class="string">"nameGenerator"</span>, BeanUtils.instantiateClass(generatorClass));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 解析@MapperScan注解属性MapperFactoryBean设置到MapperScannerConfigurer声明一个自定义的MapperFactoryBean返回一个代理对象</span></span><br><span class="line">        Class&lt;? extends MapperFactoryBean&gt; mapperFactoryBeanClass = annoAttrs.getClass(<span class="string">"factoryBean"</span>);</span><br><span class="line">        <span class="keyword">if</span> (!MapperFactoryBean<span class="class">.<span class="keyword">class</span>.<span class="title">equals</span>(<span class="title">mapperFactoryBeanClass</span>)) </span>&#123;</span><br><span class="line">            builder.addPropertyValue(<span class="string">"mapperFactoryBeanClass"</span>, mapperFactoryBeanClass);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 解析@MapperScan的sqlSessionTemplateRef到底使用是哪个sqlSessionTemplate设置到MapperScannerConfigurer多数据源的情况下需要指定</span></span><br><span class="line">        String sqlSessionTemplateRef = annoAttrs.getString(<span class="string">"sqlSessionTemplateRef"</span>);</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.hasText(sqlSessionTemplateRef)) &#123;</span><br><span class="line">            builder.addPropertyValue(<span class="string">"sqlSessionTemplateBeanName"</span>, annoAttrs.getString(<span class="string">"sqlSessionTemplateRef"</span>));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 解析@MapperScan的sqlSessionFactoryRef属性 设置到 MapperScannerConfigurer 多数据情况下的话 ，需要指定使用哪个 sqlSessionFactory</span></span><br><span class="line">        String sqlSessionFactoryRef = annoAttrs.getString(<span class="string">"sqlSessionFactoryRef"</span>);</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.hasText(sqlSessionFactoryRef)) &#123;</span><br><span class="line">            builder.addPropertyValue(<span class="string">"sqlSessionFactoryBeanName"</span>, annoAttrs.getString(<span class="string">"sqlSessionFactoryRef"</span>));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 解析@MapperScan扫描的的包或者是class对象</span></span><br><span class="line">        List&lt;String&gt; basePackages = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        basePackages.addAll(Arrays.stream(annoAttrs.getStringArray(<span class="string">"value"</span>)).filter(StringUtils::hasText).collect(Collectors.toList()));</span><br><span class="line">        basePackages.addAll(Arrays.stream(annoAttrs.getStringArray(<span class="string">"basePackages"</span>)).filter(StringUtils::hasText).collect(Collectors.toList()));</span><br><span class="line">        basePackages.addAll(Arrays.stream(annoAttrs.getClassArray(<span class="string">"basePackageClasses"</span>)).map(ClassUtils::getPackageName).collect(Collectors.toList()));</span><br><span class="line">        String lazyInitialization = annoAttrs.getString(<span class="string">"lazyInitialization"</span>);</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.hasText(lazyInitialization)) &#123;<span class="comment">// 指定MapperScannerConfigurer是否为懒加载</span></span><br><span class="line">            builder.addPropertyValue(<span class="string">"lazyInitialization"</span>, lazyInitialization);</span><br><span class="line">        &#125;</span><br><span class="line">        builder.addPropertyValue(<span class="string">"basePackage"</span>, StringUtils.collectionToCommaDelimitedString(basePackages));</span><br><span class="line">        registry.registerBeanDefinition(beanName, builder.getBeanDefinition()); <span class="comment">// 为的容器中注册了MapperScannerConfigurer的接口</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> String <span class="title">generateBaseBeanName</span><span class="params">(AnnotationMetadata importingClassMetadata, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        return importingClassMetadata.getClassName() + "#" + MapperScannerRegistrar.class.getSimpleName() + "#" + index;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">RepeatingRegistrar</span> <span class="keyword">extends</span> <span class="title">MapperScannerRegistrar</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerBeanDefinitions</span><span class="params">(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">            AnnotationAttributes mapperScansAttrs = AnnotationAttributes.fromMap(importingClassMetadata.getAnnotationAttributes(MapperScans<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>()))</span>;</span><br><span class="line">            <span class="keyword">if</span> (mapperScansAttrs != <span class="keyword">null</span>) &#123;</span><br><span class="line">                AnnotationAttributes[] annotations = mapperScansAttrs.getAnnotationArray(<span class="string">"value"</span>);</span><br><span class="line">                <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; annotations.length; i++) &#123;</span><br><span class="line">                    registerBeanDefinitions(annotations[i], registry, generateBaseBeanName(importingClassMetadata, i));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>MapperScannerConfigurer</code></strong>中显示创建了<strong><code>ClassPathMapperScanner</code>包扫描器</strong>对象，其继承自<strong><code>ClassPathBeanDefinitionScanner</code></strong>，其作用是为了扫描<strong><code>@MapperScan</code>注解</strong>中配置包路径下的目标类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MapperScannerConfigurer</span> <span class="keyword">implements</span> <span class="title">BeanDefinitionRegistryPostProcessor</span>, <span class="title">InitializingBean</span>, <span class="title">ApplicationContextAware</span>, <span class="title">BeanNameAware</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postProcessBeanDefinitionRegistry</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.processPropertyPlaceHolders) &#123;</span><br><span class="line">            processPropertyPlaceHolders(); <span class="comment">// 若MapperScannerConfigurer属性的processPropertyPlaceHolders为ture时则执行processPropertyPlaceHolders()，解析动态参数</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 显示的new一个ClassPathMapperScanner包扫描器对象该对象继承了spring的ClassPathBeanDefinitionScanner为了扫描器指定@MapperScan属性</span></span><br><span class="line">        ClassPathMapperScanner scanner = <span class="keyword">new</span> ClassPathMapperScanner(registry);</span><br><span class="line">        scanner.setAddToConfig(<span class="keyword">this</span>.addToConfig);</span><br><span class="line">        scanner.setAnnotationClass(<span class="keyword">this</span>.annotationClass);</span><br><span class="line">        scanner.setMarkerInterface(<span class="keyword">this</span>.markerInterface);</span><br><span class="line">        scanner.setSqlSessionFactory(<span class="keyword">this</span>.sqlSessionFactory);</span><br><span class="line">        scanner.setSqlSessionTemplate(<span class="keyword">this</span>.sqlSessionTemplate);</span><br><span class="line">        scanner.setSqlSessionFactoryBeanName(<span class="keyword">this</span>.sqlSessionFactoryBeanName);</span><br><span class="line">        scanner.setSqlSessionTemplateBeanName(<span class="keyword">this</span>.sqlSessionTemplateBeanName);</span><br><span class="line">        scanner.setResourceLoader(<span class="keyword">this</span>.applicationContext);</span><br><span class="line">        scanner.setBeanNameGenerator(<span class="keyword">this</span>.nameGenerator);</span><br><span class="line">        scanner.setMapperFactoryBeanClass(<span class="keyword">this</span>.mapperFactoryBeanClass);</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.hasText(lazyInitialization)) &#123;</span><br><span class="line">            scanner.setLazyInitialization(Boolean.valueOf(lazyInitialization));</span><br><span class="line">        &#125;</span><br><span class="line">        scanner.registerFilters(); <span class="comment">// 注册扫描规则过滤器</span></span><br><span class="line">        <span class="comment">// 真正的去扫描@MapperScan指定的路径下的bean定义信息，先会去调用ClassPathMapperScanner.scan()方法</span></span><br><span class="line">        scanner.scan(StringUtils.tokenizeToStringArray(<span class="keyword">this</span>.basePackage, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">processPropertyPlaceHolders</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 因为postProcessBeanDefinitionRegistry是为注册bean定义的，但注册bean定义时需要解析$&#123;basepackaage&#125;，但PropertyResourceConfigurer类型的bean定义还没有实例化成bean对象 ，故不能提供解析$&#123;basepackaage&#125;的能力</span></span><br><span class="line">        <span class="comment">// 故显示的设置processPropertyPlaceHolders为ture，即想通过applicationContext.getBeansOfType(PropertyResourceConfigurer.class)，提前把PropertyResourceConfigurer组件实例化出来从而解析$&#123;basepackaage&#125;</span></span><br><span class="line">        Map&lt;String, PropertyResourceConfigurer&gt; prcs = applicationContext.getBeansOfType(PropertyResourceConfigurer<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 判断PropertyResourceConfigurer的集合不为空，且applicationContext是ConfigurableApplicationContext</span></span><br><span class="line">        <span class="keyword">if</span> (!prcs.isEmpty() &amp;&amp; applicationContext <span class="keyword">instanceof</span> ConfigurableApplicationContext) &#123;</span><br><span class="line">            <span class="comment">// 通过名称去容器中获取MapperScannerConfigurer组件</span></span><br><span class="line">            BeanDefinition mapperScannerBean = ((ConfigurableApplicationContext) applicationContext).getBeanFactory().getBeanDefinition(beanName);</span><br><span class="line">            <span class="comment">// PropertyResourceConfigurer类没有暴露任何的方法来处理的property placeholder substitution即$&#123;basepackaage&#125;，有且只有提供一个BeanFactoryPostProcessor接口来处理的bean定义</span></span><br><span class="line">            <span class="comment">// 但调用BeanFactoryPostProcessor.postProcessBeanFactory()方法需要一个beanFactory，若从外面传入一个Ioc的容器进来会提前破坏ioc容器，故这里创建了一个临时的ioc容器，然后把mapperScannerBean注册到该临时ioc容器中</span></span><br><span class="line">            DefaultListableBeanFactory factory = <span class="keyword">new</span> DefaultListableBeanFactory();</span><br><span class="line">            factory.registerBeanDefinition(beanName, mapperScannerBean);</span><br><span class="line">            <span class="keyword">for</span> (PropertyResourceConfigurer prc : prcs.values()) &#123;</span><br><span class="line">                prc.postProcessBeanFactory(factory); <span class="comment">//这时就可以大胆放心的处理临时的ioc容器factory中的bean定义，即当前的mapperScannerBean</span></span><br><span class="line">            &#125;</span><br><span class="line">            PropertyValues values = mapperScannerBean.getPropertyValues(); <span class="comment">// 处理完之后重新获取通过PropertyResourceConfigurer解析后的mapperScannerBean的属性</span></span><br><span class="line">            <span class="keyword">this</span>.basePackage = updatePropertyValue(<span class="string">"basePackage"</span>, values); <span class="comment">// 更新MapperScannerBean属性可能有$&#123;&#125;包裹的字段</span></span><br><span class="line">            <span class="keyword">this</span>.sqlSessionFactoryBeanName = updatePropertyValue(<span class="string">"sqlSessionFactoryBeanName"</span>, values);</span><br><span class="line">            <span class="keyword">this</span>.sqlSessionTemplateBeanName = updatePropertyValue(<span class="string">"sqlSessionTemplateBeanName"</span>, values);</span><br><span class="line">            <span class="keyword">this</span>.lazyInitialization = updatePropertyValue(<span class="string">"lazyInitialization"</span>, values);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.basePackage = Optional.ofNullable(<span class="keyword">this</span>.basePackage).map(getEnvironment()::resolvePlaceholders).orElse(<span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">this</span>.sqlSessionFactoryBeanName = Optional.ofNullable(<span class="keyword">this</span>.sqlSessionFactoryBeanName).map(getEnvironment()::resolvePlaceholders).orElse(<span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">this</span>.sqlSessionTemplateBeanName = Optional.ofNullable(<span class="keyword">this</span>.sqlSessionTemplateBeanName).map(getEnvironment()::resolvePlaceholders).orElse(<span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">this</span>.lazyInitialization = Optional.ofNullable(<span class="keyword">this</span>.lazyInitialization).map(getEnvironment()::resolvePlaceholders).orElse(<span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先会根据在<strong><code>@MapperScan</code>注解</strong>上设置的注解类<strong><code>annotationClass</code></strong>、以及<strong><code>markerInterface</code></strong>来添加过滤器，若未设置将会将包下的所有接口扫描出来。</p>
+<p>在调用超类<strong><code>ClassPathBeanDefinitionScanner</code></strong>的scan方法扫描包时会调用子类<strong><code>ClassPathMapperScanner</code></strong>中的<strong><code>doScan</code></strong>，而该类又去调用了<strong>超类</strong>的<strong><code>doScan</code></strong>方法，但有一点不同的是这复写了<strong><code>isCandidateComponent</code></strong>方法<strong>只扫描接口</strong>，而Spring中默认恰好相反。</p>
+<p>当将所有符合条件的<strong><code>Mapper</code>接口</strong>的<strong><code>BeanDefinition</code></strong>信息扫描出来后，进行遍历将<strong><code>beanClass</code></strong>设置成<strong><code>MapperFactoryBean</code></strong>的Class，从而达到偷天换日将Mapper接口通过<strong><code>MapperFactoryBean</code></strong>来创建生成Bean。因为<strong>接口是不能被实例化生成<code>Bean</code></strong>的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClassPathMapperScanner</span> <span class="keyword">extends</span> <span class="title">ClassPathBeanDefinitionScanner</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerFilters</span><span class="params">()</span> </span>&#123; <span class="comment">// 注册扫描规则过滤器</span></span><br><span class="line">        <span class="keyword">boolean</span> acceptAllInterfaces = <span class="keyword">true</span>;</span><br><span class="line">        <span class="comment">// 若annotationClass不为空，表示用户设置了此属性，则根据此属性生成过滤器以保证达到用户想要的效果，而封装此属性的过滤器就是 AnnotationTypeFiter，其保证在扫描对应Java文件时只接受标记有注解为annotationClass的接口</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.annotationClass != <span class="keyword">null</span>) &#123;</span><br><span class="line">            addIncludeFilter(<span class="keyword">new</span> AnnotationTypeFilter(<span class="keyword">this</span>.annotationClass));</span><br><span class="line">            acceptAllInterfaces = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 如果markerlnterface不为空，表示要根据此属性生成过滤器以保证达到用户想要的效果，而封装此属性的过滤器就是实现AssignableTypeFiter接口的局部类，扫描过程中只有实现markerIntrface接口的接口才会被接受</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.markerInterface != <span class="keyword">null</span>) &#123;</span><br><span class="line">            addIncludeFilter(<span class="keyword">new</span> AssignableTypeFilter(<span class="keyword">this</span>.markerInterface) &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">matchClassName</span><span class="params">(String className)</span> </span>&#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">            acceptAllInterfaces = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (acceptAllInterfaces) &#123; <span class="comment">// 若接受所有接口，则添加自定义INCLUDE过滤器TypeFilter，全部返回true</span></span><br><span class="line">            <span class="comment">// default include filter that accepts all classes</span></span><br><span class="line">            addIncludeFilter((metadataReader, metadataReaderFactory) -&gt; <span class="keyword">true</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 对于命名为package-info Java文件，默认不作为逻辑实现接口，将其排除掉，使用TypeFiltler接口的局部类实现match 法</span></span><br><span class="line">        addExcludeFilter((metadataReader, metadataReaderFactory) -&gt; &#123;</span><br><span class="line">            String className = metadataReader.getClassMetadata().getClassName();</span><br><span class="line">            <span class="keyword">return</span> className.endsWith(<span class="string">"package-info"</span>);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Set&lt;BeanDefinitionHolder&gt; <span class="title">doScan</span><span class="params">(String... basePackages)</span> </span>&#123;</span><br><span class="line">        Set&lt;BeanDefinitionHolder&gt; beanDefinitions = <span class="keyword">super</span>.doScan(basePackages); <span class="comment">// 调用父类ClassPathBeanDefinitionScanner来进行扫描</span></span><br><span class="line">        <span class="keyword">if</span> (beanDefinitions.isEmpty()) &#123; <span class="comment">// 若扫描后mapper包下有接口类，则扫描bean定义就不会为空</span></span><br><span class="line">            LOGGER.warn(() -&gt; <span class="string">"No MyBatis mapper was found in '"</span> + Arrays.toString(basePackages) + <span class="string">"' package. Please check your configuration."</span>);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            processBeanDefinitions(beanDefinitions); <span class="comment">// 这里是将Mapper接口注册到Spring容器中的关键</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> beanDefinitions;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">processBeanDefinitions</span><span class="params">(Set&lt;BeanDefinitionHolder&gt; beanDefinitions)</span> </span>&#123;</span><br><span class="line">        GenericBeanDefinition definition;</span><br><span class="line">        <span class="keyword">for</span> (BeanDefinitionHolder holder : beanDefinitions) &#123; <span class="comment">// 循环所有扫描出mapper的bean定义出来</span></span><br><span class="line">            definition = (GenericBeanDefinition) holder.getBeanDefinition(); <span class="comment">// 获取的bean定义</span></span><br><span class="line">            String beanClassName = definition.getBeanClassName();  <span class="comment">// 获取的bean定义的名称</span></span><br><span class="line">            definition.getConstructorArgumentValues().addGenericArgumentValue(beanClassName); <span class="comment">// 设置ConstructorArgumentValues会通过构造器初始化对象</span></span><br><span class="line">            <span class="comment">// 进行真的偷天换日操作，将当前Bean的Class设置成MapperFactoryBean的Class</span></span><br><span class="line">            definition.setBeanClass(<span class="keyword">this</span>.mapperFactoryBeanClass);</span><br><span class="line">            definition.getPropertyValues().add(<span class="string">"addToConfig"</span>, <span class="keyword">this</span>.addToConfig);</span><br><span class="line">            <span class="comment">// 为的Mapper对象绑定sqlSessionFactory引用，实际上是为MapperFactoryBean添加一个sqlSessionFactory的属性</span></span><br><span class="line">            <span class="comment">// 然后SpringIoc在实例化MapperFactoryBean时为通过populate()为UserMapper(MapperFactoryBean)的sqlSessionFactory属性赋值，调用set方法</span></span><br><span class="line">            <span class="keyword">boolean</span> explicitFactoryUsed = <span class="keyword">false</span>;</span><br><span class="line">            <span class="keyword">if</span> (StringUtils.hasText(<span class="keyword">this</span>.sqlSessionFactoryBeanName)) &#123;</span><br><span class="line">                definition.getPropertyValues().add(<span class="string">"sqlSessionFactory"</span>, <span class="keyword">new</span> RuntimeBeanReference(<span class="keyword">this</span>.sqlSessionFactoryBeanName));</span><br><span class="line">                explicitFactoryUsed = <span class="keyword">true</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">this</span>.sqlSessionFactory != <span class="keyword">null</span>) &#123;</span><br><span class="line">                definition.getPropertyValues().add(<span class="string">"sqlSessionFactory"</span>, <span class="keyword">this</span>.sqlSessionFactory);</span><br><span class="line">                explicitFactoryUsed = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (StringUtils.hasText(<span class="keyword">this</span>.sqlSessionTemplateBeanName)) &#123; <span class="comment">// 同上sqlSessionFactory</span></span><br><span class="line">                definition.getPropertyValues().add(<span class="string">"sqlSessionTemplate"</span>, <span class="keyword">new</span> RuntimeBeanReference(<span class="keyword">this</span>.sqlSessionTemplateBeanName));</span><br><span class="line">                explicitFactoryUsed = <span class="keyword">true</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">this</span>.sqlSessionTemplate != <span class="keyword">null</span>) &#123;</span><br><span class="line">                definition.getPropertyValues().add(<span class="string">"sqlSessionTemplate"</span>, <span class="keyword">this</span>.sqlSessionTemplate); <span class="comment">// 将sqlSessionTemplate通过AUTOWIRE_BY_TYPE自动装配</span></span><br><span class="line">                explicitFactoryUsed = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 设置UserMapper&lt;MapperFactoryBean&gt;定义的注入模型是通过包扫描进来的，所有默认注入模型为AutowireCapableBeanFactory.AUTOWIRE_NO=0标识通过@Autowire注解注入</span></span><br><span class="line">            <span class="comment">// 因为字段上是没有@AutoWired注解，则MapperFactoryBean的字段属性永远自动注入不了值，故需要把UserMapper&lt;MapperFactoryBean&gt;bean定义的注入模型给改成的AUTOWIRE_BY_TYPE=1表示根据类型自动装配</span></span><br><span class="line">            <span class="keyword">if</span> (!explicitFactoryUsed) &#123;</span><br><span class="line">                definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);</span><br><span class="line">            &#125;</span><br><span class="line">            definition.setLazyInit(lazyInitialization); <span class="comment">// 设置bean定义的加载模型(是否为懒加载)</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">isCandidateComponent</span><span class="params">(AnnotatedBeanDefinition beanDefinition)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> beanDefinition.getMetadata().isInterface() &amp;&amp; beanDefinition.getMetadata().isIndependent();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于<strong><code>MapperFactoryBean</code></strong>代码就比较简单了，上面在给BeanDefinition设置属性时，给构造函数参数列表中添加了一个参数即原始Mapper类名，故实例化<strong><code>MapperFactoryBean</code></strong>时会调用有参构造函数。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MapperFactoryBean</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">SqlSessionDaoSupport</span> <span class="keyword">implements</span> <span class="title">FactoryBean</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Class&lt;T&gt; mapperInterface;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MapperFactoryBean</span><span class="params">(Class&lt;T&gt; mapperInterface)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.mapperInterface = mapperInterface;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getSqlSession().getMapper(<span class="keyword">this</span>.mapperInterface);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Class&lt;T&gt; <span class="title">getObjectType</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.mapperInterface;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SqlSessionTemplate</span> <span class="keyword">implements</span> <span class="title">SqlSession</span>, <span class="title">DisposableBean</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> &lt;T&gt; <span class="function">T <span class="title">getMapper</span><span class="params">(Class&lt;T&gt; type)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 最终去sqlSessionFactory.Configuration.mapperRegistry去获取我们的Mapper对象</span></span><br><span class="line">        <span class="keyword">return</span> getConfiguration().getMapper(type, <span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        SpringBoot Jar包启动原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Mybatis执行SQL原理</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

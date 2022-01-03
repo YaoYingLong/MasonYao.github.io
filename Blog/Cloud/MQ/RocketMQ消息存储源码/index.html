@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        RocketMQ消息存储源码 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="RocketMQ">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="RocketMQ的存储文件包括消息文件Commitlog、消息消费队列文件ConsumerQueue、Hash索引文件IndexFile、监测点文件checkPoint、abort关闭异常文件。单个消息存储文件、消息消费队列文件、Hash索引文件长度固定以便使用内存映射机制进行文件的读写操作。 RocketMQ组织文件以文件起始偏移量来命令文件，根据偏移量能快速定位到真实物理文件。基于内存映射文件">
+<meta name="keywords" content="RocketMQ">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RocketMQ消息存储源码">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/MQ/RocketMQ消息存储源码/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="RocketMQ的存储文件包括消息文件Commitlog、消息消费队列文件ConsumerQueue、Hash索引文件IndexFile、监测点文件checkPoint、abort关闭异常文件。单个消息存储文件、消息消费队列文件、Hash索引文件长度固定以便使用内存映射机制进行文件的读写操作。 RocketMQ组织文件以文件起始偏移量来命令文件，根据偏移量能快速定位到真实物理文件。基于内存映射文件">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2021-12-20T11:20:23.653Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RocketMQ消息存储源码">
+<meta name="twitter:description" content="RocketMQ的存储文件包括消息文件Commitlog、消息消费队列文件ConsumerQueue、Hash索引文件IndexFile、监测点文件checkPoint、abort关闭异常文件。单个消息存储文件、消息消费队列文件、Hash索引文件长度固定以便使用内存映射机制进行文件的读写操作。 RocketMQ组织文件以文件起始偏移量来命令文件，根据偏移量能快速定位到真实物理文件。基于内存映射文件">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-Cloud/MQ/RocketMQ消息存储源码" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/MQ/">MQ</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/RocketMQ/">RocketMQ</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">
+            <time datetime="2021-12-01T16:00:00.000Z" itemprop="datePublished">2021-12-02</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            RocketMQ消息存储源码
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>RocketMQ的存储文件包括<strong>消息文件<code>Commitlog</code></strong>、消息<strong>消费队列文件<code>ConsumerQueue</code></strong>、<strong>Hash索引文件<code>IndexFile</code></strong>、<strong>监测点文件<code>checkPoint</code></strong>、<strong><code>abort</code>关闭异常文件</strong>。单个<strong>消息存储文件</strong>、消息<strong>消费队列文件</strong>、Hash索引文件<strong>长度固定</strong>以便使用<strong>内存映射机制进行文件的读写操作</strong>。</p>
+<p>RocketMQ组织文件<strong>以文件起始偏移量来命令文件</strong>，根据偏移量<strong>能快速定位到真实物理文件</strong>。<strong>基于内存映射文件机制提</strong>供了<strong>同步刷盘</strong>和<strong>异步刷盘</strong>两种机制，异步刷盘是指在消息存储时<strong>先追加到内存映射文件</strong>，然后启动专门的刷盘线程定时将内存中的文件数据刷写到磁盘。</p>
+<p>为了<strong>保证</strong>消息发送的<strong>高吞吐量</strong>，<strong>采用单一文件存储所有主题消息</strong>，保证消息存储是完全的<strong>顺序写</strong>，但这样给文件读取带来了不便，<strong>为了方便消息消费构建了消息消费队列文件</strong>，基于<strong>主题</strong>与<strong>队列</strong>进行组织，同时为消息实现了<strong>Hash索引</strong>，可以<strong>为消息设置索引键</strong>，故能快速从<strong><code>CommitLog</code></strong>文件中检索消息。</p>
+<p>当消息达到<strong><code>CommitLog</code></strong>后，会通过<strong><code>ReputMessageService</code></strong>线程<strong>接近实时</strong>地将消息转发给消息<strong>消费队列文件</strong>与<strong>索引文件</strong>。为了安全起见引入<strong><code>abort</code>文件</strong>，记录Broker<strong>停机是否是正常</strong>关闭，在重启Broker时为了保证CommitLog文件、消息消费队列文件与Hash索引文件的正确性，<strong>分别采用不同策略来恢复文件</strong>。</p>
+<p>RocketMQ<strong>不会永久存储</strong>消息文件、消息消费队列文件，而是启动<strong>文件过期机制</strong>并在<strong>磁盘空间不足</strong>或<strong>默认4点删除过期文件</strong>，文件保存72小时并且在删除文件时并<strong>不会判断该消息文件上的消息是否被消费</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultMessageStore</span> <span class="keyword">implements</span> <span class="title">MessageStore</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        lock = lockFile.getChannel().tryLock(<span class="number">0</span>, <span class="number">1</span>, <span class="keyword">false</span>);</span><br><span class="line">        <span class="keyword">if</span> (lock == <span class="keyword">null</span> || lock.isShared() || !lock.isValid()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Lock failed,MQ already started"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        lockFile.getChannel().write(ByteBuffer.wrap(<span class="string">"lock"</span>.getBytes()));</span><br><span class="line">        lockFile.getChannel().force(<span class="keyword">true</span>);</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">long</span> maxPhysicalPosInLogicQueue = commitLog.getMinOffset();</span><br><span class="line">            <span class="keyword">for</span> (ConcurrentMap&lt;Integer, ConsumeQueue&gt; maps : <span class="keyword">this</span>.consumeQueueTable.values()) &#123;</span><br><span class="line">                <span class="keyword">for</span> (ConsumeQueue logic : maps.values()) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (logic.getMaxPhysicOffset() &gt; maxPhysicalPosInLogicQueue) &#123;</span><br><span class="line">                        maxPhysicalPosInLogicQueue = logic.getMaxPhysicOffset();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (maxPhysicalPosInLogicQueue &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                maxPhysicalPosInLogicQueue = <span class="number">0</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (maxPhysicalPosInLogicQueue &lt; <span class="keyword">this</span>.commitLog.getMinOffset()) &#123;</span><br><span class="line">                maxPhysicalPosInLogicQueue = <span class="keyword">this</span>.commitLog.getMinOffset();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// Broker启动时会启动一个线程来更新ConsumerQueue索引文件。</span></span><br><span class="line">            <span class="keyword">this</span>.reputMessageService.setReputFromOffset(maxPhysicalPosInLogicQueue);</span><br><span class="line">            <span class="keyword">this</span>.reputMessageService.start();</span><br><span class="line">            <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (dispatchBehindBytes() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.recoverTopicQueueTable();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!messageStoreConfig.isEnableDLegerCommitLog()) &#123;</span><br><span class="line">            <span class="keyword">this</span>.haService.start();</span><br><span class="line">            <span class="keyword">this</span>.handleScheduleMessageService(messageStoreConfig.getBrokerRole());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.flushConsumeQueueService.start();</span><br><span class="line">        <span class="keyword">this</span>.commitLog.start();</span><br><span class="line">        <span class="keyword">this</span>.storeStatsService.start();</span><br><span class="line">        <span class="keyword">this</span>.createTempFile();</span><br><span class="line">        <span class="keyword">this</span>.addScheduleTask(); <span class="comment">// Broker启动删除过期文件的定时任务</span></span><br><span class="line">        <span class="keyword">this</span>.shutdown = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="消息存储"><a href="#消息存储" class="headerlink" title="消息存储"></a>消息存储</h4><p>对于消息的存储是通过<strong><code>DefaultMessageStore</code></strong>的<strong><code>putMessage</code></strong>方法最终调用<strong><code>CommitLog</code></strong>的<strong><code>putMessage</code></strong>方法从而使用<strong><code>mmap</code>零拷贝</strong>来完成数据的存储。对于延迟消息会<strong>将实际的Topic替换为<code>SCHEDULE_TOPIC_XXXX</code></strong>，通过<strong>异步任务</strong>当到达时间点时再从该队列中取出再<strong>放入原来实际的<code>Topic</code>中</strong>。</p>
+<p>对于<strong><code>CommitLog</code></strong>文件的写同一时间只能有一个线程，首先会获取当前要写的<strong><code>MappedFile</code></strong>，若该文件已满或不存在则创建一个<strong><code>MappedFile</code></strong>，通过<strong><code>MappedFile</code></strong>的<strong><code>appendMessage</code></strong>方法将数据写入缓存中。然后执行<strong><code>handleDiskFlush</code></strong>方法将缓存中的数据刷到磁盘中，以及通过<strong><code>handleHA</code></strong>方法进行<strong>主从同步</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">MessageStore</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">default</span> CompletableFuture&lt;PutMessageResult&gt; <span class="title">asyncPutMessage</span><span class="params">(<span class="keyword">final</span> MessageExtBrokerInner msg)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> CompletableFuture.completedFuture(putMessage(msg));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultMessageStore</span> <span class="keyword">implements</span> <span class="title">MessageStore</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> PutMessageResult <span class="title">putMessage</span><span class="params">(MessageExtBrokerInner msg)</span> </span>&#123;</span><br><span class="line">        PutMessageStatus checkStoreStatus = <span class="keyword">this</span>.checkStoreStatus();</span><br><span class="line">        <span class="keyword">if</span> (checkStoreStatus != PutMessageStatus.PUT_OK) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(checkStoreStatus, <span class="keyword">null</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        PutMessageStatus msgCheckStatus = <span class="keyword">this</span>.checkMessage(msg);</span><br><span class="line">        <span class="keyword">if</span> (msgCheckStatus == PutMessageStatus.MESSAGE_ILLEGAL) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(msgCheckStatus, <span class="keyword">null</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">long</span> beginTime = <span class="keyword">this</span>.getSystemClock().now();</span><br><span class="line">        <span class="comment">//我们跟踪下这个最典型的消息写入commitlog的方法</span></span><br><span class="line">        PutMessageResult result = <span class="keyword">this</span>.commitLog.putMessage(msg);</span><br><span class="line">        <span class="keyword">long</span> elapsedTime = <span class="keyword">this</span>.getSystemClock().now() - beginTime;</span><br><span class="line">        <span class="keyword">this</span>.storeStatsService.setPutMessageEntireTimeMax(elapsedTime);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == result || !result.isOk()) &#123;</span><br><span class="line">            <span class="keyword">this</span>.storeStatsService.getPutMessageFailedTimes().incrementAndGet();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CommitLog</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> PutMessageResult <span class="title">putMessage</span><span class="params">(<span class="keyword">final</span> MessageExtBrokerInner msg)</span> </span>&#123;</span><br><span class="line">        msg.setStoreTimestamp(System.currentTimeMillis()); <span class="comment">// Set the storage time</span></span><br><span class="line">        msg.setBodyCRC(UtilAll.crc32(msg.getBody()));</span><br><span class="line">        AppendMessageResult result = <span class="keyword">null</span>;</span><br><span class="line">        StoreStatsService storeStatsService = <span class="keyword">this</span>.defaultMessageStore.getStoreStatsService();</span><br><span class="line">        String topic = msg.getTopic();</span><br><span class="line">        <span class="keyword">int</span> queueId = msg.getQueueId();</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> tranType = MessageSysFlag.getTransactionValue(msg.getSysFlag());</span><br><span class="line">        <span class="keyword">if</span> (tranType == MessageSysFlag.TRANSACTION_NOT_TYPE || tranType == MessageSysFlag.TRANSACTION_COMMIT_TYPE) &#123;</span><br><span class="line">            <span class="keyword">if</span> (msg.getDelayTimeLevel() &gt; <span class="number">0</span>) &#123; <span class="comment">// Delay Delivery</span></span><br><span class="line">                <span class="keyword">if</span> (msg.getDelayTimeLevel() &gt; <span class="keyword">this</span>.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel()) &#123;</span><br><span class="line">                    msg.setDelayTimeLevel(<span class="keyword">this</span>.defaultMessageStore.getScheduleMessageService().getMaxDelayLevel());</span><br><span class="line">                &#125;</span><br><span class="line">                topic = TopicValidator.RMQ_SYS_SCHEDULE_TOPIC; <span class="comment">// 将消息的Topic替换为SCHEDULE_TOPIC_XXXX</span></span><br><span class="line">                queueId = ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel());</span><br><span class="line">                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_TOPIC, msg.getTopic());</span><br><span class="line">                MessageAccessor.putProperty(msg, MessageConst.PROPERTY_REAL_QUEUE_ID, String.valueOf(msg.getQueueId()));</span><br><span class="line">                msg.setPropertiesString(MessageDecoder.messageProperties2String(msg.getProperties()));</span><br><span class="line">                msg.setTopic(topic);</span><br><span class="line">                msg.setQueueId(queueId);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        InetSocketAddress bornSocketAddress = (InetSocketAddress) msg.getBornHost();</span><br><span class="line">        <span class="keyword">if</span> (bornSocketAddress.getAddress() <span class="keyword">instanceof</span> Inet6Address) &#123;</span><br><span class="line">            msg.setBornHostV6Flag();</span><br><span class="line">        &#125;</span><br><span class="line">        InetSocketAddress storeSocketAddress = (InetSocketAddress) msg.getStoreHost();</span><br><span class="line">        <span class="keyword">if</span> (storeSocketAddress.getAddress() <span class="keyword">instanceof</span> Inet6Address) &#123;</span><br><span class="line">            msg.setStoreHostAddressV6Flag();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">long</span> elapsedTimeInLock = <span class="number">0</span>;</span><br><span class="line">        MappedFile unlockMappedFile = <span class="keyword">null</span>;</span><br><span class="line">        MappedFile mappedFile = <span class="keyword">this</span>.mappedFileQueue.getLastMappedFile(); <span class="comment">//mappedFile 零拷贝实现</span></span><br><span class="line">        putMessageLock.lock(); <span class="comment">// 线程锁 注意使用锁的这种方式</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">long</span> beginLockTimestamp = <span class="keyword">this</span>.defaultMessageStore.getSystemClock().now();</span><br><span class="line">            <span class="keyword">this</span>.beginTimeInLock = beginLockTimestamp;</span><br><span class="line">            msg.setStoreTimestamp(beginLockTimestamp);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == mappedFile || mappedFile.isFull()) &#123;</span><br><span class="line">                mappedFile = <span class="keyword">this</span>.mappedFileQueue.getLastMappedFile(<span class="number">0</span>); <span class="comment">// Mark: NewFile may be cause noise</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == mappedFile) &#123;</span><br><span class="line">                beginTimeInLock = <span class="number">0</span>;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, <span class="keyword">null</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 直接以Append的方式写入文件</span></span><br><span class="line">            result = mappedFile.appendMessage(msg, <span class="keyword">this</span>.appendMessageCallback);</span><br><span class="line">            <span class="keyword">switch</span> (result.getStatus()) &#123; <span class="comment">// 文件写入的结果</span></span><br><span class="line">                <span class="keyword">case</span> PUT_OK:</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> END_OF_FILE: <span class="comment">//文件写满了，就创建一个新文件，重写消息</span></span><br><span class="line">                    unlockMappedFile = mappedFile;</span><br><span class="line">                    mappedFile = <span class="keyword">this</span>.mappedFileQueue.getLastMappedFile(<span class="number">0</span>);</span><br><span class="line">                    <span class="keyword">if</span> (<span class="keyword">null</span> == mappedFile) &#123;</span><br><span class="line">                        beginTimeInLock = <span class="number">0</span>;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.CREATE_MAPEDFILE_FAILED, result);</span><br><span class="line">                    &#125;</span><br><span class="line">                    result = mappedFile.appendMessage(msg, <span class="keyword">this</span>.appendMessageCallback);</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MESSAGE_SIZE_EXCEEDED:</span><br><span class="line">                <span class="keyword">case</span> PROPERTIES_SIZE_EXCEEDED:</span><br><span class="line">                    beginTimeInLock = <span class="number">0</span>;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, result);</span><br><span class="line">                <span class="keyword">case</span> UNKNOWN_ERROR:</span><br><span class="line">                    beginTimeInLock = <span class="number">0</span>;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.UNKNOWN_ERROR, result);</span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                    beginTimeInLock = <span class="number">0</span>;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">new</span> PutMessageResult(PutMessageStatus.UNKNOWN_ERROR, result);</span><br><span class="line">            &#125;</span><br><span class="line">            elapsedTimeInLock = <span class="keyword">this</span>.defaultMessageStore.getSystemClock().now() - beginLockTimestamp;</span><br><span class="line">            beginTimeInLock = <span class="number">0</span>;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            putMessageLock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != unlockMappedFile &amp;&amp; <span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().isWarmMapedFileEnable()) &#123;</span><br><span class="line">            <span class="keyword">this</span>.defaultMessageStore.unlockMappedFile(unlockMappedFile);</span><br><span class="line">        &#125;</span><br><span class="line">        PutMessageResult putMessageResult = <span class="keyword">new</span> PutMessageResult(PutMessageStatus.PUT_OK, result);</span><br><span class="line">        storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();</span><br><span class="line">        storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());</span><br><span class="line">        handleDiskFlush(result, putMessageResult, msg); <span class="comment">//文件刷盘</span></span><br><span class="line">        handleHA(result, putMessageResult, msg); <span class="comment">//主从同步</span></span><br><span class="line">        <span class="keyword">return</span> putMessageResult;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>MappedFileQueue</code></strong>对应<strong><code>CommitLog</code></strong>目录下的文件，文件名称为第一个数据的偏移量加个上文件的固定大小，最终会通过<strong><code>AllocateMappedFileService</code></strong>的<strong><code>putRequestAndReturnMappedFile</code></strong>方法创建一个<strong><code>MappedFile</code></strong>对象。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MappedFileQueue</span> </span>&#123; <span class="comment">// MappedFileQueue对应CommitLog目录下的文件</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedFile <span class="title">getLastMappedFile</span><span class="params">(<span class="keyword">final</span> <span class="keyword">long</span> startOffset)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> getLastMappedFile(startOffset, <span class="keyword">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedFile <span class="title">getLastMappedFile</span><span class="params">(<span class="keyword">final</span> <span class="keyword">long</span> startOffset, <span class="keyword">boolean</span> needCreate)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">long</span> createOffset = -<span class="number">1</span>;</span><br><span class="line">        MappedFile mappedFileLast = getLastMappedFile();</span><br><span class="line">        <span class="keyword">if</span> (mappedFileLast == <span class="keyword">null</span>) &#123;</span><br><span class="line">            createOffset = startOffset - (startOffset % <span class="keyword">this</span>.mappedFileSize);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (mappedFileLast != <span class="keyword">null</span> &amp;&amp; mappedFileLast.isFull()) &#123;</span><br><span class="line">            createOffset = mappedFileLast.getFileFromOffset() + <span class="keyword">this</span>.mappedFileSize;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (createOffset != -<span class="number">1</span> &amp;&amp; needCreate) &#123;</span><br><span class="line">            String nextFilePath = <span class="keyword">this</span>.storePath + File.separator + UtilAll.offset2FileName(createOffset);</span><br><span class="line">            String nextNextFilePath = <span class="keyword">this</span>.storePath + File.separator + UtilAll.offset2FileName(createOffset + <span class="keyword">this</span>.mappedFileSize);</span><br><span class="line">            MappedFile mappedFile = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span>.allocateMappedFileService != <span class="keyword">null</span>) &#123;</span><br><span class="line">                mappedFile = <span class="keyword">this</span>.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath, nextNextFilePath, <span class="keyword">this</span>.mappedFileSize);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    mappedFile = <span class="keyword">new</span> MappedFile(nextFilePath, <span class="keyword">this</span>.mappedFileSize);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (mappedFile != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.mappedFiles.isEmpty()) &#123;</span><br><span class="line">                    mappedFile.setFirstCreateInQueue(<span class="keyword">true</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">this</span>.mappedFiles.add(mappedFile);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> mappedFile;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> mappedFileLast;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>AllocateMappedFileService</code></strong>是一个线程类，<strong><code>putRequestAndReturnMappedFile</code></strong>中会把任务放入队列中，然后在run方法中取处理任务，该线程是在<strong><code>DefaultMessageStore</code></strong>的构造方法中创建启动。这里会将写满的文件刷到磁盘中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AllocateMappedFileService</span> <span class="keyword">extends</span> <span class="title">ServiceThread</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> ConcurrentMap&lt;String, AllocateRequest&gt; requestTable = <span class="keyword">new</span> ConcurrentHashMap&lt;String, AllocateRequest&gt;();</span><br><span class="line">    <span class="keyword">private</span> PriorityBlockingQueue&lt;AllocateRequest&gt; requestQueue = <span class="keyword">new</span> PriorityBlockingQueue&lt;AllocateRequest&gt;();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> MappedFile <span class="title">putRequestAndReturnMappedFile</span><span class="params">(String nextFilePath, String nextNextFilePath, <span class="keyword">int</span> fileSize)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> canSubmitRequests = <span class="number">2</span>;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span>.messageStore.getMessageStoreConfig().isFastFailIfNoBufferInStorePool() &amp;&amp; BrokerRole.SLAVE != <span class="keyword">this</span>.messageStore.getMessageStoreConfig().getBrokerRole()) &#123; <span class="comment">//if broker is slave, don't fast fail even no buffer in pool</span></span><br><span class="line">                canSubmitRequests = <span class="keyword">this</span>.messageStore.getTransientStorePool().availableBufferNums() - <span class="keyword">this</span>.requestQueue.size();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        AllocateRequest nextReq = <span class="keyword">new</span> AllocateRequest(nextFilePath, fileSize);</span><br><span class="line">        <span class="keyword">boolean</span> nextPutOK = <span class="keyword">this</span>.requestTable.putIfAbsent(nextFilePath, nextReq) == <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">if</span> (nextPutOK) &#123;</span><br><span class="line">            <span class="keyword">if</span> (canSubmitRequests &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">this</span>.requestTable.remove(nextFilePath);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">boolean</span> offerOK = <span class="keyword">this</span>.requestQueue.offer(nextReq);</span><br><span class="line">            canSubmitRequests--;</span><br><span class="line">        &#125;</span><br><span class="line">        AllocateRequest nextNextReq = <span class="keyword">new</span> AllocateRequest(nextNextFilePath, fileSize);</span><br><span class="line">        <span class="keyword">boolean</span> nextNextPutOK = <span class="keyword">this</span>.requestTable.putIfAbsent(nextNextFilePath, nextNextReq) == <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">if</span> (nextNextPutOK) &#123;</span><br><span class="line">            <span class="keyword">if</span> (canSubmitRequests &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">this</span>.requestTable.remove(nextNextFilePath);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">boolean</span> offerOK = <span class="keyword">this</span>.requestQueue.offer(nextNextReq);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (hasException) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        AllocateRequest result = <span class="keyword">this</span>.requestTable.get(nextFilePath);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (result != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">boolean</span> waitOK = result.getCountDownLatch().await(waitTimeOut, TimeUnit.MILLISECONDS);</span><br><span class="line">                <span class="keyword">if</span> (!waitOK) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">this</span>.requestTable.remove(nextFilePath);</span><br><span class="line">                    <span class="keyword">return</span> result.getMappedFile();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (!<span class="keyword">this</span>.isStopped() &amp;&amp; <span class="keyword">this</span>.mmapOperation()) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">mmapOperation</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">boolean</span> isSuccess = <span class="keyword">false</span>;</span><br><span class="line">        AllocateRequest req = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            req = <span class="keyword">this</span>.requestQueue.take();</span><br><span class="line">            AllocateRequest expectedRequest = <span class="keyword">this</span>.requestTable.get(req.getFilePath());</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == expectedRequest) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (expectedRequest != req) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (req.getMappedFile() == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">long</span> beginTime = System.currentTimeMillis();</span><br><span class="line">                MappedFile mappedFile;</span><br><span class="line">                <span class="keyword">if</span> (messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        mappedFile = ServiceLoader.load(MappedFile<span class="class">.<span class="keyword">class</span>).<span class="title">iterator</span>().<span class="title">next</span>()</span>;</span><br><span class="line">                        mappedFile.init(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (RuntimeException e) &#123;</span><br><span class="line">                        mappedFile = <span class="keyword">new</span> MappedFile(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    mappedFile = <span class="keyword">new</span> MappedFile(req.getFilePath(), req.getFileSize());</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">long</span> elapsedTime = UtilAll.computeElapsedTimeMilliseconds(beginTime);</span><br><span class="line">                <span class="keyword">if</span> (elapsedTime &gt; <span class="number">10</span>) &#123;</span><br><span class="line">                    <span class="keyword">int</span> queueSize = <span class="keyword">this</span>.requestQueue.size();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (mappedFile.getFileSize() &gt;= <span class="keyword">this</span>.messageStore.getMessageStoreConfig().getMappedFileSizeCommitLog() &amp;&amp; <span class="keyword">this</span>.messageStore.getMessageStoreConfig().isWarmMapedFileEnable()) &#123;</span><br><span class="line">                    mappedFile.warmMappedFile(<span class="keyword">this</span>.messageStore.getMessageStoreConfig().getFlushDiskType(), <span class="keyword">this</span>.messageStore.getMessageStoreConfig().getFlushLeastPagesWhenWarmMapedFile());</span><br><span class="line">                &#125;</span><br><span class="line">                req.setMappedFile(mappedFile);</span><br><span class="line">                <span class="keyword">this</span>.hasException = <span class="keyword">false</span>;</span><br><span class="line">                isSuccess = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">            <span class="keyword">this</span>.hasException = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            <span class="keyword">this</span>.hasException = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> != req) &#123;</span><br><span class="line">                requestQueue.offer(req);</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">1</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException ignored) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (req != <span class="keyword">null</span> &amp;&amp; isSuccess)</span><br><span class="line">                req.getCountDownLatch().countDown();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MappedFile</span> <span class="keyword">extends</span> <span class="title">ReferenceResource</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">warmMappedFile</span><span class="params">(FlushDiskType type, <span class="keyword">int</span> pages)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">long</span> beginTime = System.currentTimeMillis();</span><br><span class="line">        ByteBuffer byteBuffer = <span class="keyword">this</span>.mappedByteBuffer.slice();</span><br><span class="line">        <span class="keyword">int</span> flush = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">long</span> time = System.currentTimeMillis();</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>, j = <span class="number">0</span>; i &lt; <span class="keyword">this</span>.fileSize; i += MappedFile.OS_PAGE_SIZE, j++) &#123;</span><br><span class="line">            byteBuffer.put(i, (<span class="keyword">byte</span>) <span class="number">0</span>);</span><br><span class="line">            <span class="keyword">if</span> (type == FlushDiskType.SYNC_FLUSH) &#123;</span><br><span class="line">                <span class="keyword">if</span> ((i / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE) &gt;= pages) &#123;</span><br><span class="line">                    flush = i;</span><br><span class="line">                    mappedByteBuffer.force(); <span class="comment">// force flush when flush disk type is sync</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (j % <span class="number">1000</span> == <span class="number">0</span>) &#123; <span class="comment">// prevent gc</span></span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">0</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (type == FlushDiskType.SYNC_FLUSH) &#123;</span><br><span class="line">            mappedByteBuffer.force(); <span class="comment">// force flush when prepare load finished</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.mlock();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>消息是通过<strong><code>MappedFile</code></strong>的<strong><code>appendMessage</code></strong>方法以Append的方式写入文件缓存中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MappedFile</span> <span class="keyword">extends</span> <span class="title">ReferenceResource</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> AppendMessageResult <span class="title">appendMessage</span><span class="params">(<span class="keyword">final</span> MessageExtBrokerInner msg, <span class="keyword">final</span> AppendMessageCallback cb)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> appendMessagesInner(msg, cb);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> AppendMessageResult <span class="title">appendMessagesInner</span><span class="params">(<span class="keyword">final</span> MessageExt messageExt, <span class="keyword">final</span> AppendMessageCallback cb)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">assert</span> messageExt != <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">assert</span> cb != <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">int</span> currentPos = <span class="keyword">this</span>.wrotePosition.get();</span><br><span class="line">        <span class="keyword">if</span> (currentPos &lt; <span class="keyword">this</span>.fileSize) &#123;</span><br><span class="line">            ByteBuffer byteBuffer = writeBuffer != <span class="keyword">null</span> ? writeBuffer.slice() : <span class="keyword">this</span>.mappedByteBuffer.slice();</span><br><span class="line">            byteBuffer.position(currentPos);</span><br><span class="line">            AppendMessageResult result;</span><br><span class="line">            <span class="keyword">if</span> (messageExt <span class="keyword">instanceof</span> MessageExtBrokerInner) &#123;</span><br><span class="line">                result = cb.doAppend(<span class="keyword">this</span>.getFileFromOffset(), byteBuffer, <span class="keyword">this</span>.fileSize - currentPos, (MessageExtBrokerInner) messageExt);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (messageExt <span class="keyword">instanceof</span> MessageExtBatch) &#123;</span><br><span class="line">                result = cb.doAppend(<span class="keyword">this</span>.getFileFromOffset(), byteBuffer, <span class="keyword">this</span>.fileSize - currentPos, (MessageExtBatch) messageExt);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> AppendMessageResult(AppendMessageStatus.UNKNOWN_ERROR);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.wrotePosition.addAndGet(result.getWroteBytes());</span><br><span class="line">            <span class="keyword">this</span>.storeTimestamp = result.getStoreTimestamp();</span><br><span class="line">            <span class="keyword">return</span> result;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> AppendMessageResult(AppendMessageStatus.UNKNOWN_ERROR);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CommitLog</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> AppendMessageResult <span class="title">doAppend</span><span class="params">(<span class="keyword">final</span> <span class="keyword">long</span> fileFromOffset, <span class="keyword">final</span> ByteBuffer byteBuffer, <span class="keyword">final</span> <span class="keyword">int</span> maxBlank, <span class="keyword">final</span> MessageExtBatch messageExtBatch)</span> </span>&#123;</span><br><span class="line">        byteBuffer.mark();</span><br><span class="line">        <span class="keyword">long</span> wroteOffset = fileFromOffset + byteBuffer.position(); <span class="comment">//physical offset</span></span><br><span class="line">        keyBuilder.setLength(<span class="number">0</span>); <span class="comment">// Record ConsumeQueue information</span></span><br><span class="line">        keyBuilder.append(messageExtBatch.getTopic());</span><br><span class="line">        keyBuilder.append(<span class="string">'-'</span>);</span><br><span class="line">        keyBuilder.append(messageExtBatch.getQueueId());</span><br><span class="line">        String key = keyBuilder.toString();</span><br><span class="line">        Long queueOffset = CommitLog.<span class="keyword">this</span>.topicQueueTable.get(key);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == queueOffset) &#123;</span><br><span class="line">            queueOffset = <span class="number">0L</span>;</span><br><span class="line">            CommitLog.<span class="keyword">this</span>.topicQueueTable.put(key, queueOffset);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">long</span> beginQueueOffset = queueOffset;</span><br><span class="line">        <span class="keyword">int</span> totalMsgLen = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">int</span> msgNum = <span class="number">0</span>;</span><br><span class="line">        msgIdBuilder.setLength(<span class="number">0</span>);</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">long</span> beginTimeMills = CommitLog.<span class="keyword">this</span>.defaultMessageStore.now();</span><br><span class="line">        ByteBuffer messagesByteBuff = messageExtBatch.getEncodedBuff();</span><br><span class="line">        <span class="keyword">int</span> sysFlag = messageExtBatch.getSysFlag();</span><br><span class="line">        <span class="keyword">int</span> storeHostLength = (sysFlag &amp; MessageSysFlag.STOREHOSTADDRESS_V6_FLAG) == <span class="number">0</span> ? <span class="number">4</span> + <span class="number">4</span> : <span class="number">16</span> + <span class="number">4</span>;</span><br><span class="line">        ByteBuffer storeHostHolder = ByteBuffer.allocate(storeHostLength);</span><br><span class="line">        <span class="keyword">this</span>.resetByteBuffer(storeHostHolder, storeHostLength);</span><br><span class="line">        ByteBuffer storeHostBytes = messageExtBatch.getStoreHostBytes(storeHostHolder);</span><br><span class="line">        messagesByteBuff.mark();</span><br><span class="line">        <span class="keyword">while</span> (messagesByteBuff.hasRemaining()) &#123;</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> msgPos = messagesByteBuff.position(); <span class="comment">// 1 TOTALSIZE</span></span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> msgLen = messagesByteBuff.getInt();</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> bodyLen = msgLen - <span class="number">40</span>; <span class="comment">//only for log, just estimate it</span></span><br><span class="line">            <span class="keyword">if</span> (msgLen &gt; <span class="keyword">this</span>.maxMessageSize) &#123; <span class="comment">// Exceeds the maximum message</span></span><br><span class="line">                CommitLog.log.warn(<span class="string">"message size exceeded, msg total size: "</span> + msgLen + <span class="string">", msg body size: "</span> + bodyLen + <span class="string">", maxMessageSize: "</span> + <span class="keyword">this</span>.maxMessageSize);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> AppendMessageResult(AppendMessageStatus.MESSAGE_SIZE_EXCEEDED);</span><br><span class="line">            &#125;</span><br><span class="line">            totalMsgLen += msgLen;</span><br><span class="line">            <span class="keyword">if</span> ((totalMsgLen + END_FILE_MIN_BLANK_LENGTH) &gt; maxBlank) &#123; <span class="comment">// Determines whether there is sufficient free space</span></span><br><span class="line">                <span class="keyword">this</span>.resetByteBuffer(<span class="keyword">this</span>.msgStoreItemMemory, <span class="number">8</span>);</span><br><span class="line">                <span class="keyword">this</span>.msgStoreItemMemory.putInt(maxBlank); <span class="comment">// 1 TOTALSIZE</span></span><br><span class="line">                <span class="keyword">this</span>.msgStoreItemMemory.putInt(CommitLog.BLANK_MAGIC_CODE); <span class="comment">// 2 MAGICCODE</span></span><br><span class="line">                messagesByteBuff.reset(); <span class="comment">// 3 The remaining space may be any value ignore previous read</span></span><br><span class="line">                byteBuffer.reset(); <span class="comment">//Here the length of the specially set maxBlank ignore the previous appended messages</span></span><br><span class="line">                byteBuffer.put(<span class="keyword">this</span>.msgStoreItemMemory.array(), <span class="number">0</span>, <span class="number">8</span>);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> AppendMessageResult(AppendMessageStatus.END_OF_FILE, wroteOffset, maxBlank, msgIdBuilder.toString(), messageExtBatch.getStoreTimestamp(), beginQueueOffset, CommitLog.<span class="keyword">this</span>.defaultMessageStore.now() - beginTimeMills);</span><br><span class="line">            &#125;</span><br><span class="line">            messagesByteBuff.position(msgPos + <span class="number">20</span>); <span class="comment">//move to add queue offset and commitlog offset</span></span><br><span class="line">            messagesByteBuff.putLong(queueOffset);</span><br><span class="line">            messagesByteBuff.putLong(wroteOffset + totalMsgLen - msgLen);</span><br><span class="line">            storeHostBytes.rewind();</span><br><span class="line">            String msgId;</span><br><span class="line">            <span class="keyword">if</span> ((sysFlag &amp; MessageSysFlag.STOREHOSTADDRESS_V6_FLAG) == <span class="number">0</span>) &#123;</span><br><span class="line">                msgId = MessageDecoder.createMessageId(<span class="keyword">this</span>.msgIdMemory, storeHostBytes, wroteOffset + totalMsgLen - msgLen);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                msgId = MessageDecoder.createMessageId(<span class="keyword">this</span>.msgIdV6Memory, storeHostBytes, wroteOffset + totalMsgLen - msgLen);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (msgIdBuilder.length() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                msgIdBuilder.append(<span class="string">','</span>).append(msgId);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                msgIdBuilder.append(msgId);</span><br><span class="line">            &#125;</span><br><span class="line">            queueOffset++;</span><br><span class="line">            msgNum++;</span><br><span class="line">            messagesByteBuff.position(msgPos + msgLen);</span><br><span class="line">        &#125;</span><br><span class="line">        messagesByteBuff.position(<span class="number">0</span>);</span><br><span class="line">        messagesByteBuff.limit(totalMsgLen);</span><br><span class="line">        byteBuffer.put(messagesByteBuff);</span><br><span class="line">        messageExtBatch.setEncodedBuff(<span class="keyword">null</span>);</span><br><span class="line">        AppendMessageResult result = <span class="keyword">new</span> AppendMessageResult(AppendMessageStatus.PUT_OK, wroteOffset, totalMsgLen, msgIdBuilder.toString(), messageExtBatch.getStoreTimestamp(), beginQueueOffset, CommitLog.<span class="keyword">this</span>.defaultMessageStore.now() - beginTimeMills);</span><br><span class="line">        result.setMsgNum(msgNum);</span><br><span class="line">        CommitLog.<span class="keyword">this</span>.topicQueueTable.put(key, queueOffset);</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>同步</strong>数据刷盘是通过<strong><code>CommitLog</code></strong>的<strong><code>handleDiskFlush</code></strong>方法来完成的，最终将耍盘任务通过<strong><code>putRequest</code></strong>方法提交到<strong><code>GroupCommitService</code></strong>中，异步消息刷盘任务也是调用的<strong><code>putRequest</code></strong>方法，<strong><code>GroupCommitService</code></strong>是一个线程在<strong><code>CommitLog</code></strong>的start方法中被启动，从run方法中可知该<strong>刷盘</strong>任务<strong>每<code>10ms</code>执行一次</strong>。最终调用<strong><code>MappedFileQueue</code></strong>的<strong><code>flush</code></strong>方法强迫把写入内存的数据刷入到磁盘文件中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CommitLog</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> CompletableFuture&lt;PutMessageStatus&gt; <span class="title">submitFlushRequest</span><span class="params">(AppendMessageResult result, PutMessageResult putMessageResult, MessageExt messageExt)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (FlushDiskType.SYNC_FLUSH == <span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) &#123;</span><br><span class="line">            <span class="keyword">final</span> GroupCommitService service = (GroupCommitService) <span class="keyword">this</span>.flushCommitLogService;</span><br><span class="line">            <span class="keyword">if</span> (messageExt.isWaitStoreMsgOK()) &#123;</span><br><span class="line">                GroupCommitRequest request = <span class="keyword">new</span> GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes(), <span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());</span><br><span class="line">                service.putRequest(request);</span><br><span class="line">                <span class="keyword">return</span> request.future(); <span class="comment">// 直接返回future不会同步等待</span></span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                service.wakeup();</span><br><span class="line">                <span class="keyword">return</span> CompletableFuture.completedFuture(PutMessageStatus.PUT_OK);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123; <span class="comment">// 若打开了对外内存，就需要先将对外内存写入到文件映射中，再存盘</span></span><br><span class="line">            <span class="keyword">if</span> (!<span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) &#123;</span><br><span class="line">                flushCommitLogService.wakeup();</span><br><span class="line">            &#125; <span class="keyword">else</span>  &#123;</span><br><span class="line">                commitLogService.wakeup();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> CompletableFuture.completedFuture(PutMessageStatus.PUT_OK);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleDiskFlush</span><span class="params">(AppendMessageResult result, PutMessageResult putMessageResult, MessageExt messageExt)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (FlushDiskType.SYNC_FLUSH == <span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().getFlushDiskType()) &#123; <span class="comment">// Synchronization flush 同步刷盘</span></span><br><span class="line">            <span class="keyword">final</span> GroupCommitService service = (GroupCommitService) <span class="keyword">this</span>.flushCommitLogService;</span><br><span class="line">            <span class="keyword">if</span> (messageExt.isWaitStoreMsgOK()) &#123;<span class="comment">//构建一个GroupCommitRequest，交给GroupCommitService处理。</span></span><br><span class="line">                GroupCommitRequest request = <span class="keyword">new</span> GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes());</span><br><span class="line">                service.putRequest(request);</span><br><span class="line">                CompletableFuture&lt;PutMessageStatus&gt; flushOkFuture = request.future();</span><br><span class="line">                PutMessageStatus flushStatus = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">try</span> &#123; <span class="comment">//同步等待文件刷新</span></span><br><span class="line">                    flushStatus = flushOkFuture.get(<span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout(), TimeUnit.MILLISECONDS);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException | ExecutionException | TimeoutException e) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (flushStatus != PutMessageStatus.PUT_OK) &#123;</span><br><span class="line">                    putMessageResult.setPutMessageStatus(PutMessageStatus.FLUSH_DISK_TIMEOUT);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                service.wakeup();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123; <span class="comment">// Asynchronous flush 异步刷盘，异步刷盘是把消息映射到MappedFile后，单独唤醒一个服务来进行刷盘</span></span><br><span class="line">            <span class="keyword">if</span> (!<span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().isTransientStorePoolEnable()) &#123;</span><br><span class="line">                flushCommitLogService.wakeup();</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                commitLogService.wakeup();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">GroupCommitService</span> <span class="keyword">extends</span> <span class="title">FlushCommitLogService</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> List&lt;GroupCommitRequest&gt; requestsWrite = <span class="keyword">new</span> ArrayList&lt;GroupCommitRequest&gt;();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> List&lt;GroupCommitRequest&gt; requestsRead = <span class="keyword">new</span> ArrayList&lt;GroupCommitRequest&gt;();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">putRequest</span><span class="params">(<span class="keyword">final</span> GroupCommitRequest request)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>.requestsWrite) &#123;</span><br><span class="line">            <span class="keyword">this</span>.requestsWrite.add(request);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.wakeup();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (!<span class="keyword">this</span>.isStopped()) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">this</span>.waitForRunning(<span class="number">10</span>);</span><br><span class="line">                <span class="keyword">this</span>.doCommit();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;<span class="comment">// Under normal circumstances shutdown, wait for the arrival of the request, and then flush</span></span><br><span class="line">            Thread.sleep(<span class="number">10</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">            <span class="keyword">this</span>.swapRequests();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.doCommit();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">doCommit</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>.requestsRead) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!<span class="keyword">this</span>.requestsRead.isEmpty()) &#123;</span><br><span class="line">                <span class="keyword">for</span> (GroupCommitRequest req : <span class="keyword">this</span>.requestsRead) &#123; <span class="comment">// 消息刷盘</span></span><br><span class="line">                    <span class="comment">// There may be a message in the next file, so a maximum of two times the flush</span></span><br><span class="line">                    <span class="keyword">boolean</span> flushOK = <span class="keyword">false</span>;</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">2</span> &amp;&amp; !flushOK; i++) &#123;</span><br><span class="line">                        flushOK = CommitLog.<span class="keyword">this</span>.mappedFileQueue.getFlushedWhere() &gt;= req.getNextOffset();</span><br><span class="line">                        <span class="keyword">if</span> (!flushOK) &#123; <span class="comment">// 当前索引位置小于请求数据的位置执行刷盘</span></span><br><span class="line">                            CommitLog.<span class="keyword">this</span>.mappedFileQueue.flush(<span class="number">0</span>);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    req.wakeupCustomer(flushOK ? PutMessageStatus.PUT_OK : PutMessageStatus.FLUSH_DISK_TIMEOUT);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">long</span> storeTimestamp = CommitLog.<span class="keyword">this</span>.mappedFileQueue.getStoreTimestamp();</span><br><span class="line">                <span class="keyword">if</span> (storeTimestamp &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                    CommitLog.<span class="keyword">this</span>.defaultMessageStore.getStoreCheckpoint().setPhysicMsgTimestamp(storeTimestamp);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">this</span>.requestsRead.clear();</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">// Because of individual messages is set to not sync flush, it will come to this process</span></span><br><span class="line">                CommitLog.<span class="keyword">this</span>.mappedFileQueue.flush(<span class="number">0</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MappedFileQueue</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">flush</span><span class="params">(<span class="keyword">final</span> <span class="keyword">int</span> flushLeastPages)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">boolean</span> result = <span class="keyword">true</span>;</span><br><span class="line">        MappedFile mappedFile = <span class="keyword">this</span>.findMappedFileByOffset(<span class="keyword">this</span>.flushedWhere, <span class="keyword">this</span>.flushedWhere == <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (mappedFile != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">long</span> tmpTimeStamp = mappedFile.getStoreTimestamp();</span><br><span class="line">            <span class="keyword">int</span> offset = mappedFile.flush(flushLeastPages);</span><br><span class="line">            <span class="keyword">long</span> where = mappedFile.getFileFromOffset() + offset;</span><br><span class="line">            result = where == <span class="keyword">this</span>.flushedWhere;</span><br><span class="line">            <span class="keyword">this</span>.flushedWhere = where;</span><br><span class="line">            <span class="keyword">if</span> (<span class="number">0</span> == flushLeastPages) &#123;</span><br><span class="line">                <span class="keyword">this</span>.storeTimestamp = tmpTimeStamp;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">flush</span><span class="params">(<span class="keyword">final</span> <span class="keyword">int</span> flushLeastPages)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.isAbleToFlush(flushLeastPages)) &#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.hold()) &#123;</span><br><span class="line">            <span class="keyword">int</span> value = getReadPosition();</span><br><span class="line">            <span class="keyword">try</span> &#123; <span class="comment">// force方法就是强迫把写入内存的数据刷入到磁盘文件里去</span></span><br><span class="line">                <span class="keyword">if</span> (writeBuffer != <span class="keyword">null</span> || <span class="keyword">this</span>.fileChannel.position() != <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">this</span>.fileChannel.force(<span class="keyword">false</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">this</span>.mappedByteBuffer.force();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.flushedPosition.set(value);</span><br><span class="line">            <span class="keyword">this</span>.release();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.flushedPosition.set(getReadPosition());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.getFlushedPosition();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="消息分发"><a href="#消息分发" class="headerlink" title="消息分发"></a>消息分发</h4><p>当<strong><code>CommitLog</code></strong>写入一条消息后，会有一个后台线程<strong><code>ReputMessageService</code></strong>每<strong>隔<code>1ms</code></strong>就会去拉取<strong><code>CommitLog</code></strong>中最新更新的一批消息，然后分别转发到<strong><code>ComsumeQueue</code></strong>和<strong><code>IndexFile</code></strong>中。若服务异常宕机，会造成<strong><code>CommitLog</code></strong>和<strong><code>ConsumeQueue</code></strong>、<strong><code>IndexFile</code></strong>文件不一致，有消息写入CommitLog后，没有分发到索引文件，这样消息就丢失了。<strong><code>DefaultMappedStore</code></strong>的<strong><code>load</code></strong>方法提供了<strong>恢复索引文件</strong>的方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ReputMessageService</span> <span class="keyword">extends</span> <span class="title">ServiceThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (!<span class="keyword">this</span>.isStopped()) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123; <span class="comment">// 每隔1毫秒，往ConsumeQueue和IndexFile中转发一次CommitLog写入的消息</span></span><br><span class="line">                Thread.sleep(<span class="number">1</span>);</span><br><span class="line">                <span class="keyword">this</span>.doReput();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">doReput</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.reputFromOffset &lt; DefaultMessageStore.<span class="keyword">this</span>.commitLog.getMinOffset()) &#123;</span><br><span class="line">            <span class="keyword">this</span>.reputFromOffset = DefaultMessageStore.<span class="keyword">this</span>.commitLog.getMinOffset();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">boolean</span> doNext = <span class="keyword">true</span>; <span class="keyword">this</span>.isCommitLogAvailable() &amp;&amp; doNext; ) &#123;</span><br><span class="line">            <span class="keyword">if</span> (DefaultMessageStore.<span class="keyword">this</span>.getMessageStoreConfig().isDuplicationEnable() &amp;&amp; <span class="keyword">this</span>.reputFromOffset &gt;= DefaultMessageStore.<span class="keyword">this</span>.getConfirmOffset()) &#123;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            SelectMappedBufferResult result = DefaultMessageStore.<span class="keyword">this</span>.commitLog.getData(reputFromOffset); <span class="comment">// 获取CommitLog中的消息</span></span><br><span class="line">            <span class="keyword">if</span> (result != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">this</span>.reputFromOffset = result.getStartOffset();</span><br><span class="line">                    <span class="keyword">for</span> (<span class="keyword">int</span> readSize = <span class="number">0</span>; readSize &lt; result.getSize() &amp;&amp; doNext; ) &#123;</span><br><span class="line">                        <span class="comment">//从CommitLog中获取一个DispatchRequest,拿到一份需要进行转发的消息，也就是从commitlog中读取的。</span></span><br><span class="line">                        DispatchRequest dispatchRequest = DefaultMessageStore.<span class="keyword">this</span>.commitLog.checkMessageAndReturnSize(result.getByteBuffer(), <span class="keyword">false</span>, <span class="keyword">false</span>);</span><br><span class="line">                        <span class="keyword">int</span> size = dispatchRequest.getBufferSize() == -<span class="number">1</span> ? dispatchRequest.getMsgSize() : dispatchRequest.getBufferSize();</span><br><span class="line">                        <span class="keyword">if</span> (dispatchRequest.isSuccess()) &#123;</span><br><span class="line">                            <span class="keyword">if</span> (size &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                                DefaultMessageStore.<span class="keyword">this</span>.doDispatch(dispatchRequest); <span class="comment">//分发CommitLog写入消息</span></span><br><span class="line">                                <span class="comment">// 长轮询： 如果有消息到了主节点，并且开启了长轮询。</span></span><br><span class="line">                                <span class="keyword">if</span> (BrokerRole.SLAVE != DefaultMessageStore.<span class="keyword">this</span>.getMessageStoreConfig().getBrokerRole() &amp;&amp; DefaultMessageStore.<span class="keyword">this</span>.brokerConfig.isLongPollingEnable()) &#123;</span><br><span class="line">                                    <span class="comment">//唤醒NotifyMessageArrivingListener的arriving方法，进行一次请求线程的检查</span></span><br><span class="line">                                    DefaultMessageStore.<span class="keyword">this</span>.messageArrivingListener.arriving(dispatchRequest.getTopic(), dispatchRequest.getQueueId(), dispatchRequest.getConsumeQueueOffset() + <span class="number">1</span>,</span><br><span class="line">                                                                                              dispatchRequest.getTagsCode(), dispatchRequest.getStoreTimestamp(), dispatchRequest.getBitMap(), dispatchRequest.getPropertiesMap());</span><br><span class="line">                                &#125;</span><br><span class="line">                                <span class="keyword">this</span>.reputFromOffset += size;</span><br><span class="line">                                readSize += size;</span><br><span class="line">                                <span class="keyword">if</span> (DefaultMessageStore.<span class="keyword">this</span>.getMessageStoreConfig().getBrokerRole() == BrokerRole.SLAVE) &#123;</span><br><span class="line">                                    DefaultMessageStore.<span class="keyword">this</span>.storeStatsService.getSinglePutMessageTopicTimesTotal(dispatchRequest.getTopic()).incrementAndGet();</span><br><span class="line">                                    DefaultMessageStore.<span class="keyword">this</span>.storeStatsService.getSinglePutMessageTopicSizeTotal(dispatchRequest.getTopic()).addAndGet(dispatchRequest.getMsgSize());</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (size == <span class="number">0</span>) &#123;</span><br><span class="line">                                <span class="keyword">this</span>.reputFromOffset = DefaultMessageStore.<span class="keyword">this</span>.commitLog.rollNextFile(<span class="keyword">this</span>.reputFromOffset);</span><br><span class="line">                                readSize = result.getSize();</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!dispatchRequest.isSuccess()) &#123;</span><br><span class="line">                            <span class="keyword">if</span> (size &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                                <span class="keyword">this</span>.reputFromOffset += size;</span><br><span class="line">                            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                                doNext = <span class="keyword">false</span>;</span><br><span class="line">                                <span class="keyword">if</span> (DefaultMessageStore.<span class="keyword">this</span>.getMessageStoreConfig().isEnableDLegerCommitLog() || DefaultMessageStore.<span class="keyword">this</span>.brokerConfig.getBrokerId() == MixAll.MASTER_ID) &#123;</span><br><span class="line">                                    <span class="keyword">this</span>.reputFromOffset += result.getSize() - readSize;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                    result.release();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                doNext = <span class="keyword">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doDispatch</span><span class="params">(DispatchRequest req)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (CommitLogDispatcher dispatcher : <span class="keyword">this</span>.dispatcherList) &#123;</span><br><span class="line">            dispatcher.dispatch(req); <span class="comment">// 将commitLog写入的事件转发到ComsumeQueue和IndexFile</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于<strong><code>ConsumeQueue</code></strong>文件的写入是通过调用<strong><code>CommitLogDispatcherBuildConsumeQueue</code></strong>的<strong><code>dispatch</code></strong>方法，在分发时首先通过<strong><code>DefaultMessageStore</code></strong>的<strong><code>findConsumeQueue</code></strong>方法按消息<strong><code>Topic</code></strong>和<strong><code>queueId</code></strong>找到对应的消息队列，然后调用<strong><code>ConsumeQueue</code></strong>的<strong><code>putMessagePositionInfoWrapper</code></strong>正则去完成写入到对应的缓存以及刷盘工作。最终调用的<strong><code>MappedFile</code></strong>的<strong><code>appendMessage</code></strong>来完成数据的<strong>持久化</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CommitLogDispatcherBuildConsumeQueue</span> <span class="keyword">implements</span> <span class="title">CommitLogDispatcher</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispatch</span><span class="params">(DispatchRequest request)</span> </span>&#123; <span class="comment">// Consumequeue文件分发的构建器</span></span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> tranType = MessageSysFlag.getTransactionValue(request.getSysFlag());</span><br><span class="line">        <span class="keyword">switch</span> (tranType) &#123;</span><br><span class="line">            <span class="keyword">case</span> MessageSysFlag.TRANSACTION_NOT_TYPE:</span><br><span class="line">            <span class="keyword">case</span> MessageSysFlag.TRANSACTION_COMMIT_TYPE:</span><br><span class="line">                DefaultMessageStore.<span class="keyword">this</span>.putMessagePositionInfo(request);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> MessageSysFlag.TRANSACTION_PREPARED_TYPE:</span><br><span class="line">            <span class="keyword">case</span> MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DefaultMessageStore</span> <span class="keyword">implements</span> <span class="title">MessageStore</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> ConcurrentMap&lt;String, ConcurrentMap&lt;Integer, ConsumeQueue&gt;&gt; consumeQueueTable;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">putMessagePositionInfo</span><span class="params">(DispatchRequest dispatchRequest)</span> </span>&#123;</span><br><span class="line">        ConsumeQueue cq = <span class="keyword">this</span>.findConsumeQueue(dispatchRequest.getTopic(), dispatchRequest.getQueueId());</span><br><span class="line">        cq.putMessagePositionInfoWrapper(dispatchRequest);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ConsumeQueue <span class="title">findConsumeQueue</span><span class="params">(String topic, <span class="keyword">int</span> queueId)</span> </span>&#123; <span class="comment">// 获取具体的队列</span></span><br><span class="line">        ConcurrentMap&lt;Integer, ConsumeQueue&gt; map = consumeQueueTable.get(topic);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == map) &#123;</span><br><span class="line">            ConcurrentMap&lt;Integer, ConsumeQueue&gt; newMap = <span class="keyword">new</span> ConcurrentHashMap&lt;Integer, ConsumeQueue&gt;(<span class="number">128</span>);</span><br><span class="line">            ConcurrentMap&lt;Integer, ConsumeQueue&gt; oldMap = consumeQueueTable.putIfAbsent(topic, newMap);</span><br><span class="line">            <span class="keyword">if</span> (oldMap != <span class="keyword">null</span>) &#123;</span><br><span class="line">                map = oldMap;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                map = newMap;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        ConsumeQueue logic = map.get(queueId);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == logic) &#123;</span><br><span class="line">            ConsumeQueue newLogic = <span class="keyword">new</span> ConsumeQueue(topic, queueId, StorePathConfigHelper.getStorePathConsumeQueue(<span class="keyword">this</span>.messageStoreConfig.getStorePathRootDir()), <span class="keyword">this</span>.getMessageStoreConfig().getMappedFileSizeConsumeQueue(), <span class="keyword">this</span>);</span><br><span class="line">            ConsumeQueue oldLogic = map.putIfAbsent(queueId, newLogic);</span><br><span class="line">            <span class="keyword">if</span> (oldLogic != <span class="keyword">null</span>) &#123;</span><br><span class="line">                logic = oldLogic;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                logic = newLogic;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> logic;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConsumeQueue</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">putMessagePositionInfoWrapper</span><span class="params">(DispatchRequest request)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> maxRetries = <span class="number">30</span>;</span><br><span class="line">        <span class="keyword">boolean</span> canWrite = <span class="keyword">this</span>.defaultMessageStore.getRunningFlags().isCQWriteable();</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; maxRetries &amp;&amp; canWrite; i++) &#123;</span><br><span class="line">            <span class="keyword">long</span> tagsCode = request.getTagsCode();</span><br><span class="line">            <span class="keyword">if</span> (isExtWriteEnable()) &#123;</span><br><span class="line">                ConsumeQueueExt.CqExtUnit cqExtUnit = <span class="keyword">new</span> ConsumeQueueExt.CqExtUnit();</span><br><span class="line">                cqExtUnit.setFilterBitMap(request.getBitMap());</span><br><span class="line">                cqExtUnit.setMsgStoreTime(request.getStoreTimestamp());</span><br><span class="line">                cqExtUnit.setTagsCode(request.getTagsCode());</span><br><span class="line">                <span class="keyword">long</span> extAddr = <span class="keyword">this</span>.consumeQueueExt.put(cqExtUnit);</span><br><span class="line">                <span class="keyword">if</span> (isExtAddr(extAddr)) &#123;</span><br><span class="line">                    tagsCode = extAddr;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// ConsumeQueue数据分发</span></span><br><span class="line">            <span class="keyword">boolean</span> result = <span class="keyword">this</span>.putMessagePositionInfo(request.getCommitLogOffset(), request.getMsgSize(), tagsCode, request.getConsumeQueueOffset());</span><br><span class="line">            <span class="keyword">if</span> (result) &#123;</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().getBrokerRole() == BrokerRole.SLAVE || <span class="keyword">this</span>.defaultMessageStore.getMessageStoreConfig().isEnableDLegerCommitLog()) &#123;</span><br><span class="line">                    <span class="keyword">this</span>.defaultMessageStore.getStoreCheckpoint().setPhysicMsgTimestamp(request.getStoreTimestamp());</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">this</span>.defaultMessageStore.getStoreCheckpoint().setLogicsMsgTimestamp(request.getStoreTimestamp());</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.defaultMessageStore.getRunningFlags().makeLogicsQueueError();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">putMessagePositionInfo</span><span class="params">(<span class="keyword">final</span> <span class="keyword">long</span> offset, <span class="keyword">final</span> <span class="keyword">int</span> size, <span class="keyword">final</span> <span class="keyword">long</span> tagsCode, <span class="keyword">final</span> <span class="keyword">long</span> cqOffset)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (offset + size &lt;= <span class="keyword">this</span>.maxPhysicOffset) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.byteBufferIndex.flip();</span><br><span class="line">        <span class="keyword">this</span>.byteBufferIndex.limit(CQ_STORE_UNIT_SIZE);</span><br><span class="line">        <span class="keyword">this</span>.byteBufferIndex.putLong(offset);</span><br><span class="line">        <span class="keyword">this</span>.byteBufferIndex.putInt(size);</span><br><span class="line">        <span class="keyword">this</span>.byteBufferIndex.putLong(tagsCode);</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">long</span> expectLogicOffset = cqOffset * CQ_STORE_UNIT_SIZE;</span><br><span class="line">        MappedFile mappedFile = <span class="keyword">this</span>.mappedFileQueue.getLastMappedFile(expectLogicOffset);</span><br><span class="line">        <span class="keyword">if</span> (mappedFile != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (mappedFile.isFirstCreateInQueue() &amp;&amp; cqOffset != <span class="number">0</span> &amp;&amp; mappedFile.getWrotePosition() == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">this</span>.minLogicOffset = expectLogicOffset;</span><br><span class="line">                <span class="keyword">this</span>.mappedFileQueue.setFlushedWhere(expectLogicOffset);</span><br><span class="line">                <span class="keyword">this</span>.mappedFileQueue.setCommittedWhere(expectLogicOffset);</span><br><span class="line">                <span class="keyword">this</span>.fillPreBlank(mappedFile, expectLogicOffset);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (cqOffset != <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">long</span> currentLogicOffset = mappedFile.getWrotePosition() + mappedFile.getFileFromOffset();</span><br><span class="line">                <span class="keyword">if</span> (expectLogicOffset &lt; currentLogicOffset) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.maxPhysicOffset = offset + size;</span><br><span class="line">            <span class="keyword">return</span> mappedFile.appendMessage(<span class="keyword">this</span>.byteBufferIndex.array());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于Index文件的分发是通过<strong><code>CommitLogDispatcherBuildIndex</code></strong>中最终调用<strong><code>IndexService</code></strong>的<strong><code>buildIndex</code></strong>方法完成的，首先先通过<strong><code>retryGetAndCreateIndexFile</code></strong>获取<strong><code>IndexFile</code></strong>，若不存在则创建，让后通过<strong><code>IndexFile</code></strong>的<strong><code>putKey</code></strong>方法将数据写入磁盘。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CommitLogDispatcherBuildIndex</span> <span class="keyword">implements</span> <span class="title">CommitLogDispatcher</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispatch</span><span class="params">(DispatchRequest request)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (DefaultMessageStore.<span class="keyword">this</span>.messageStoreConfig.isMessageIndexEnable()) &#123;</span><br><span class="line">            DefaultMessageStore.<span class="keyword">this</span>.indexService.buildIndex(request);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IndexService</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">buildIndex</span><span class="params">(DispatchRequest req)</span> </span>&#123;</span><br><span class="line">        IndexFile indexFile = retryGetAndCreateIndexFile();</span><br><span class="line">        <span class="keyword">if</span> (indexFile != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">long</span> endPhyOffset = indexFile.getEndPhyOffset();</span><br><span class="line">            DispatchRequest msg = req;</span><br><span class="line">            String topic = msg.getTopic();</span><br><span class="line">            String keys = msg.getKeys();</span><br><span class="line">            <span class="keyword">if</span> (msg.getCommitLogOffset() &lt; endPhyOffset) &#123; <span class="comment">//重复消息直接返回</span></span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">final</span> <span class="keyword">int</span> tranType = MessageSysFlag.getTransactionValue(msg.getSysFlag());</span><br><span class="line">            <span class="keyword">switch</span> (tranType) &#123;</span><br><span class="line">                <span class="keyword">case</span> MessageSysFlag.TRANSACTION_NOT_TYPE:</span><br><span class="line">                <span class="keyword">case</span> MessageSysFlag.TRANSACTION_PREPARED_TYPE:</span><br><span class="line">                <span class="keyword">case</span> MessageSysFlag.TRANSACTION_COMMIT_TYPE:</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:</span><br><span class="line">                    <span class="keyword">return</span>; <span class="comment">// 回退消息直接返回</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// indexFile索引文件构建的核心步骤</span></span><br><span class="line">            <span class="keyword">if</span> (req.getUniqKey() != <span class="keyword">null</span>) &#123; <span class="comment">// 若存在唯一键</span></span><br><span class="line">                indexFile = putKey(indexFile, msg, buildKey(topic, req.getUniqKey()));</span><br><span class="line">                <span class="keyword">if</span> (indexFile == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (keys != <span class="keyword">null</span> &amp;&amp; keys.length() &gt; <span class="number">0</span>) &#123; <span class="comment">// 若存在过滤的keys</span></span><br><span class="line">                String[] keyset = keys.split(MessageConst.KEY_SEPARATOR);</span><br><span class="line">                <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; keyset.length; i++) &#123;</span><br><span class="line">                    String key = keyset[i];</span><br><span class="line">                    <span class="keyword">if</span> (key.length() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                        indexFile = putKey(indexFile, msg, buildKey(topic, key));</span><br><span class="line">                        <span class="keyword">if</span> (indexFile == <span class="keyword">null</span>) &#123;</span><br><span class="line">                            <span class="keyword">return</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> IndexFile <span class="title">retryGetAndCreateIndexFile</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        IndexFile indexFile = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> times = <span class="number">0</span>; <span class="keyword">null</span> == indexFile &amp;&amp; times &lt; MAX_TRY_IDX_CREATE; times++) &#123;</span><br><span class="line">            indexFile = <span class="keyword">this</span>.getAndCreateLastIndexFile();</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> != indexFile)</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == indexFile) &#123;</span><br><span class="line">            <span class="keyword">this</span>.defaultMessageStore.getAccessRights().makeIndexFileError();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> indexFile;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> IndexFile <span class="title">getAndCreateLastIndexFile</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        IndexFile indexFile = <span class="keyword">null</span>;</span><br><span class="line">        IndexFile prevIndexFile = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">long</span> lastUpdateEndPhyOffset = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">long</span> lastUpdateIndexTimestamp = <span class="number">0</span>;</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">this</span>.readWriteLock.readLock().lock();</span><br><span class="line">            <span class="keyword">if</span> (!<span class="keyword">this</span>.indexFileList.isEmpty()) &#123;</span><br><span class="line">                IndexFile tmp = <span class="keyword">this</span>.indexFileList.get(<span class="keyword">this</span>.indexFileList.size() - <span class="number">1</span>);</span><br><span class="line">                <span class="keyword">if</span> (!tmp.isWriteFull()) &#123;</span><br><span class="line">                    indexFile = tmp;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    lastUpdateEndPhyOffset = tmp.getEndPhyOffset();</span><br><span class="line">                    lastUpdateIndexTimestamp = tmp.getEndTimestamp();</span><br><span class="line">                    prevIndexFile = tmp;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.readWriteLock.readLock().unlock();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (indexFile == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123; <span class="comment">// 按照时间生成Index文件名称</span></span><br><span class="line">                String fileName = <span class="keyword">this</span>.storePath + File.separator + UtilAll.timeMillisToHumanString(System.currentTimeMillis());</span><br><span class="line">                indexFile = <span class="keyword">new</span> IndexFile(fileName, <span class="keyword">this</span>.hashSlotNum, <span class="keyword">this</span>.indexNum, lastUpdateEndPhyOffset, lastUpdateIndexTimestamp);</span><br><span class="line">                <span class="keyword">this</span>.readWriteLock.writeLock().lock();</span><br><span class="line">                <span class="keyword">this</span>.indexFileList.add(indexFile);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                <span class="keyword">this</span>.readWriteLock.writeLock().unlock();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (indexFile != <span class="keyword">null</span>) &#123; <span class="comment">// 开启线程将之前的IndexFile缓存中的数据刷到磁盘中</span></span><br><span class="line">                <span class="keyword">final</span> IndexFile flushThisFile = prevIndexFile;</span><br><span class="line">                Thread flushThread = <span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                        IndexService.<span class="keyword">this</span>.flush(flushThisFile);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;, <span class="string">"FlushIndexFileThread"</span>);</span><br><span class="line">                flushThread.setDaemon(<span class="keyword">true</span>);</span><br><span class="line">                flushThread.start();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> indexFile;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> IndexFile <span class="title">putKey</span><span class="params">(IndexFile indexFile, DispatchRequest msg, String idxKey)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">boolean</span> ok = indexFile.putKey(idxKey, msg.getCommitLogOffset(), msg.getStoreTimestamp()); !ok; ) &#123;</span><br><span class="line">            indexFile = retryGetAndCreateIndexFile();</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == indexFile) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            ok = indexFile.putKey(idxKey, msg.getCommitLogOffset(), msg.getStoreTimestamp());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> indexFile;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">IndexFile</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">putKey</span><span class="params">(<span class="keyword">final</span> String key, <span class="keyword">final</span> <span class="keyword">long</span> phyOffset, <span class="keyword">final</span> <span class="keyword">long</span> storeTimestamp)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.indexHeader.getIndexCount() &lt; <span class="keyword">this</span>.indexNum) &#123;</span><br><span class="line">            <span class="keyword">int</span> keyHash = indexKeyHashMethod(key);</span><br><span class="line">            <span class="keyword">int</span> slotPos = keyHash % <span class="keyword">this</span>.hashSlotNum;</span><br><span class="line">            <span class="keyword">int</span> absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;</span><br><span class="line">            FileLock fileLock = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">try</span> &#123;<span class="comment">// fileLock = this.fileChannel.lock(absSlotPos, hashSlotSize, false);</span></span><br><span class="line">                <span class="keyword">int</span> slotValue = <span class="keyword">this</span>.mappedByteBuffer.getInt(absSlotPos);</span><br><span class="line">                <span class="keyword">if</span> (slotValue &lt;= invalidIndex || slotValue &gt; <span class="keyword">this</span>.indexHeader.getIndexCount()) &#123;</span><br><span class="line">                    slotValue = invalidIndex;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">long</span> timeDiff = storeTimestamp - <span class="keyword">this</span>.indexHeader.getBeginTimestamp();</span><br><span class="line">                timeDiff = timeDiff / <span class="number">1000</span>;</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.indexHeader.getBeginTimestamp() &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                    timeDiff = <span class="number">0</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (timeDiff &gt; Integer.MAX_VALUE) &#123;</span><br><span class="line">                    timeDiff = Integer.MAX_VALUE;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (timeDiff &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                    timeDiff = <span class="number">0</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">int</span> absIndexPos = IndexHeader.INDEX_HEADER_SIZE + <span class="keyword">this</span>.hashSlotNum * hashSlotSize + <span class="keyword">this</span>.indexHeader.getIndexCount() * indexSize;</span><br><span class="line">                <span class="keyword">this</span>.mappedByteBuffer.putInt(absIndexPos, keyHash);</span><br><span class="line">                <span class="keyword">this</span>.mappedByteBuffer.putLong(absIndexPos + <span class="number">4</span>, phyOffset);</span><br><span class="line">                <span class="keyword">this</span>.mappedByteBuffer.putInt(absIndexPos + <span class="number">4</span> + <span class="number">8</span>, (<span class="keyword">int</span>) timeDiff);</span><br><span class="line">                <span class="keyword">this</span>.mappedByteBuffer.putInt(absIndexPos + <span class="number">4</span> + <span class="number">8</span> + <span class="number">4</span>, slotValue);</span><br><span class="line">                <span class="keyword">this</span>.mappedByteBuffer.putInt(absSlotPos, <span class="keyword">this</span>.indexHeader.getIndexCount());</span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.indexHeader.getIndexCount() &lt;= <span class="number">1</span>) &#123;</span><br><span class="line">                    <span class="keyword">this</span>.indexHeader.setBeginPhyOffset(phyOffset);</span><br><span class="line">                    <span class="keyword">this</span>.indexHeader.setBeginTimestamp(storeTimestamp);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (invalidIndex == slotValue) &#123;</span><br><span class="line">                    <span class="keyword">this</span>.indexHeader.incHashSlotCount();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">this</span>.indexHeader.incIndexCount();</span><br><span class="line">                <span class="keyword">this</span>.indexHeader.setEndPhyOffset(phyOffset);</span><br><span class="line">                <span class="keyword">this</span>.indexHeader.setEndTimestamp(storeTimestamp);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (fileLock != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        fileLock.release();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/MQ/RocketMQ消费者源码/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        RocketMQ消费者源码
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/MQ/RocketMQ生产者源码/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">RocketMQ生产者源码</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

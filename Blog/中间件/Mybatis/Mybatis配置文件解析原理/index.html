@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Mybatis配置文件解析原理 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Mybatis">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Mybatis通过加载配置文件流构建一个DefaultSqlSessionFactory，是通过SqlSessionFactoryBuilder的build方法进行解析，包括属性配置、别名配置、拦截器配置、环境（数据源和事务管理器）、Mapper配置等；解析完这些配置后会生成一个Configration对象，该对象中包含了Mybatis需要的所有配置，然后用Configration对象创建SqlS">
+<meta name="keywords" content="Mybatis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Mybatis配置文件解析原理">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/中间件/Mybatis/Mybatis配置文件解析原理/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Mybatis通过加载配置文件流构建一个DefaultSqlSessionFactory，是通过SqlSessionFactoryBuilder的build方法进行解析，包括属性配置、别名配置、拦截器配置、环境（数据源和事务管理器）、Mapper配置等；解析完这些配置后会生成一个Configration对象，该对象中包含了Mybatis需要的所有配置，然后用Configration对象创建SqlS">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2021-10-12T11:27:43.492Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mybatis配置文件解析原理">
+<meta name="twitter:description" content="Mybatis通过加载配置文件流构建一个DefaultSqlSessionFactory，是通过SqlSessionFactoryBuilder的build方法进行解析，包括属性配置、别名配置、拦截器配置、环境（数据源和事务管理器）、Mapper配置等；解析完这些配置后会生成一个Configration对象，该对象中包含了Mybatis需要的所有配置，然后用Configration对象创建SqlS">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file active"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-中间件/Mybatis/Mybatis配置文件解析原理" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/中间件/">中间件</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/中间件/Mybatis/">Mybatis</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Mybatis/">Mybatis</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">
+            <time datetime="2021-10-11T16:00:00.000Z" itemprop="datePublished">2021-10-12</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Mybatis配置文件解析原理
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>Mybatis通过<strong>加载配置文件</strong>流构建一个<strong><code>DefaultSqlSessionFactory</code></strong>，是通过<strong><code>SqlSessionFactoryBuilder</code></strong>的build方法进行解析，包括<strong>属性配置</strong>、<strong>别名配置</strong>、<strong>拦截器配置</strong>、环境（数据源和事务管理器）、<strong>Mapper配置</strong>等；解析完这些配置后会生成一个<strong><code>Configration</code></strong>对象，该对象中包含了Mybatis需要的所有配置，然后用Configration对象创建SqlSessionFactory对象。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">String resource = <span class="string">"mybatis-config.xml"</span>;</span><br><span class="line"><span class="comment">// 将XML配置文件构建为Configuration配置类</span></span><br><span class="line">Reader reader = Resources.getResourceAsReader(resource);</span><br><span class="line"><span class="comment">// 通过加载配置文件流构建一个SqlSessionFactory  DefaultSqlSessionFactory</span></span><br><span class="line">SqlSessionFactory sqlMapper = <span class="keyword">new</span> SqlSessionFactoryBuilder().build(reader);</span><br></pre></td></tr></table></figure>
+<p>build方法内部会使用<strong><code>XMLConfigBuilder</code></strong>解析属性<strong><code>configLocation</code></strong>中配置的路径，首先解析<strong><code>&lt;configuration&gt;</code>标签</strong>，所有XML文件中的内容以及注解中的内容都会解析到<strong><code>Configuration</code></strong>中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SqlSessionFactoryBuilder</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> SqlSessionFactory <span class="title">build</span><span class="params">(Reader reader, String environment, Properties properties)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            XMLConfigBuilder parser = <span class="keyword">new</span> XMLConfigBuilder(reader, environment, properties);</span><br><span class="line">            <span class="keyword">return</span> build(parser.parse());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="keyword">throw</span> ExceptionFactory.wrapException(<span class="string">"Error building SqlSession."</span>, e);</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            ErrorContext.instance().reset();</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                reader.close();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IOException e) &#123;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">XMLConfigBuilder</span> <span class="keyword">extends</span> <span class="title">BaseBuilder</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Configuration <span class="title">parse</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (parsed) &#123; <span class="comment">// 若已经解析过则抛出异常</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Each XMLConfigBuilder can only be used once."</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        parsed = <span class="keyword">true</span>; <span class="comment">// 设置解析标志位</span></span><br><span class="line">        parseConfiguration(parser.evalNode(<span class="string">"/configuration"</span>)); <span class="comment">// 解析mybatis-config.xml的节点&lt;configuration&gt;...&lt;/configuration&gt;</span></span><br><span class="line">        <span class="keyword">return</span> configuration;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">parseConfiguration</span><span class="params">(XNode root)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// 解析properties节点&lt;properties resource="mybatis/db.properties" /&gt;，解析到XPathParser#variables，Configuration#variables</span></span><br><span class="line">            propertiesElement(root.evalNode(<span class="string">"properties"</span>));</span><br><span class="line">            <span class="comment">// 解析setting标签的配置</span></span><br><span class="line">            Properties settings = settingsAsProperties(root.evalNode(<span class="string">"settings"</span>));</span><br><span class="line">            <span class="comment">// VFS是虚拟文件系统，主要是通过程序能方便读取本地文件系统、FTP文件系统等系统中的文件资源，解析到Configuration#vfsImpl</span></span><br><span class="line">            loadCustomVfs(settings);</span><br><span class="line">            <span class="comment">// 指定Mybatis所用日志的具体实现，未指定时将自动查找，解析到Configuration#logImpl</span></span><br><span class="line">            loadCustomLogImpl(settings);</span><br><span class="line">            <span class="comment">// 解析别名标签数据&lt;typeAliases&gt;，配置后就可以用别名来替代全限定名，解析到Configuration#typeAliasRegistry.typeAliases</span></span><br><span class="line">            typeAliasesElement(root.evalNode(<span class="string">"typeAliases"</span>));</span><br><span class="line">            <span class="comment">// 解析拦截器和拦截器的属性，如分页插件，解析到Configuration#interceptorChain.interceptors，允许在已映射语句执行过程中的某一点进行拦截调用</span></span><br><span class="line">            <span class="comment">// 允许使用插件来拦截的方法调用包括Executor(update, query, flushStatements, commit, rollback, getTransaction, close, isClosed)，</span></span><br><span class="line">            <span class="comment">// ParameterHandler(getParameterObject, setParameters)，ResultSetHandler (handleResultSets, handleOutputParameters)</span></span><br><span class="line">            <span class="comment">// StatementHandler(prepare, parameterize, batch, update, query)</span></span><br><span class="line">            pluginElement(root.evalNode(<span class="string">"plugins"</span>));</span><br><span class="line">            objectFactoryElement(root.evalNode(<span class="string">"objectFactory"</span>));</span><br><span class="line">            objectWrapperFactoryElement(root.evalNode(<span class="string">"objectWrapperFactory"</span>));</span><br><span class="line">            reflectorFactoryElement(root.evalNode(<span class="string">"reflectorFactory"</span>));</span><br><span class="line">            settingsElement(settings); <span class="comment">// 设置settings若没有则设置默认值</span></span><br><span class="line">            <span class="comment">//解析环境信息，包括事物管理器和数据源，SqlSessionFactoryBuilder在解析时需要指定环境id，如果不指定的话，会选择默认的环境</span></span><br><span class="line">            environmentsElement(root.evalNode(<span class="string">"environments"</span>));</span><br><span class="line">            <span class="comment">// 解析数据库厂商&lt;databaseIdProvider type="DB_VENDOR"&gt;，解析到Configuration#databaseId</span></span><br><span class="line">            databaseIdProviderElement(root.evalNode(<span class="string">"databaseIdProvider"</span>));</span><br><span class="line">            <span class="comment">// 无论是在预处理语句PreparedStatement中设置参数，还是从结果集中取值时，都会用类型处理器将获取值以合适的方式转换成Java类型</span></span><br><span class="line">            typeHandlerElement(root.evalNode(<span class="string">"typeHandlers"</span>));</span><br><span class="line">            mapperElement(root.evalNode(<span class="string">"mappers"</span>)); <span class="comment">// 解析mapper</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Error parsing SQL Mapper Configuration. Cause: "</span> + e, e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>具体的<strong>Mapper文件解析</strong>是通过<strong><code>XMLConfigBuilder</code></strong>的<strong><code>mapperElement</code></strong>来遍历解析<strong><code>mappers</code>节点</strong>下的所有<strong>mapper子节点</strong>。这里有<strong>四种配置方式</strong>，可通过<strong><code>package</code></strong>标签<strong>批量注册Mapper接口</strong>，通过mapper标签的<strong><code>resource</code>属性</strong>配置具体的<strong><code>xml</code>文件</strong>，通过mapper标签的<strong><code>url</code>属性</strong>配置<strong>网络</strong>上的<strong>xml文件</strong>，，通过mapper标签的<strong><code>class</code>属性</strong>配置具体的<strong><code>Mapper</code>接口</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">mapperElement</span><span class="params">(XNode parent)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">for</span> (XNode child : parent.getChildren()) &#123;  <span class="comment">// 遍历解析mappers节点下的所有mapper子节点</span></span><br><span class="line">            <span class="comment">// 判断mapper是否通过批量注册的&lt;package name="com.eleven.mapper"&gt;&lt;/package&gt;</span></span><br><span class="line">            <span class="keyword">if</span> (<span class="string">"package"</span>.equals(child.getName())) &#123;</span><br><span class="line">                String mapperPackage = child.getStringAttribute(<span class="string">"name"</span>);</span><br><span class="line">                configuration.addMappers(mapperPackage);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="comment">// 从classpath下读取mapper &lt;mapper resource="mybatis/mapper/EmployeeMapper.xml"/&gt;</span></span><br><span class="line">                String resource = child.getStringAttribute(<span class="string">"resource"</span>);</span><br><span class="line">                <span class="comment">// 判断是否从网络或本地磁盘读取&lt;mapper url="D:/mapper/EmployeeMapper.xml"/&gt;</span></span><br><span class="line">                String url = child.getStringAttribute(<span class="string">"url"</span>);</span><br><span class="line">                <span class="comment">// class属性配置要求接口和xml在同一个包下)&lt;mapper class="com.tuling.mapper.DeptMapper"&gt;&lt;/mapper&gt;</span></span><br><span class="line">                String mapperClass = child.getStringAttribute(<span class="string">"class"</span>);</span><br><span class="line">                <span class="comment">// mappers节点只配置了&lt;mapper resource="mybatis/mapper/EmployeeMapper.xml"/&gt;</span></span><br><span class="line">                <span class="keyword">if</span> (resource != <span class="keyword">null</span> &amp;&amp; url == <span class="keyword">null</span> &amp;&amp; mapperClass == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    ErrorContext.instance().resource(resource);</span><br><span class="line">                    InputStream inputStream = Resources.getResourceAsStream(resource); <span class="comment">// 把文件读取出一个流</span></span><br><span class="line">                    <span class="comment">// 创建读取XmlMapper构建器对象，用于来解析mapper.xml文件</span></span><br><span class="line">                    XMLMapperBuilder mapperParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, configuration, resource, configuration.getSqlFragments());</span><br><span class="line">                    <span class="comment">// 真正的解析mapper.xml配置文件，就是解析sql</span></span><br><span class="line">                    mapperParser.parse();</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (resource == <span class="keyword">null</span> &amp;&amp; url != <span class="keyword">null</span> &amp;&amp; mapperClass == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    ErrorContext.instance().resource(url);</span><br><span class="line">                    InputStream inputStream = Resources.getUrlAsStream(url);</span><br><span class="line">                    XMLMapperBuilder mapperParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, configuration, url, configuration.getSqlFragments());</span><br><span class="line">                    mapperParser.parse();</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (resource == <span class="keyword">null</span> &amp;&amp; url == <span class="keyword">null</span> &amp;&amp; mapperClass != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    Class&lt;?&gt; mapperInterface = Resources.classForName(mapperClass);</span><br><span class="line">                    configuration.addMapper(mapperInterface);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"A mapper element may only specify a url, resource or class, but not more than one."</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于Mapper通过<strong><code>XML</code>配置文件</strong>的方法配置的，首先会通过parse方法先去解析<strong><code>mapper.xml</code></strong>文件内容，然后再通过调用<strong><code>bindMapperForNamespace</code></strong>从而调用<strong><code>configuration#addMapper</code></strong>去触发<strong>解析<code>Mapper</code>接口中的注解</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">parse</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!configuration.isResourceLoaded(resource)) &#123;<span class="comment">// 判断当前的Mapper XML是否被加载过</span></span><br><span class="line">        configurationElement(parser.evalNode(<span class="string">"/mapper"</span>)); <span class="comment">// 真正的解析mapper.xml文件内容</span></span><br><span class="line">        configuration.addLoadedResource(resource); <span class="comment">// 把mapper.xml全限定名保存到已被加载列表</span></span><br><span class="line">        bindMapperForNamespace(); <span class="comment">// 解析Mapper接口中SQL注解</span></span><br><span class="line">    &#125;</span><br><span class="line">    parsePendingResultMaps();</span><br><span class="line">    parsePendingCacheRefs();</span><br><span class="line">    parsePendingStatements();</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">bindMapperForNamespace</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    String namespace = builderAssistant.getCurrentNamespace();</span><br><span class="line">    <span class="keyword">if</span> (namespace != <span class="keyword">null</span>) &#123;</span><br><span class="line">        Class&lt;?&gt; boundType = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            boundType = Resources.classForName(namespace);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (boundType != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!configuration.hasMapper(boundType)) &#123;</span><br><span class="line">                configuration.addLoadedResource(<span class="string">"namespace:"</span> + namespace);</span><br><span class="line">                configuration.addMapper(boundType);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于<strong><code>Mapper</code>接口</strong>的配置以及上面的<strong><code>bindMapperForNamespace</code></strong>，都是通过<strong><code>MapperAnnotationBuilder</code></strong>对注解进行解析，<strong>解析注解前会先去判断<code>XML</code>文件是否被解析</strong>，若没有被解析会先解析XML文件，若解析过了则直接解析SQL注解。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> &lt;T&gt; <span class="function"><span class="keyword">void</span> <span class="title">addMapper</span><span class="params">(Class&lt;T&gt; type)</span> </span>&#123;</span><br><span class="line">    mapperRegistry.addMapper(type);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> &lt;T&gt; <span class="function"><span class="keyword">void</span> <span class="title">addMapper</span><span class="params">(Class&lt;T&gt; type)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (type.isInterface()) &#123; <span class="comment">// 判断传入进来的type类型是不是接口</span></span><br><span class="line">        <span class="keyword">if</span> (hasMapper(type)) &#123; <span class="comment">// 判断的缓存中有没有该类型</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> BindingException(<span class="string">"Type "</span> + type + <span class="string">" is already known to the MapperRegistry."</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">boolean</span> loadCompleted = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// 创建一个MapperProxyFactory把的Mapper接口保存到工厂类中</span></span><br><span class="line">            knownMappers.put(type, <span class="keyword">new</span> MapperProxyFactory&lt;&gt;(type));</span><br><span class="line">            MapperAnnotationBuilder parser = <span class="keyword">new</span> MapperAnnotationBuilder(config, type);</span><br><span class="line">            parser.parse(); <span class="comment">// 解析mapper.xml以及Mapper接口中的SQL注解</span></span><br><span class="line">            loadCompleted = <span class="keyword">true</span>;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (!loadCompleted) &#123;</span><br><span class="line">                knownMappers.remove(type);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于XML文件的解析是通过<strong><code>XMLMapperBuilder#parse</code></strong>来完成的，最终通过<strong><code>configurationElement</code></strong>来完成各个子节点的解析工作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">loadXmlResource</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!configuration.isResourceLoaded(<span class="string">"namespace:"</span> + type.getName())) &#123;</span><br><span class="line">        String xmlResource = type.getName().replace(<span class="string">'.'</span>, <span class="string">'/'</span>) + <span class="string">".xml"</span>;</span><br><span class="line">        InputStream inputStream = type.getResourceAsStream(<span class="string">"/"</span> + xmlResource);</span><br><span class="line">        <span class="keyword">if</span> (inputStream == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                inputStream = Resources.getResourceAsStream(type.getClassLoader(), xmlResource);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IOException e2) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (inputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">            XMLMapperBuilder xmlParser = <span class="keyword">new</span> XMLMapperBuilder(inputStream, assistant.getConfiguration(), xmlResource, configuration.getSqlFragments(), type.getName());</span><br><span class="line">            xmlParser.parse();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">configurationElement</span><span class="params">(XNode context)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        String namespace = context.getStringAttribute(<span class="string">"namespace"</span>); <span class="comment">// 解析namespace属性</span></span><br><span class="line">        <span class="keyword">if</span> (namespace == <span class="keyword">null</span> || namespace.equals(<span class="string">""</span>)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Mapper's namespace cannot be empty"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        builderAssistant.setCurrentNamespace(namespace); <span class="comment">// 保存当前的namespace</span></span><br><span class="line">        cacheRefElement(context.evalNode(<span class="string">"cache-ref"</span>)); <span class="comment">// 解析缓存引用,说明当前的缓存引用和DeptMapper的缓存引用一致</span></span><br><span class="line">        cacheElement(context.evalNode(<span class="string">"cache"</span>)); <span class="comment">// 解析cache节点</span></span><br><span class="line">        parameterMapElement(context.evalNodes(<span class="string">"/mapper/parameterMap"</span>)); <span class="comment">//  解析paramterMap节点</span></span><br><span class="line">        resultMapElements(context.evalNodes(<span class="string">"/mapper/resultMap"</span>)); <span class="comment">// 解析resultMap节点</span></span><br><span class="line">        sqlElement(context.evalNodes(<span class="string">"/mapper/sql"</span>)); <span class="comment">// 解析sql标签节点</span></span><br><span class="line">        buildStatementFromContext(context.evalNodes(<span class="string">"select|insert|update|delete"</span>)); <span class="comment">// 解析select | insert |update |delete节点</span></span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Error parsing Mapper XML. The XML location is '"</span> + resource + <span class="string">"'. Cause: "</span> + e, e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于缓存cache节点的解析，这里其实是对二级缓存的构建，二级缓存在结构设计上采用<strong>装饰器+责任链模式</strong>。从最内层到最外层依次是<strong><code>PerpetualCache</code></strong>、<strong><code>LruCache</code></strong>、<strong><code>SerializedCache</code></strong>、<strong><code>LoggingCache</code></strong>、<strong><code>SynchronizedCache</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">cacheElement</span><span class="params">(XNode context)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (context != <span class="keyword">null</span>) &#123;</span><br><span class="line">        String type = context.getStringAttribute(<span class="string">"type"</span>, <span class="string">"PERPETUAL"</span>);<span class="comment">// 解析cache节点的type属性</span></span><br><span class="line">        Class&lt;? extends Cache&gt; typeClass = typeAliasRegistry.resolveAlias(type);<span class="comment">// 根据type的String获取class类型</span></span><br><span class="line">        String eviction = context.getStringAttribute(<span class="string">"eviction"</span>, <span class="string">"LRU"</span>); <span class="comment">// 获取缓存过期策略:默认是LRU</span></span><br><span class="line">        Class&lt;? extends Cache&gt; evictionClass = typeAliasRegistry.resolveAlias(eviction);</span><br><span class="line">        <span class="comment">// flushInterval刷新间隔，可被设置为任意正整数，设置的值应该是一个以毫秒为单位的合理时间量。默认不设置即没有刷新间隔，缓存仅在调用语句时刷新</span></span><br><span class="line">        Long flushInterval = context.getLongAttribute(<span class="string">"flushInterval"</span>);</span><br><span class="line">        <span class="comment">// size引用数目，可被设置为任意正整数，要注意缓存对象的大小和运行环境中可用的内存资源。默认值是1024</span></span><br><span class="line">        Integer size = context.getIntAttribute(<span class="string">"size"</span>);</span><br><span class="line">        <span class="comment">// readOnly只读，可被设置为true或false。只读的缓存会给所有调用者返回缓存对象的相同实例。因此这些对象不能被修改。</span></span><br><span class="line">        <span class="comment">// 而可读写的缓存会通过序列化返回缓存对象的拷贝，速度上会慢一些，但更安全默认值false</span></span><br><span class="line">        <span class="keyword">boolean</span> readWrite = !context.getBooleanAttribute(<span class="string">"readOnly"</span>, <span class="keyword">false</span>);</span><br><span class="line">        <span class="keyword">boolean</span> blocking = context.getBooleanAttribute(<span class="string">"blocking"</span>, <span class="keyword">false</span>);</span><br><span class="line">        Properties props = context.getChildrenAsProperties();</span><br><span class="line">        <span class="comment">// 把缓存节点加入到Configuration中</span></span><br><span class="line">        builderAssistant.useNewCache(typeClass, evictionClass, flushInterval, size, readWrite, blocking, props);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> Cache <span class="title">useNewCache</span><span class="params">(Class&lt;? extends Cache&gt; typeClass, Class&lt;? extends Cache&gt; evictionClass, Long flushInterval, Integer size, <span class="keyword">boolean</span> readWrite, <span class="keyword">boolean</span> blocking, Properties props)</span> </span>&#123;</span><br><span class="line">    Cache cache = <span class="keyword">new</span> CacheBuilder(currentNamespace)</span><br><span class="line">        .implementation(valueOrDefault(typeClass, PerpetualCache<span class="class">.<span class="keyword">class</span>))</span></span><br><span class="line"><span class="class">        .<span class="title">addDecorator</span>(<span class="title">valueOrDefault</span>(<span class="title">evictionClass</span>, <span class="title">LruCache</span>.<span class="title">class</span>))</span></span><br><span class="line"><span class="class">        .<span class="title">clearInterval</span>(<span class="title">flushInterval</span>)</span></span><br><span class="line"><span class="class">        .<span class="title">size</span>(<span class="title">size</span>)</span></span><br><span class="line"><span class="class">        .<span class="title">readWrite</span>(<span class="title">readWrite</span>)</span></span><br><span class="line"><span class="class">        .<span class="title">blocking</span>(<span class="title">blocking</span>)</span></span><br><span class="line"><span class="class">        .<span class="title">properties</span>(<span class="title">props</span>)</span></span><br><span class="line"><span class="class">        .<span class="title">build</span>()</span>;</span><br><span class="line">    configuration.addCache(cache);</span><br><span class="line">    currentCache = cache;</span><br><span class="line">    <span class="keyword">return</span> cache;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> Cache <span class="title">build</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    setDefaultImplementations();</span><br><span class="line">    Cache cache = newBaseCacheInstance(implementation, id);</span><br><span class="line">    setCacheProperties(cache);</span><br><span class="line">    <span class="keyword">if</span> (PerpetualCache<span class="class">.<span class="keyword">class</span>.<span class="title">equals</span>(<span class="title">cache</span>.<span class="title">getClass</span>())) </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (Class&lt;? extends Cache&gt; decorator : decorators) &#123; <span class="comment">// 通过LruCache对PerpetualCache进行装饰</span></span><br><span class="line">            cache = newCacheDecoratorInstance(decorator, cache);</span><br><span class="line">            setCacheProperties(cache);</span><br><span class="line">        &#125;</span><br><span class="line">        cache = setStandardDecorators(cache); <span class="comment">// 剩余集中Cache对LruCache依次装饰</span></span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!LoggingCache<span class="class">.<span class="keyword">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">cache</span>.<span class="title">getClass</span>())) </span>&#123;</span><br><span class="line">        cache = <span class="keyword">new</span> LoggingCache(cache);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> cache;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> Cache <span class="title">setStandardDecorators</span><span class="params">(Cache cache)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        MetaObject metaCache = SystemMetaObject.forObject(cache);</span><br><span class="line">        <span class="keyword">if</span> (size != <span class="keyword">null</span> &amp;&amp; metaCache.hasSetter(<span class="string">"size"</span>)) &#123;</span><br><span class="line">            metaCache.setValue(<span class="string">"size"</span>, size);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (clearInterval != <span class="keyword">null</span>) &#123;</span><br><span class="line">            cache = <span class="keyword">new</span> ScheduledCache(cache);<span class="comment">//ScheduledCache：调度缓存，负责定时清空缓存</span></span><br><span class="line">            ((ScheduledCache) cache).setClearInterval(clearInterval);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (readWrite) &#123;  <span class="comment">// 将LRU 装饰到Serialized</span></span><br><span class="line">            cache = <span class="keyword">new</span> SerializedCache(cache); <span class="comment">//SerializedCache：缓存序列化和反序列化存储</span></span><br><span class="line">        &#125;</span><br><span class="line">        cache = <span class="keyword">new</span> LoggingCache(cache);</span><br><span class="line">        cache = <span class="keyword">new</span> SynchronizedCache(cache);</span><br><span class="line">        <span class="keyword">if</span> (blocking) &#123;</span><br><span class="line">            cache = <span class="keyword">new</span> BlockingCache(cache);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> cache;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> CacheException(<span class="string">"Error building standard cache decorators.  Cause: "</span> + e, e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于<strong><code>select</code></strong>、<strong><code>delete</code></strong>、<strong><code>insert</code></strong>、<strong><code>update</code></strong>等标签的解析是通过<strong><code>buildStatementFromContext</code></strong>中创建<strong><code>XMLStatementBuilder</code></strong>来完成解析的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">buildStatementFromContext</span><span class="params">(List&lt;XNode&gt; list, String requiredDatabaseId)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (XNode context : list) &#123; <span class="comment">// 循环select|delte|insert|update节点</span></span><br><span class="line">        <span class="comment">// 创建一个XMLStatementBuilder的构建器对象</span></span><br><span class="line">        <span class="keyword">final</span> XMLStatementBuilder statementParser = <span class="keyword">new</span> XMLStatementBuilder(configuration, builderAssistant, context, requiredDatabaseId);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            statementParser.parseStatementNode();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IncompleteElementException e) &#123;</span><br><span class="line">            configuration.addIncompleteStatement(statementParser);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">parseStatementNode</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    String id = context.getStringAttribute(<span class="string">"id"</span>); <span class="comment">// insert|delete|update|select标签的Id</span></span><br><span class="line">    String databaseId = context.getStringAttribute(<span class="string">"databaseId"</span>); <span class="comment">// 判断insert|delete|update|select节点是否配置了数据库厂商标注</span></span><br><span class="line">    <span class="keyword">if</span> (!databaseIdMatchesCurrent(id, databaseId, <span class="keyword">this</span>.requiredDatabaseId)) &#123;</span><br><span class="line">        <span class="keyword">return</span>; <span class="comment">// 匹配当前的数据库厂商id是否匹配当前数据源的厂商id</span></span><br><span class="line">    &#125;</span><br><span class="line">    String nodeName = context.getNode().getNodeName(); <span class="comment">// 获得节点名称：select|insert|update|delete</span></span><br><span class="line">    <span class="comment">// 根据nodeName获得SqlCommandType枚举</span></span><br><span class="line">    SqlCommandType sqlCommandType = SqlCommandType.valueOf(nodeName.toUpperCase(Locale.ENGLISH));</span><br><span class="line">    <span class="keyword">boolean</span> isSelect = sqlCommandType == SqlCommandType.SELECT; <span class="comment">// 判断是不是select语句节点</span></span><br><span class="line">    <span class="comment">// 获取flushCache属性，默认值为isSelect的反值：查询：默认flushCache=false，增删改：默认flushCache=true</span></span><br><span class="line">    <span class="keyword">boolean</span> flushCache = context.getBooleanAttribute(<span class="string">"flushCache"</span>, !isSelect);</span><br><span class="line">    <span class="comment">// 获取useCache属性，默认值为isSelect：查询：默认useCache=true，增删改：默认useCache=false</span></span><br><span class="line">    <span class="keyword">boolean</span> useCache = context.getBooleanAttribute(<span class="string">"useCache"</span>, isSelect);</span><br><span class="line">    <span class="comment">// resultOrdered：是否需要处理嵌套查询结果group by(使用极少）可将比如30条数据拆分成三组组成一个嵌套的查询结果</span></span><br><span class="line">    <span class="keyword">boolean</span> resultOrdered = context.getBooleanAttribute(<span class="string">"resultOrdered"</span>, <span class="keyword">false</span>);</span><br><span class="line">    <span class="comment">// 解析sql公用片段，将&lt;include refid="selectInfo"&gt;&lt;/include&gt;解析成sql语句放到&lt;select&gt;Node的子节点中</span></span><br><span class="line">    XMLIncludeTransformer includeParser = <span class="keyword">new</span> XMLIncludeTransformer(configuration, builderAssistant);</span><br><span class="line">    includeParser.applyIncludes(context.getNode());</span><br><span class="line">    String parameterType = context.getStringAttribute(<span class="string">"parameterType"</span>); <span class="comment">// 解析sql节点的参数类型</span></span><br><span class="line">    Class&lt;?&gt; parameterTypeClass = resolveClass(parameterType);  <span class="comment">// 把参数类型字符串转化为class</span></span><br><span class="line">    String lang = context.getStringAttribute(<span class="string">"lang"</span>); <span class="comment">// 查看sql是否支撑自定义语言</span></span><br><span class="line">    <span class="comment">// 获取自定义sql脚本语言驱动，默认:class org.apache.ibatis.scripting.xmltags.XMLLanguageDriver</span></span><br><span class="line">    LanguageDriver langDriver = getLanguageDriver(lang);</span><br><span class="line">    <span class="comment">// 解析insert语句的的selectKey节点, 一般在oracle里面设置自增id</span></span><br><span class="line">    processSelectKeyNodes(id, parameterTypeClass, langDriver);</span><br><span class="line">    KeyGenerator keyGenerator; <span class="comment">// insert语句用于主键生成组件</span></span><br><span class="line">    String keyStatementId = id + SelectKeyGenerator.SELECT_KEY_SUFFIX; <span class="comment">//selectById!selectKey id+!selectKey</span></span><br><span class="line">    keyStatementId = builderAssistant.applyCurrentNamespace(keyStatementId, <span class="keyword">true</span>); <span class="comment">// 把命名空间拼接到keyStatementId中</span></span><br><span class="line">    <span class="keyword">if</span> (configuration.hasKeyGenerator(keyStatementId)) &#123; <span class="comment">// 判断全局的配置类configuration中是否包含以及解析过的组件生成器对象</span></span><br><span class="line">        keyGenerator = configuration.getKeyGenerator(keyStatementId);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 若配置了useGeneratedKeys则去除useGeneratedKeys配置值，否者查找mybatis-config.xml中是否配置了&lt;setting name="useGeneratedKeys" value="true"&gt;&lt;/setting&gt; 默认是false</span></span><br><span class="line">        <span class="comment">// 并且判断sql操作类型是否为insert若是则使用Jdbc3KeyGenerator.INSTANCE生成策略，否则使用NoKeyGenerator.INSTANCE生产策略</span></span><br><span class="line">        keyGenerator = context.getBooleanAttribute(<span class="string">"useGeneratedKeys"</span>, configuration.isUseGeneratedKeys() &amp;&amp; SqlCommandType.INSERT.equals(sqlCommandType)) ? Jdbc3KeyGenerator.INSTANCE : NoKeyGenerator.INSTANCE;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 通过XMLLanguageDriver来解析sql脚本对象，只是解析成一个个的SqlNode，并不会完全解析sql，因为这时参数都没确定，动态sql无法解析</span></span><br><span class="line">    SqlSource sqlSource = langDriver.createSqlSource(configuration, context, parameterTypeClass);</span><br><span class="line">    <span class="comment">// STATEMENT，PREPARED或CALLABLE中的一个。这会让MyBatis分别使用Statement，PreparedStatement或CallableStatement，默认值：PREPARED</span></span><br><span class="line">    StatementType statementType = StatementType.valueOf(context.getStringAttribute(<span class="string">"statementType"</span>, StatementType.PREPARED.toString()));</span><br><span class="line">    <span class="comment">// 这是一个给驱动的提示，尝试让驱动程序每次批量返回的结果行数和这个设置值相等。 默认值为未设置（unset）（依赖驱动）</span></span><br><span class="line">    Integer fetchSize = context.getIntAttribute(<span class="string">"fetchSize"</span>);</span><br><span class="line">    <span class="comment">// 这个设置是在抛出异常之前，驱动程序等待数据库返回请求结果的秒数。默认值为unset未设置，依赖驱动</span></span><br><span class="line">    Integer timeout = context.getIntAttribute(<span class="string">"timeout"</span>);</span><br><span class="line">    <span class="comment">// 将会传入这条语句的参数类的完全限定名或别名。可选属性，可通过类型处理器TypeHandler推断出具体传入语句的参数，默认值为unset未设置</span></span><br><span class="line">    String parameterMap = context.getStringAttribute(<span class="string">"parameterMap"</span>);</span><br><span class="line">    <span class="comment">// 从这条语句中返回的期望类型的类的完全限定名或别名，注意若返回的是集合，则应设置为集合包含的类型，而不是集合本身，可使用resultType或resultMap，但不能同时使用</span></span><br><span class="line">    String resultType = context.getStringAttribute(<span class="string">"resultType"</span>);</span><br><span class="line">    Class&lt;?&gt; resultTypeClass = resolveClass(resultType); <span class="comment">// 解析查询结果集返回的类型</span></span><br><span class="line">    <span class="comment">// 外部resultMap的命名引用，结果集的映射是Mybatis最强大的特性，可使用resultMap或resultType，但不能同时使用。</span></span><br><span class="line">    String resultMap = context.getStringAttribute(<span class="string">"resultMap"</span>);</span><br><span class="line">    String resultSetType = context.getStringAttribute(<span class="string">"resultSetType"</span>);</span><br><span class="line">    ResultSetType resultSetTypeEnum = resolveResultSetType(resultSetType);</span><br><span class="line">    <span class="keyword">if</span> (resultSetTypeEnum == <span class="keyword">null</span>) &#123;</span><br><span class="line">        resultSetTypeEnum = configuration.getDefaultResultSetType();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 解析keyProperty keyColumn仅适用于insert和update</span></span><br><span class="line">    String keyProperty = context.getStringAttribute(<span class="string">"keyProperty"</span>);</span><br><span class="line">    String keyColumn = context.getStringAttribute(<span class="string">"keyColumn"</span>);</span><br><span class="line">    String resultSets = context.getStringAttribute(<span class="string">"resultSets"</span>);</span><br><span class="line">    <span class="comment">// 为insert|delete|update|select节点构建成mappedStatment对象</span></span><br><span class="line">    builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType, fetchSize, timeout, parameterMap, parameterTypeClass, resultMap, resultTypeClass, resultSetTypeEnum, flushCache, useCache, resultOrdered, keyGenerator, keyProperty,  keyColumn, databaseId, langDriver, resultSets);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这里会通过<strong><code>XMLIncludeTransformer#applyIncludes</code>递归</strong>目标标签，将其中的<strong><code>include</code>标签</strong>引用的sql替换成文本。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">applyIncludes</span><span class="params">(Node source)</span> </span>&#123;</span><br><span class="line">    Properties variablesContext = <span class="keyword">new</span> Properties();</span><br><span class="line">    Properties configurationVariables = configuration.getVariables(); <span class="comment">// 拿到之前配置文件解析的&lt;properties&gt;</span></span><br><span class="line">    Optional.ofNullable(configurationVariables).ifPresent(variablesContext::putAll); <span class="comment">// 放入到variablesContext中</span></span><br><span class="line">    applyIncludes(source, variablesContext, <span class="keyword">false</span>);  <span class="comment">// 替换Includes标签为对应的sql标签里面的值</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">applyIncludes</span><span class="params">(Node source, <span class="keyword">final</span> Properties variablesContext, <span class="keyword">boolean</span> included)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (source.getNodeName().equals(<span class="string">"include"</span>)) &#123;</span><br><span class="line">        Node toInclude = findSqlFragment(getStringAttribute(source, <span class="string">"refid"</span>), variablesContext);  <span class="comment">// 拿到之前解析的&lt;sql&gt;</span></span><br><span class="line">        Properties toIncludeContext = getVariablesContext(source, variablesContext);</span><br><span class="line">        applyIncludes(toInclude, toIncludeContext, <span class="keyword">true</span>); <span class="comment">// 递归， included=true</span></span><br><span class="line">        <span class="keyword">if</span> (toInclude.getOwnerDocument() != source.getOwnerDocument()) &#123;</span><br><span class="line">            toInclude = source.getOwnerDocument().importNode(toInclude, <span class="keyword">true</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// include的父节点=select将&lt;select&gt;里面的&lt;include&gt;替换成&lt;sql&gt;，那&lt;include&gt;.getParentNode就为Null了</span></span><br><span class="line">        source.getParentNode().replaceChild(toInclude, source);</span><br><span class="line">        <span class="keyword">while</span> (toInclude.hasChildNodes()) &#123;<span class="comment">// &lt;sql&gt;.getParentNode()=select，在&lt;sql&gt;的前面插入&lt;sql&gt;中的sql语句</span></span><br><span class="line">            toInclude.getParentNode().insertBefore(toInclude.getFirstChild(), toInclude);</span><br><span class="line">        &#125;</span><br><span class="line">        toInclude.getParentNode().removeChild(toInclude); <span class="comment">// &lt;sql&gt;.getParentNode()=select, 移除select中的&lt;sql&gt;</span></span><br><span class="line">        <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (source.getNodeType() == Node.ELEMENT_NODE) &#123; <span class="comment">// 0</span></span><br><span class="line">        <span class="keyword">if</span> (included &amp;&amp; !variablesContext.isEmpty()) &#123;</span><br><span class="line">            <span class="comment">// replace variables in attribute values</span></span><br><span class="line">            NamedNodeMap attributes = source.getAttributes();</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; attributes.getLength(); i++) &#123;</span><br><span class="line">                Node attr = attributes.item(i);</span><br><span class="line">                attr.setNodeValue(PropertyParser.parse(attr.getNodeValue(), variablesContext));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        NodeList children = source.getChildNodes();</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; children.getLength(); i++) &#123;</span><br><span class="line">            applyIncludes(children.item(i), variablesContext, included); <span class="comment">// 递归</span></span><br><span class="line">        &#125;<span class="comment">// included=true 说明是从include递归进来的</span></span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (included &amp;&amp; (source.getNodeType() == Node.TEXT_NODE || source.getNodeType() == Node.CDATA_SECTION_NODE) &amp;&amp; !variablesContext.isEmpty()) &#123;</span><br><span class="line">        source.setNodeValue(PropertyParser.parse(source.getNodeValue(), variablesContext));  <span class="comment">// 替换sql片段中的 $&#123;&lt;properties解析到的内容&gt;&#125;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于<strong><code>select</code></strong>、<strong><code>delete</code></strong>、<strong><code>insert</code></strong>、<strong><code>update</code></strong>等标签<strong>内容</strong>具体解析是通过<strong><code>LanguageDriver#createSqlSource</code></strong>中创建<strong><code>XMLScriptBuilder</code></strong>来完成的，最终将解析出的sqlNode根据是否是动态SQL将其封装成<strong><code>DynamicSqlSource</code></strong>或<strong><code>RawSqlSource</code></strong>。判断<strong>是否是动态SQL</strong>是根据SQL中是否包含<strong><code>${}</code></strong>以及是否包含<strong>动态标签</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> SqlSource <span class="title">createSqlSource</span><span class="params">(Configuration configuration, XNode script, Class&lt;?&gt; parameterType)</span> </span>&#123;</span><br><span class="line">    XMLScriptBuilder builder = <span class="keyword">new</span> XMLScriptBuilder(configuration, script, parameterType);</span><br><span class="line">    <span class="keyword">return</span> builder.parseScriptNode();</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> SqlSource <span class="title">parseScriptNode</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 递归解析selectById这个sql元素会解析成</span></span><br><span class="line"><span class="comment">     *    1层  MixedSqlNode &lt;SELECT&gt;</span></span><br><span class="line"><span class="comment">     *    2层  WhereSqlNode &lt;WHERE&gt;</span></span><br><span class="line"><span class="comment">     *    2层  IfSqlNode &lt;IF&gt;</span></span><br><span class="line"><span class="comment">     *       test="条件表达式"</span></span><br><span class="line"><span class="comment">     *  contexts= sql语句分： 1.TextSqlNode 带$&#123;&#125;    2.StaticTextSqlNode</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    MixedSqlNode rootSqlNode = parseDynamicTags(context);</span><br><span class="line">    SqlSource sqlSource;</span><br><span class="line">    <span class="keyword">if</span> (isDynamic) &#123;</span><br><span class="line">        sqlSource = <span class="keyword">new</span> DynamicSqlSource(configuration, rootSqlNode);  <span class="comment">// 动态Sql源</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        sqlSource = <span class="keyword">new</span> RawSqlSource(configuration, rootSqlNode, parameterType);  <span class="comment">// 静态Sql源，会在这里解析</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> sqlSource;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先会获取当前节点的所有子节点列表，判断子<strong>节点类型</strong>是否是<strong>动态标签节点</strong>，若不是则直接获取节点SQL文本，且判断文本中是否包含<strong><code>${}</code></strong>若包含这标识为动态SQL，将SQL文本封装到<strong><code>TextSqlNode</code></strong>中添加到结果列表中，否则将其封装为<strong><code>StaticTextSqlNode</code></strong>添加到结果列表中。</p>
+<p>若节点是<strong>动态标签</strong>的节点即where、if、foreach等标签节点，若是则获取对应处理的handler，handler列表是在<strong><code>XMLScriptBuilder</code>构造函数</strong>中调用<strong><code>initNodeHandlerMap</code></strong>就已初始化完成。对于各种动态标签因为可以嵌套，所以handleNode内部也是递归处理的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> MixedSqlNode <span class="title">parseDynamicTags</span><span class="params">(XNode node)</span> </span>&#123; <span class="comment">// 解析$&#123;&#125;和动态节点</span></span><br><span class="line">    List&lt;SqlNode&gt; contents = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    NodeList children = node.getNode().getChildNodes();  <span class="comment">//获得&lt;select&gt;的子节点</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; children.getLength(); i++) &#123;</span><br><span class="line">        XNode child = node.newXNode(children.item(i));</span><br><span class="line">        <span class="keyword">if</span> (child.getNode().getNodeType() == Node.CDATA_SECTION_NODE || child.getNode().getNodeType() == Node.TEXT_NODE) &#123;</span><br><span class="line">            String data = child.getStringBody(<span class="string">""</span>); <span class="comment">// 获得sql文本</span></span><br><span class="line">            TextSqlNode textSqlNode = <span class="keyword">new</span> TextSqlNode(data);</span><br><span class="line">            <span class="keyword">if</span> (textSqlNode.isDynamic()) &#123;  <span class="comment">// 判断sql文本中是否有$&#123;&#125;，有则isDynamic = true</span></span><br><span class="line">                contents.add(textSqlNode);</span><br><span class="line">                isDynamic = <span class="keyword">true</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                contents.add(<span class="keyword">new</span> StaticTextSqlNode(data));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (child.getNode().getNodeType() == Node.ELEMENT_NODE) &#123; <span class="comment">// issue #628</span></span><br><span class="line">            String nodeName = child.getNode().getNodeName();</span><br><span class="line">            NodeHandler handler = nodeHandlerMap.get(nodeName); <span class="comment">// 根据当前标签名称获取当前动态节点的NodeHandler，构造方法中调用initNodeHandlerMap进行初始化</span></span><br><span class="line">            <span class="keyword">if</span> (handler == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Unknown element &lt;"</span> + nodeName + <span class="string">"&gt; in SQL statement."</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            handler.handleNode(child, contents);  <span class="comment">// 不同动态节点有不用的实现</span></span><br><span class="line">            isDynamic = <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> MixedSqlNode(contents);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">XMLScriptBuilder</span> <span class="keyword">extends</span> <span class="title">BaseBuilder</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, NodeHandler&gt; nodeHandlerMap = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initNodeHandlerMap</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"trim"</span>, <span class="keyword">new</span> TrimHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"where"</span>, <span class="keyword">new</span> WhereHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"set"</span>, <span class="keyword">new</span> SetHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"foreach"</span>, <span class="keyword">new</span> ForEachHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"if"</span>, <span class="keyword">new</span> IfHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"choose"</span>, <span class="keyword">new</span> ChooseHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"when"</span>, <span class="keyword">new</span> IfHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"otherwise"</span>, <span class="keyword">new</span> OtherwiseHandler());</span><br><span class="line">        nodeHandlerMap.put(<span class="string">"bind"</span>, <span class="keyword">new</span> BindHandler());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">WhereHandler</span> <span class="keyword">implements</span> <span class="title">NodeHandler</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleNode</span><span class="params">(XNode nodeToHandle, List&lt;SqlNode&gt; targetContents)</span> </span>&#123;</span><br><span class="line">        MixedSqlNode mixedSqlNode = parseDynamicTags(nodeToHandle);</span><br><span class="line">        WhereSqlNode where = <span class="keyword">new</span> WhereSqlNode(configuration, mixedSqlNode);</span><br><span class="line">        targetContents.add(where);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">IfHandler</span> <span class="keyword">implements</span> <span class="title">NodeHandler</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handleNode</span><span class="params">(XNode nodeToHandle, List&lt;SqlNode&gt; targetContents)</span> </span>&#123;</span><br><span class="line">        MixedSqlNode mixedSqlNode = parseDynamicTags(nodeToHandle); <span class="comment">//递归解析</span></span><br><span class="line">        String test = nodeToHandle.getStringAttribute(<span class="string">"test"</span>); <span class="comment">// 得到表达式</span></span><br><span class="line">        IfSqlNode ifSqlNode = <span class="keyword">new</span> IfSqlNode(mixedSqlNode, test);</span><br><span class="line">        targetContents.add(ifSqlNode);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>将每个增删改查SQL解析完成后都封装成一个MappedStatement并添加到<strong><code>Configuration#mappedStatements</code></strong>中，依次遍历解析完所有的XML文件中的SQL，到此XML解析完成。</p>
+<p>解析完XML后就改解析Mapper接口中的注解了，首先解析<strong><code>@CacheNamespace</code></strong>、<strong><code>@CacheNamespaceRef</code></strong>注解。然后<strong>解析方法上的SQL注解</strong>。在<strong><code>parseStatement</code></strong>中通过<strong><code>getSqlSourceFromAnnotations</code></strong>然后通过<strong><code>LanguageDriver</code></strong>去将注解上的SQL解析成<strong><code>SQLNode</code></strong>列表封装成<strong><code>DynamicSqlSource</code></strong>或<strong><code>RawSqlSource</code></strong>。</p>
+<p>对于<strong><code>@SelectProvider</code></strong>、<strong><code>@InsertProvider</code></strong>、<strong><code>@UpdateProvider</code></strong>、<strong><code>@DeleteProvider</code></strong>注解的方法解析最终会封装成一个<strong><code>ProviderSqlSource</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">parse</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    String resource = type.toString();</span><br><span class="line">    <span class="keyword">if</span> (!configuration.isResourceLoaded(resource)) &#123; <span class="comment">// 是否已经解析mapper接口</span></span><br><span class="line">        loadXmlResource(); <span class="comment">// 根据mapper接口名获取xml文件并解析，解析&lt;mapper&gt;&lt;/mapper&gt;里面所有东西放到configuration</span></span><br><span class="line">        configuration.addLoadedResource(resource); <span class="comment">// 添加已解析的标记</span></span><br><span class="line">        assistant.setCurrentNamespace(type.getName());</span><br><span class="line">        parseCache(); <span class="comment">// 解析接口上@CacheNamespace注解</span></span><br><span class="line">        parseCacheRef(); <span class="comment">// 解析接口上@CacheNamespaceRef注解</span></span><br><span class="line">        Method[] methods = type.getMethods(); <span class="comment">// 获取所有方法看是否使用了注解</span></span><br><span class="line">        <span class="keyword">for</span> (Method method : methods) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (!method.isBridge()) &#123;</span><br><span class="line">                    parseStatement(method); <span class="comment">// 是不是用了注解，用了注解会将注解解析成MappedStatement</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IncompleteElementException e) &#123;</span><br><span class="line">                configuration.addIncompleteMethod(<span class="keyword">new</span> MethodResolver(<span class="keyword">this</span>, method));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    parsePendingMethods();</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> SqlSource <span class="title">getSqlSourceFromAnnotations</span><span class="params">(Method method, Class&lt;?&gt; parameterType, LanguageDriver languageDriver)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        Class&lt;? extends Annotation&gt; sqlAnnotationType = getSqlAnnotationType(method);</span><br><span class="line">        Class&lt;? extends Annotation&gt; sqlProviderAnnotationType = getSqlProviderAnnotationType(method);</span><br><span class="line">        <span class="keyword">if</span> (sqlAnnotationType != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (sqlProviderAnnotationType != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> BindingException(<span class="string">"You cannot supply both a static SQL and SqlProvider to method named "</span> + method.getName());</span><br><span class="line">            &#125;</span><br><span class="line">            Annotation sqlAnnotation = method.getAnnotation(sqlAnnotationType);</span><br><span class="line">            <span class="keyword">final</span> String[] strings = (String[]) sqlAnnotation.getClass().getMethod(<span class="string">"value"</span>).invoke(sqlAnnotation);</span><br><span class="line">            <span class="keyword">return</span> buildSqlSourceFromStrings(strings, parameterType, languageDriver);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (sqlProviderAnnotationType != <span class="keyword">null</span>) &#123;</span><br><span class="line">            Annotation sqlProviderAnnotation = method.getAnnotation(sqlProviderAnnotationType);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ProviderSqlSource(assistant.getConfiguration(), sqlProviderAnnotation, type, method);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> BuilderException(<span class="string">"Could not find value method on SQL annotation.  Cause: "</span> + e, e);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> SqlSource <span class="title">buildSqlSourceFromStrings</span><span class="params">(String[] strings, Class&lt;?&gt; parameterTypeClass, LanguageDriver languageDriver)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> StringBuilder sql = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">    <span class="keyword">for</span> (String fragment : strings) &#123;</span><br><span class="line">        sql.append(fragment);</span><br><span class="line">        sql.append(<span class="string">" "</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> languageDriver.createSqlSource(configuration, sql.toString().trim(), parameterTypeClass);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> SqlSource <span class="title">createSqlSource</span><span class="params">(Configuration configuration, String script, Class&lt;?&gt; parameterType)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// issue #3</span></span><br><span class="line">    <span class="keyword">if</span> (script.startsWith(<span class="string">"&lt;script&gt;"</span>)) &#123;</span><br><span class="line">        XPathParser parser = <span class="keyword">new</span> XPathParser(script, <span class="keyword">false</span>, configuration.getVariables(), <span class="keyword">new</span> XMLMapperEntityResolver());</span><br><span class="line">        <span class="keyword">return</span> createSqlSource(configuration, parser.evalNode(<span class="string">"/script"</span>), parameterType);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// issue #127</span></span><br><span class="line">        script = PropertyParser.parse(script, configuration.getVariables());</span><br><span class="line">        TextSqlNode textSqlNode = <span class="keyword">new</span> TextSqlNode(script);</span><br><span class="line">        <span class="keyword">if</span> (textSqlNode.isDynamic()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> DynamicSqlSource(configuration, textSqlNode);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> RawSqlSource(configuration, script, parameterType);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/中间件/Mybatis/Mybatis缓存原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Mybatis缓存原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Spring/SpringMvc处理分发请求原理/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">SpringMvc处理分发请求原理</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

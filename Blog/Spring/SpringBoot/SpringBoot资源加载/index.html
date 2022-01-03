@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        SpringBoot资源加载 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Spring,SpringBoot">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="@ConfigurationProperties被@ConfigurationProperties注解修饰的类的属性注入，可通过@ConfigurationPropertiesScan和@EnableConfigurationProperties注解将@ConfigurationProperties修饰的类注册到Spring容器中，且注册处理属性注入的BeanPostProcessor后置处理器及">
+<meta name="keywords" content="Spring,SpringBoot">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SpringBoot资源加载">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Spring/SpringBoot/SpringBoot资源加载/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="@ConfigurationProperties被@ConfigurationProperties注解修饰的类的属性注入，可通过@ConfigurationPropertiesScan和@EnableConfigurationProperties注解将@ConfigurationProperties修饰的类注册到Spring容器中，且注册处理属性注入的BeanPostProcessor后置处理器及">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2021-10-31T03:26:47.622Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SpringBoot资源加载">
+<meta name="twitter:description" content="@ConfigurationProperties被@ConfigurationProperties注解修饰的类的属性注入，可通过@ConfigurationPropertiesScan和@EnableConfigurationProperties注解将@ConfigurationProperties修饰的类注册到Spring容器中，且注册处理属性注入的BeanPostProcessor后置处理器及">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file active"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-Spring/SpringBoot/SpringBoot资源加载" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Spring/">Spring</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Spring/SpringBoot/">SpringBoot</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Spring/">Spring</a>, <a class="tag-link" href="/tags/SpringBoot/">SpringBoot</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">
+            <time datetime="2021-10-26T16:00:00.000Z" itemprop="datePublished">2021-10-27</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            SpringBoot资源加载
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <h4 id="ConfigurationProperties"><a href="#ConfigurationProperties" class="headerlink" title="@ConfigurationProperties"></a>@ConfigurationProperties</h4><p>被<strong><code>@ConfigurationProperties</code></strong>注解修饰的类的属性注入，可通过<strong><code>@ConfigurationPropertiesScan</code></strong>和<strong><code>@EnableConfigurationProperties</code></strong>注解将<strong><code>@ConfigurationProperties</code></strong>修饰的类注册到Spring容器中，且<strong>注册处理属性注入</strong>的<strong><code>BeanPostProcessor</code></strong>后置处理器及相关的类。</p>
+<p><strong><code>@EnableConfigurationProperties</code></strong>注解通过<strong><code>@Import</code></strong>注解导入<strong><code>EnableConfigurationPropertiesRegistrar</code></strong>。能讲该注解<strong><code>value</code>属性</strong>中配置的加了<strong><code>@ConfigurationProperties</code></strong>注解的类注册到Spring容器中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Import</span>(EnableConfigurationPropertiesRegistrar<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> @<span class="title">interface</span> <span class="title">EnableConfigurationProperties</span> </span>&#123;</span><br><span class="line">   String VALIDATOR_BEAN_NAME = <span class="string">"configurationPropertiesValidator"</span>;</span><br><span class="line">   Class&lt;?&gt;[] value() <span class="keyword">default</span> &#123;&#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>EnableConfigurationPropertiesRegistrar</code></strong>实现了<strong><code>ImportBeanDefinitionRegistrar</code></strong>接口，在扫描<strong><code>BeanDefinition</code></strong>时被调用<strong><code>registerBeanDefinitions</code></strong>方法，从而完成<strong><code>ConfigurationPropertiesBindingPostProcessor</code></strong>、<strong><code>BoundConfigurationProperties</code></strong>、<strong><code>ConfigurationPropertiesBinder</code></strong>等处理属性注入的Bean的注册。</p>
+<p>通过<strong><code>getTypes</code></strong>方法获取<strong><code>@EnableConfigurationProperties</code></strong>注解中<strong><code>value</code>属性</strong>配置的类，遍历这些类通过<strong><code>ConfigurationPropertiesBeanRegistrar#register</code></strong>将这些类注册到Spring容器中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">EnableConfigurationPropertiesRegistrar</span> <span class="keyword">implements</span> <span class="title">ImportBeanDefinitionRegistrar</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerBeanDefinitions</span><span class="params">(AnnotationMetadata metadata, BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        registerInfrastructureBeans(registry);</span><br><span class="line">        ConfigurationPropertiesBeanRegistrar beanRegistrar = <span class="keyword">new</span> ConfigurationPropertiesBeanRegistrar(registry);</span><br><span class="line">        getTypes(metadata).forEach(beanRegistrar::register);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">registerInfrastructureBeans</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        ConfigurationPropertiesBindingPostProcessor.register(registry);</span><br><span class="line">        BoundConfigurationProperties.register(registry);</span><br><span class="line">        ConfigurationBeanFactoryMetadata.register(registry);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> Set&lt;Class&lt;?&gt;&gt; getTypes(AnnotationMetadata metadata) &#123;</span><br><span class="line">        <span class="keyword">return</span> metadata.getAnnotations().stream(EnableConfigurationProperties<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">            .<span class="title">flatMap</span>((<span class="title">annotation</span>) -&gt; <span class="title">Arrays</span>.<span class="title">stream</span>(<span class="title">annotation</span>.<span class="title">getClassArray</span>(<span class="title">MergedAnnotation</span>.<span class="title">VALUE</span>)))</span></span><br><span class="line"><span class="class">            .<span class="title">filter</span>((<span class="title">type</span>) -&gt; <span class="title">void</span>.<span class="title">class</span> !</span>= type).collect(Collectors.toSet());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在通过<strong><code>ConfigurationPropertiesBeanRegistrar</code></strong>将其注册到Spring容器前会检查该类上是否存在<strong><code>@ConfigurationProperties</code></strong>注解，且<strong>通过该方式生成Bean的名称</strong>和通过<strong><code>@Component</code></strong>等注解生成Bean不一样。这里会将<strong><code>@ConfigurationProperties</code></strong>注解<strong><code>prefix</code></strong>属性配置的值加上<strong><code>-</code></strong>再加上<strong>类的全限定名</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">ConfigurationPropertiesBeanRegistrar</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">register</span><span class="params">(Class&lt;?&gt; type)</span> </span>&#123;</span><br><span class="line">        MergedAnnotation&lt;ConfigurationProperties&gt; annotation = MergedAnnotations</span><br><span class="line">            .from(type, SearchStrategy.TYPE_HIERARCHY).get(ConfigurationProperties<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        register(type, annotation);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">register</span><span class="params">(Class&lt;?&gt; type, MergedAnnotation&lt;ConfigurationProperties&gt; annotation)</span> </span>&#123;</span><br><span class="line">        String name = getName(type, annotation); <span class="comment">// 特殊化Bean的名称</span></span><br><span class="line">        <span class="keyword">if</span> (!containsBeanDefinition(name)) &#123;<span class="comment">// 判断该Bean是否注册到容器中</span></span><br><span class="line">            registerBeanDefinition(name, type, annotation); <span class="comment">// 注册BeanDefinition到容器中</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> String <span class="title">getName</span><span class="params">(Class&lt;?&gt; type, MergedAnnotation&lt;ConfigurationProperties&gt; annotation)</span> </span>&#123;</span><br><span class="line">        String prefix = annotation.isPresent() ? annotation.getString(<span class="string">"prefix"</span>) : <span class="string">""</span>;</span><br><span class="line">        <span class="keyword">return</span> (StringUtils.hasText(prefix) ? prefix + <span class="string">"-"</span> + type.getName() : type.getName());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">registerBeanDefinition</span><span class="params">(String beanName, Class&lt;?&gt; type, MergedAnnotation&lt;ConfigurationProperties&gt; annotation)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.registry.registerBeanDefinition(beanName, createBeanDefinition(beanName, type));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> BeanDefinition <span class="title">createBeanDefinition</span><span class="params">(String beanName, Class&lt;?&gt; type)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (BindMethod.forType(type) == BindMethod.VALUE_OBJECT) &#123; <span class="comment">// 根据该类是否有构造函数，且构造函数上是否有ConstructorBinding注解</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ConfigurationPropertiesValueObjectBeanDefinition(<span class="keyword">this</span>.beanFactory, beanName, type);</span><br><span class="line">        &#125;</span><br><span class="line">        GenericBeanDefinition definition = <span class="keyword">new</span> GenericBeanDefinition();</span><br><span class="line">        definition.setBeanClass(type);</span><br><span class="line">        <span class="keyword">return</span> definition;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>ConfigurationPropertiesBindingPostProcessor</code></strong>实现了<strong><code>BeanPostProcessor</code></strong>后置处理器，在Bean创建过程中会调用该Bean的后置处理器的<strong><code>postProcessBeforeInitialization</code></strong>最终通过<strong><code>ConfigurationPropertiesBinder</code></strong>完成属性的注入。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConfigurationPropertiesBindingPostProcessor</span> <span class="keyword">implements</span> <span class="title">BeanPostProcessor</span>, <span class="title">PriorityOrdered</span>, <span class="title">ApplicationContextAware</span>, <span class="title">InitializingBean</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">register</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        Assert.notNull(registry, <span class="string">"Registry must not be null"</span>);</span><br><span class="line">        <span class="keyword">if</span> (!registry.containsBeanDefinition(BEAN_NAME)) &#123;</span><br><span class="line">            GenericBeanDefinition definition = <span class="keyword">new</span> GenericBeanDefinition();</span><br><span class="line">            definition.setBeanClass(ConfigurationPropertiesBindingPostProcessor<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);</span><br><span class="line">            registry.registerBeanDefinition(BEAN_NAME, definition);</span><br><span class="line">        &#125;</span><br><span class="line">        ConfigurationPropertiesBinder.register(registry);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterPropertiesSet</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.registry = (BeanDefinitionRegistry) <span class="keyword">this</span>.applicationContext.getAutowireCapableBeanFactory();</span><br><span class="line">        <span class="keyword">this</span>.binder = ConfigurationPropertiesBinder.get(<span class="keyword">this</span>.applicationContext);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">postProcessBeforeInitialization</span><span class="params">(Object bean, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">        bind(ConfigurationPropertiesBean.get(<span class="keyword">this</span>.applicationContext, bean, beanName));</span><br><span class="line">        <span class="keyword">return</span> bean;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">bind</span><span class="params">(ConfigurationPropertiesBean bean)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (bean == <span class="keyword">null</span> || hasBoundValueObject(bean.getName())) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Assert.state(bean.getBindMethod() == BindMethod.JAVA_BEAN, <span class="string">"Cannot bind @ConfigurationProperties for bean '"</span> + bean.getName() + <span class="string">"'. Ensure that @ConstructorBinding has not been applied to regular bean"</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.binder.bind(bean);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ConfigurationPropertiesBindException(bean, ex);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终通过层层调用将从<strong><code>PropertySources</code></strong>匹配到的属性值通过set方法将属性赋值。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ConfigurationPropertiesBinder</span> </span>&#123;</span><br><span class="line">    BindResult&lt;?&gt; bind(ConfigurationPropertiesBean propertiesBean) &#123;</span><br><span class="line">        Bindable&lt;?&gt; target = propertiesBean.asBindTarget();</span><br><span class="line">        ConfigurationProperties annotation = propertiesBean.getAnnotation();</span><br><span class="line">        BindHandler bindHandler = getBindHandler(target, annotation);</span><br><span class="line">        <span class="keyword">return</span> getBinder().bind(annotation.prefix(), target, bindHandler);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Binder <span class="title">getBinder</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.binder == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">this</span>.binder = <span class="keyword">new</span> Binder(getConfigurationPropertySources(), getPropertySourcesPlaceholdersResolver(), getConversionService(), getPropertyEditorInitializer(), <span class="keyword">null</span>, ConfigurationPropertiesBindConstructorProvider.INSTANCE);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.binder;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Binder</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> &lt;T&gt; <span class="function">BindResult&lt;T&gt; <span class="title">bind</span><span class="params">(ConfigurationPropertyName name, Bindable&lt;T&gt; target, BindHandler handler)</span> </span>&#123;</span><br><span class="line">        T bound = bind(name, target, handler, <span class="keyword">false</span>);</span><br><span class="line">        <span class="keyword">return</span> BindResult.of(bound);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> &lt;T&gt; <span class="function">T <span class="title">bind</span><span class="params">(ConfigurationPropertyName name, Bindable&lt;T&gt; target, BindHandler handler, Context context, <span class="keyword">boolean</span> allowRecursiveBinding, <span class="keyword">boolean</span> create)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Bindable&lt;T&gt; replacementTarget = handler.onStart(name, target, context);</span><br><span class="line">            <span class="keyword">if</span> (replacementTarget == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> handleBindResult(name, target, handler, context, <span class="keyword">null</span>, create);</span><br><span class="line">            &#125;</span><br><span class="line">            target = replacementTarget;</span><br><span class="line">            Object bound = bindObject(name, target, handler, context, allowRecursiveBinding);</span><br><span class="line">            <span class="keyword">return</span> handleBindResult(name, target, handler, context, bound, create);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            <span class="keyword">return</span> handleBindError(name, target, handler, context, ex);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Object <span class="title">bindDataObject</span><span class="params">(ConfigurationPropertyName name, Bindable&lt;?&gt; target, BindHandler handler, Context context, <span class="keyword">boolean</span> allowRecursiveBinding)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (isUnbindableBean(name, target, context)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Class&lt;?&gt; type = target.getType().resolve(Object<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        <span class="keyword">if</span> (!allowRecursiveBinding &amp;&amp; context.isBindingDataObject(type)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        DataObjectPropertyBinder propertyBinder = (propertyName, propertyTarget) -&gt; bind(name.append(propertyName), propertyTarget, handler, context, <span class="keyword">false</span>, <span class="keyword">false</span>);</span><br><span class="line">        <span class="keyword">return</span> context.withDataObject(type, () -&gt; &#123;</span><br><span class="line">            <span class="keyword">for</span> (DataObjectBinder dataObjectBinder : <span class="keyword">this</span>.dataObjectBinders) &#123;</span><br><span class="line">                Object instance = dataObjectBinder.bind(name, target, context, propertyBinder);</span><br><span class="line">                <span class="keyword">if</span> (instance != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">return</span> instance;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JavaBeanBinder</span> <span class="keyword">implements</span> <span class="title">DataObjectBinder</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> &lt;T&gt; <span class="function">T <span class="title">bind</span><span class="params">(ConfigurationPropertyName name, Bindable&lt;T&gt; target, Context context, DataObjectPropertyBinder propertyBinder)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">boolean</span> hasKnownBindableProperties = target.getValue() != <span class="keyword">null</span> &amp;&amp; hasKnownBindableProperties(name, context);</span><br><span class="line">        Bean&lt;T&gt; bean = Bean.get(target, hasKnownBindableProperties);</span><br><span class="line">        <span class="keyword">if</span> (bean == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        BeanSupplier&lt;T&gt; beanSupplier = bean.getSupplier(target);</span><br><span class="line">        <span class="keyword">boolean</span> bound = bind(propertyBinder, bean, beanSupplier, context);</span><br><span class="line">        <span class="keyword">return</span> (bound ? beanSupplier.get() : <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> &lt;T&gt; <span class="function"><span class="keyword">boolean</span> <span class="title">bind</span><span class="params">(DataObjectPropertyBinder propertyBinder, Bean&lt;T&gt; bean, BeanSupplier&lt;T&gt; beanSupplier,</span></span></span><br><span class="line"><span class="function"><span class="params">                             Context context)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">boolean</span> bound = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">for</span> (BeanProperty beanProperty : bean.getProperties().values()) &#123;</span><br><span class="line">            bound |= bind(beanSupplier, propertyBinder, beanProperty);</span><br><span class="line">            context.clearConfigurationProperty();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> bound;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> &lt;T&gt; <span class="function"><span class="keyword">boolean</span> <span class="title">bind</span><span class="params">(BeanSupplier&lt;T&gt; beanSupplier, DataObjectPropertyBinder propertyBinder, BeanProperty property)</span> </span>&#123;</span><br><span class="line">        String propertyName = property.getName();</span><br><span class="line">        ResolvableType type = property.getType();</span><br><span class="line">        Supplier&lt;Object&gt; value = property.getValue(beanSupplier);</span><br><span class="line">        Annotation[] annotations = property.getAnnotations();</span><br><span class="line">        Object bound = propertyBinder.bindProperty(propertyName, Bindable.of(type).withSuppliedValue(value).withAnnotations(annotations));</span><br><span class="line">        <span class="keyword">if</span> (bound == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (property.isSettable()) &#123;</span><br><span class="line">            property.setValue(beanSupplier, bound);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (value == <span class="keyword">null</span> || !bound.equals(value.get())) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"No setter found for property: "</span> + property.getName());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">BeanProperty</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Method getter;</span><br><span class="line">    <span class="keyword">private</span> Method setter;</span><br><span class="line">    <span class="keyword">private</span> Field field;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">setValue</span><span class="params">(Supplier&lt;?&gt; instance, Object value)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.setter.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">            <span class="keyword">this</span>.setter.invoke(instance.get(), value);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Unable to set value for property "</span> + <span class="keyword">this</span>.name, ex);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>@ConfigurationPropertiesScan</code></strong>注解的作用是扫描所有带有<strong><code>@ConfigurationProperties</code></strong>注解的类将其注册到Spring容器中。且该注解上被<strong><code>@EnableConfigurationProperties</code></strong>注解标记。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Import</span>(ConfigurationPropertiesScanRegistrar<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">@<span class="title">EnableConfigurationProperties</span></span></span><br><span class="line"><span class="class"><span class="title">public</span> @<span class="title">interface</span> <span class="title">ConfigurationPropertiesScan</span> </span>&#123;</span><br><span class="line">   <span class="meta">@AliasFor</span>(<span class="string">"basePackages"</span>)</span><br><span class="line">   String[] value() <span class="keyword">default</span> &#123;&#125;;</span><br><span class="line">   <span class="meta">@AliasFor</span>(<span class="string">"value"</span>)</span><br><span class="line">   String[] basePackages() <span class="keyword">default</span> &#123;&#125;;</span><br><span class="line">   Class&lt;?&gt;[] basePackageClasses() <span class="keyword">default</span> &#123;&#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>ConfigurationPropertiesScanRegistrar</code></strong>同样实现了<strong><code>ImportBeanDefinitionRegistrar</code></strong>接口，首先获取需要扫描的包，若未指定则以当前注解所在类所在的包作为扫描包，通过<strong><code>ClassPathScanningCandidateComponentProvider</code></strong>遍历扫描所有的包，扫描出包中被<strong><code>@ConfigurationProperties</code></strong>注解标注，但是未被<strong><code>@Component</code></strong>注解及其<strong>派生注解</strong>标注的类，注册到Spring容器中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ConfigurationPropertiesScanRegistrar</span> <span class="keyword">implements</span> <span class="title">ImportBeanDefinitionRegistrar</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerBeanDefinitions</span><span class="params">(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        Set&lt;String&gt; packagesToScan = getPackagesToScan(importingClassMetadata); <span class="comment">// 获取扫描的包</span></span><br><span class="line">        scan(registry, packagesToScan); <span class="comment">// 扫描出包中所有带有@ConfigurationProperties注解的类，注册到Spring容器中</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Set&lt;String&gt; <span class="title">getPackagesToScan</span><span class="params">(AnnotationMetadata metadata)</span> </span>&#123;</span><br><span class="line">        AnnotationAttributes attributes = AnnotationAttributes.fromMap(metadata.getAnnotationAttributes(ConfigurationPropertiesScan<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>()))</span>;</span><br><span class="line">        String[] basePackages = attributes.getStringArray(<span class="string">"basePackages"</span>);</span><br><span class="line">        Class&lt;?&gt;[] basePackageClasses = attributes.getClassArray(<span class="string">"basePackageClasses"</span>);</span><br><span class="line">        Set&lt;String&gt; packagesToScan = <span class="keyword">new</span> LinkedHashSet&lt;&gt;(Arrays.asList(basePackages));</span><br><span class="line">        <span class="keyword">for</span> (Class&lt;?&gt; basePackageClass : basePackageClasses) &#123;</span><br><span class="line">            packagesToScan.add(ClassUtils.getPackageName(basePackageClass));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (packagesToScan.isEmpty()) &#123; <span class="comment">// 若未指定则以当前注解所在类所在的包作为扫描包</span></span><br><span class="line">            packagesToScan.add(ClassUtils.getPackageName(metadata.getClassName()));</span><br><span class="line">        &#125;</span><br><span class="line">        packagesToScan.removeIf((candidate) -&gt; !StringUtils.hasText(candidate));</span><br><span class="line">        <span class="keyword">return</span> packagesToScan;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">scan</span><span class="params">(BeanDefinitionRegistry registry, Set&lt;String&gt; packages)</span> </span>&#123;</span><br><span class="line">        ConfigurationPropertiesBeanRegistrar registrar = <span class="keyword">new</span> ConfigurationPropertiesBeanRegistrar(registry);</span><br><span class="line">        ClassPathScanningCandidateComponentProvider scanner = getScanner(registry);</span><br><span class="line">        <span class="keyword">for</span> (String basePackage : packages) &#123;</span><br><span class="line">            <span class="keyword">for</span> (BeanDefinition candidate : scanner.findCandidateComponents(basePackage)) &#123;</span><br><span class="line">                register(registrar, candidate.getBeanClassName());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> ClassPathScanningCandidateComponentProvider <span class="title">getScanner</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        ClassPathScanningCandidateComponentProvider scanner = <span class="keyword">new</span> ClassPathScanningCandidateComponentProvider(<span class="keyword">false</span>);</span><br><span class="line">        scanner.setEnvironment(<span class="keyword">this</span>.environment);</span><br><span class="line">        scanner.setResourceLoader(<span class="keyword">this</span>.resourceLoader);</span><br><span class="line">        scanner.addIncludeFilter(<span class="keyword">new</span> AnnotationTypeFilter(ConfigurationProperties<span class="class">.<span class="keyword">class</span>))</span>; <span class="comment">// 添加过滤器，过滤出带有@ConfigurationProperties注解的类</span></span><br><span class="line">        TypeExcludeFilter typeExcludeFilter = <span class="keyword">new</span> TypeExcludeFilter();</span><br><span class="line">        typeExcludeFilter.setBeanFactory((BeanFactory) registry);</span><br><span class="line">        scanner.addExcludeFilter(typeExcludeFilter);</span><br><span class="line">        <span class="keyword">return</span> scanner;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">register</span><span class="params">(ConfigurationPropertiesBeanRegistrar registrar, String className)</span> <span class="keyword">throws</span> LinkageError </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            register(registrar, ClassUtils.forName(className, <span class="keyword">null</span>));</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ClassNotFoundException ex) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">register</span><span class="params">(ConfigurationPropertiesBeanRegistrar registrar, Class&lt;?&gt; type)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!isComponent(type)) &#123; <span class="comment">// 该类没有被@Component注解修饰</span></span><br><span class="line">            registrar.register(type); <span class="comment">// 注册过程和上面一样</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">isComponent</span><span class="params">(Class&lt;?&gt; type)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> MergedAnnotations.from(type, SearchStrategy.TYPE_HIERARCHY).isPresent(Component<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Enviroment"><a href="#Enviroment" class="headerlink" title="Enviroment"></a>Enviroment</h4><p><strong><code>Enviroment</code></strong>是Spring为运行环境提供的高度抽象接口，项目运行中的所有相关配置都基于此接口，在<strong><code>SpringApplication</code></strong>的<strong><code>prepareEnvironment</code></strong>方法中完成了配置文件的加载。通过发布环境准备就绪事件<strong><code>ApplicationEnvironmentPreparedEvent</code></strong>，从而加载项目中的配置文件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> ConfigurableEnvironment <span class="title">prepareEnvironment</span><span class="params">(SpringApplicationRunListeners listeners, DefaultBootstrapContext bootstrapContext, ApplicationArguments applicationArguments)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// Create and configure the environment</span></span><br><span class="line">    ConfigurableEnvironment environment = getOrCreateEnvironment(); <span class="comment">// 获取或创建ConfigurableEnvironment，会调用超类AbstractEnvironment的无参构造方法</span></span><br><span class="line">    configureEnvironment(environment, applicationArguments.getSourceArgs()); <span class="comment">// 加载默认配置</span></span><br><span class="line">    ConfigurationPropertySources.attach(environment);</span><br><span class="line">    listeners.environmentPrepared(bootstrapContext, environment); <span class="comment">// 发布环境准备就绪事件ApplicationEnvironmentPreparedEvent，从而加载项目中的配置文件</span></span><br><span class="line">    DefaultPropertiesPropertySource.moveToEnd(environment); <span class="comment">// 将defaultProperties移到列表最后，即将其优先级降到最低</span></span><br><span class="line">    Assert.state(!environment.containsProperty(<span class="string">"spring.main.environment-prefix"</span>), <span class="string">"Environment prefix cannot be set via properties."</span>);</span><br><span class="line">    bindToSpringApplication(environment);</span><br><span class="line">    <span class="keyword">if</span> (!<span class="keyword">this</span>.isCustomEnvironment) &#123;</span><br><span class="line">        environment = <span class="keyword">new</span> EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment, deduceEnvironmentClass());</span><br><span class="line">    &#125;</span><br><span class="line">    ConfigurationPropertySources.attach(environment);</span><br><span class="line">    <span class="keyword">return</span> environment;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>getOrCreateEnvironment</code></strong>方法中对<strong><code>Environment</code></strong>初始化，以<strong><code>ApplicationServletEnvironment</code></strong>为例，其初始化时会调用超类<strong><code>AbstractEnvironment</code></strong>的<strong>无参构造函数</strong>，然后调用子类<strong><code>StandardServletEnvironment</code></strong>实现的<strong><code>customizePropertySources</code></strong>方法，添加类型为<strong><code>StubPropertySource</code></strong>的<strong><code>servletConfigInitParams</code></strong>和<strong><code>servletContextInitParams</code></strong>，然后再调用其父类<strong><code>StandardEnvironment</code></strong>的<strong><code>customizePropertySources</code></strong>方法，将<strong><code>systemProperties</code></strong>和<strong><code>systemEnvironment</code></strong>加载到<strong><code>Environment</code></strong>中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringApplication</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> ConfigurableEnvironment <span class="title">getOrCreateEnvironment</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.environment != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>.environment;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">switch</span> (<span class="keyword">this</span>.webApplicationType) &#123;</span><br><span class="line">            <span class="keyword">case</span> SERVLET:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> ApplicationServletEnvironment();</span><br><span class="line">            <span class="keyword">case</span> REACTIVE:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> ApplicationReactiveWebEnvironment();</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> ApplicationEnvironment();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ApplicationServletEnvironment</span> <span class="keyword">extends</span> <span class="title">StandardServletEnvironment</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> ConfigurablePropertyResolver <span class="title">createPropertyResolver</span><span class="params">(MutablePropertySources propertySources)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> ConfigurationPropertySources.createPropertyResolver(propertySources);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StandardServletEnvironment</span> <span class="keyword">extends</span> <span class="title">StandardEnvironment</span> <span class="keyword">implements</span> <span class="title">ConfigurableWebEnvironment</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SERVLET_CONTEXT_PROPERTY_SOURCE_NAME = <span class="string">"servletContextInitParams"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SERVLET_CONFIG_PROPERTY_SOURCE_NAME = <span class="string">"servletConfigInitParams"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String JNDI_PROPERTY_SOURCE_NAME = <span class="string">"jndiProperties"</span>;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">customizePropertySources</span><span class="params">(MutablePropertySources propertySources)</span> </span>&#123;</span><br><span class="line">        propertySources.addLast(<span class="keyword">new</span> StubPropertySource(SERVLET_CONFIG_PROPERTY_SOURCE_NAME));</span><br><span class="line">        propertySources.addLast(<span class="keyword">new</span> StubPropertySource(SERVLET_CONTEXT_PROPERTY_SOURCE_NAME));</span><br><span class="line">        <span class="keyword">if</span> (JndiLocatorDelegate.isDefaultJndiEnvironmentAvailable()) &#123;</span><br><span class="line">            propertySources.addLast(<span class="keyword">new</span> JndiPropertySource(JNDI_PROPERTY_SOURCE_NAME));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">super</span>.customizePropertySources(propertySources);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StandardEnvironment</span> <span class="keyword">extends</span> <span class="title">AbstractEnvironment</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME = <span class="string">"systemEnvironment"</span>;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME = <span class="string">"systemProperties"</span>;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">customizePropertySources</span><span class="params">(MutablePropertySources propertySources)</span> </span>&#123;</span><br><span class="line">        propertySources.addLast(<span class="keyword">new</span> PropertiesPropertySource(SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME, getSystemProperties()));</span><br><span class="line">        propertySources.addLast(<span class="keyword">new</span> SystemEnvironmentPropertySource(SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME, getSystemEnvironment()));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractEnvironment</span> <span class="keyword">implements</span> <span class="title">ConfigurableEnvironment</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">AbstractEnvironment</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(<span class="keyword">new</span> MutablePropertySources());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="title">AbstractEnvironment</span><span class="params">(MutablePropertySources propertySources)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.propertySources = propertySources;</span><br><span class="line">        <span class="keyword">this</span>.propertyResolver = createPropertyResolver(propertySources);</span><br><span class="line">        customizePropertySources(propertySources);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">customizePropertySources</span><span class="params">(MutablePropertySources propertySources)</span> </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>发布环境准备就绪事件<strong><code>ApplicationEnvironmentPreparedEvent</code></strong>是通过<strong><code>getRunListeners</code></strong>中从<strong><code>spring.factories</code></strong>配置文件加载的<strong><code>EventPublishingRunListener</code></strong>来完成的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># Run Listeners</span><br><span class="line">org.springframework.boot.SpringApplicationRunListener=\</span><br><span class="line">org.springframework.boot.context.event.EventPublishingRunListener</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SpringApplication</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> SpringApplicationRunListeners <span class="title">getRunListeners</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Class&lt;?&gt;[] types = new Class&lt;?&gt;[] &#123; SpringApplication.class, String[].class &#125;;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> SpringApplicationRunListeners(logger, getSpringFactoriesInstances(SpringApplicationRunListener<span class="class">.<span class="keyword">class</span>, <span class="title">types</span>, <span class="title">this</span>, <span class="title">args</span>))</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>故最终会调用<strong><code>EventPublishingRunListener</code></strong>的<strong><code>environmentPrepared</code></strong>方法来发布<strong><code>ApplicationEnvironmentPreparedEvent</code></strong>事件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">SpringApplicationRunListeners</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">environmentPrepared</span><span class="params">(ConfigurableBootstrapContext bootstrapContext, ConfigurableEnvironment environment)</span> </span>&#123;</span><br><span class="line">        doWithListeners(<span class="string">"spring.boot.application.environment-prepared"</span>, (listener) -&gt; listener.environmentPrepared(bootstrapContext, environment));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EventPublishingRunListener</span> <span class="keyword">implements</span> <span class="title">SpringApplicationRunListener</span>, <span class="title">Ordered</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">environmentPrepared</span><span class="params">(ConfigurableBootstrapContext bootstrapContext, ConfigurableEnvironment environment)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.initialMulticaster.multicastEvent(<span class="keyword">new</span> ApplicationEnvironmentPreparedEvent(bootstrapContext, <span class="keyword">this</span>.application, <span class="keyword">this</span>.args, environment));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>监听了<strong><code>ApplicationEnvironmentPreparedEvent</code></strong>事件的类很多个，<strong>旧版本</strong>中是通过<strong><code>ConfigFileApplicationListener</code></strong>来加载配置文件，该监听器的加载是通过<strong><code>SpringApplication</code>构造方法</strong>中通过<strong><code>getSpringFactoriesInstances</code></strong>方法从<strong><code>spring.factories</code></strong>配置文件中加载<strong><code>ApplicationListener</code></strong>时加载的。<strong>新版本</strong>是通过<strong><code>ConfigDataEnvironmentPostProcessor</code></strong>来加载的配置文件，其是通过加载<strong><code>ApplicationListener</code></strong>时加载的<strong><code>EnvironmentPostProcessorApplicationListener</code></strong>监听器时该类的构造方法中又加载了一系列<strong><code>EnvironmentPostProcessor</code></strong>后置处理器中的一个。这里<strong><code>DEFAULT_SEARCH_LOCATIONS</code></strong>体现了<strong>配置文件加载顺序</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConfigFileApplicationListener</span> <span class="keyword">implements</span> <span class="title">EnvironmentPostProcessor</span>, <span class="title">SmartApplicationListener</span>, <span class="title">Ordered</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String DEFAULT_SEARCH_LOCATIONS = <span class="string">"classpath:/,classpath:/config/,file:./,file:./config/*/,file:./config/"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String DEFAULT_PROPERTIES = <span class="string">"defaultProperties"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String DEFAULT_NAMES = <span class="string">"application"</span>;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onApplicationEvent</span><span class="params">(ApplicationEvent event)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ApplicationEnvironmentPreparedEvent) &#123;</span><br><span class="line">            onApplicationEnvironmentPreparedEvent((ApplicationEnvironmentPreparedEvent) event);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ApplicationPreparedEvent) &#123;</span><br><span class="line">            onApplicationPreparedEvent(event);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">onApplicationEnvironmentPreparedEvent</span><span class="params">(ApplicationEnvironmentPreparedEvent event)</span> </span>&#123;</span><br><span class="line">        List&lt;EnvironmentPostProcessor&gt; postProcessors = loadPostProcessors();</span><br><span class="line">        postProcessors.add(<span class="keyword">this</span>);</span><br><span class="line">        AnnotationAwareOrderComparator.sort(postProcessors);</span><br><span class="line">        <span class="keyword">for</span> (EnvironmentPostProcessor postProcessor : postProcessors) &#123;</span><br><span class="line">            postProcessor.postProcessEnvironment(event.getEnvironment(), event.getSpringApplication());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function">List&lt;EnvironmentPostProcessor&gt; <span class="title">loadPostProcessors</span><span class="params">()</span> </span>&#123; <span class="comment">// 加载spring.factories配置文件中以EnvironmentPostProcessor为key配置的类</span></span><br><span class="line">        <span class="keyword">return</span> SpringFactoriesLoader.loadFactories(EnvironmentPostProcessor<span class="class">.<span class="keyword">class</span>, <span class="title">getClass</span>().<span class="title">getClassLoader</span>())</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postProcessEnvironment</span><span class="params">(ConfigurableEnvironment environment, SpringApplication application)</span> </span>&#123;</span><br><span class="line">        addPropertySources(environment, application.getResourceLoader());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">addPropertySources</span><span class="params">(ConfigurableEnvironment environment, ResourceLoader resourceLoader)</span> </span>&#123;</span><br><span class="line">        RandomValuePropertySource.addToEnvironment(environment);</span><br><span class="line">        <span class="keyword">new</span> Loader(environment, resourceLoader).load(); <span class="comment">// 最终通过该处去加载配置文件</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>ConfigFileApplicationListener</code></strong>也实现了<strong><code>EnvironmentPostProcessor</code></strong>故最终会执行其<strong><code>postProcessEnvironment</code></strong>方法最终通过<strong><code>Loader</code></strong>类来加载配置文件。构造方法中会加载<strong><code>PropertySourceLoader</code></strong>，主要是<strong><code>PropertiesPropertySourceLoader</code></strong>和<strong><code>YamlPropertySourceLoader</code></strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">Loader</span> </span>&#123;</span><br><span class="line">    Loader(ConfigurableEnvironment environment, ResourceLoader resourceLoader) &#123;</span><br><span class="line">        <span class="keyword">this</span>.environment = environment;</span><br><span class="line">        <span class="keyword">this</span>.placeholdersResolver = <span class="keyword">new</span> PropertySourcesPlaceholdersResolver(<span class="keyword">this</span>.environment);</span><br><span class="line">        <span class="keyword">this</span>.resourceLoader = (resourceLoader != <span class="keyword">null</span>) ? resourceLoader : <span class="keyword">new</span> DefaultResourceLoader(<span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">this</span>.propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader<span class="class">.<span class="keyword">class</span>, <span class="title">getClass</span>().<span class="title">getClassLoader</span>())</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># PropertySource Loaders</span><br><span class="line">org.springframework.boot.env.PropertySourceLoader=\</span><br><span class="line">org.springframework.boot.env.PropertiesPropertySourceLoader,\</span><br><span class="line">org.springframework.boot.env.YamlPropertySourceLoader</span><br></pre></td></tr></table></figure>
+<p>最终调用load方法来加载配置文件，首先获取需要遍历的目录，其实就是将<strong><code>DEFAULT_SEARCH_LOCATIONS</code></strong>中的目录拆分成数组，并进行<strong>反序</strong>，若为Cloud项目会在<strong><code>BootstrapApplicationListener</code></strong>中添加<strong><code>MapPropertySource</code></strong>配置，从而会获取<strong><code>spring.config.name</code></strong>设置的值，默认是<strong><code>bootstrap</code></strong>，故默认会先加载各个目录下的<strong><code>bootstrap</code></strong>配置文件。然后再加载<strong><code>application</code></strong>配置文件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">load</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    FilteredPropertySource.apply(<span class="keyword">this</span>.environment, DEFAULT_PROPERTIES, LOAD_FILTERED_PROPERTY, (defaultProperties) -&gt; &#123;</span><br><span class="line">        <span class="keyword">this</span>.profiles = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">        <span class="keyword">this</span>.processedProfiles = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">        <span class="keyword">this</span>.activatedProfiles = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">this</span>.loaded = <span class="keyword">new</span> LinkedHashMap&lt;&gt;();</span><br><span class="line">        initializeProfiles();</span><br><span class="line">        <span class="keyword">while</span> (!<span class="keyword">this</span>.profiles.isEmpty()) &#123;</span><br><span class="line">            Profile profile = <span class="keyword">this</span>.profiles.poll();</span><br><span class="line">            <span class="keyword">if</span> (isDefaultProfile(profile)) &#123;</span><br><span class="line">                addProfileToEnvironment(profile.getName());</span><br><span class="line">            &#125;</span><br><span class="line">            load(profile, <span class="keyword">this</span>::getPositiveProfileFilter, addToLoaded(MutablePropertySources::addLast, <span class="keyword">false</span>));</span><br><span class="line">            <span class="keyword">this</span>.processedProfiles.add(profile);</span><br><span class="line">        &#125;</span><br><span class="line">        load(<span class="keyword">null</span>, <span class="keyword">this</span>::getNegativeProfileFilter, addToLoaded(MutablePropertySources::addFirst, <span class="keyword">true</span>));</span><br><span class="line">        addLoadedPropertySources();</span><br><span class="line">        applyActiveProfiles(defaultProperties);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FilteredPropertySource</span> <span class="keyword">extends</span> <span class="title">PropertySource</span>&lt;<span class="title">PropertySource</span>&lt;?&gt;&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(ConfigurableEnvironment environment, String propertySourceName, Set&lt;String&gt; filteredProperties, Consumer&lt;PropertySource&lt;?&gt;&gt; operation)</span> </span>&#123;</span><br><span class="line">        MutablePropertySources propertySources = environment.getPropertySources();</span><br><span class="line">        PropertySource&lt;?&gt; original = propertySources.get(propertySourceName);</span><br><span class="line">        <span class="keyword">if</span> (original == <span class="keyword">null</span>) &#123;</span><br><span class="line">            operation.accept(<span class="keyword">null</span>);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        propertySources.replace(propertySourceName, <span class="keyword">new</span> FilteredPropertySource(original, filteredProperties));</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            operation.accept(original);</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            propertySources.replace(propertySourceName, original);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">load</span><span class="params">(Profile profile, DocumentFilterFactory filterFactory, DocumentConsumer consumer)</span> </span>&#123;</span><br><span class="line">    getSearchLocations().forEach((location) -&gt; &#123;</span><br><span class="line">        <span class="keyword">boolean</span> isDirectory = location.endsWith(<span class="string">"/"</span>);</span><br><span class="line">        Set&lt;String&gt; names = isDirectory ? getSearchNames() : NO_SEARCH_NAMES;</span><br><span class="line">        names.forEach((name) -&gt; load(location, name, profile, filterFactory, consumer));</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> Set&lt;String&gt; <span class="title">getSearchLocations</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    Set&lt;String&gt; locations = getSearchLocations(CONFIG_ADDITIONAL_LOCATION_PROPERTY);</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.environment.containsProperty(CONFIG_LOCATION_PROPERTY)) &#123;</span><br><span class="line">        locations.addAll(getSearchLocations(CONFIG_LOCATION_PROPERTY));</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123; <span class="comment">// 将DEFAULT_SEARCH_LOCATIONS中的目录拆分成数组，并进行反序</span></span><br><span class="line">        locations.addAll(asResolvedSet(ConfigFileApplicationListener.<span class="keyword">this</span>.searchLocations, DEFAULT_SEARCH_LOCATIONS));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> locations;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> Set&lt;String&gt; <span class="title">getSearchNames</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.environment.containsProperty(CONFIG_NAME_PROPERTY)) &#123;</span><br><span class="line">        String property = <span class="keyword">this</span>.environment.getProperty(CONFIG_NAME_PROPERTY);</span><br><span class="line">        Set&lt;String&gt; names = asResolvedSet(property, <span class="keyword">null</span>);</span><br><span class="line">        names.forEach(<span class="keyword">this</span>::assertValidConfigName);</span><br><span class="line">        <span class="keyword">return</span> names;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> asResolvedSet(ConfigFileApplicationListener.<span class="keyword">this</span>.names, DEFAULT_NAMES);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>遍历<strong><code>propertySourceLoaders</code></strong>依次通过<strong><code>PropertiesPropertySourceLoader</code></strong>和<strong><code>YamlPropertySourceLoader</code></strong>去加载解析配置文件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">load</span><span class="params">(String location, String name, Profile profile, DocumentFilterFactory filterFactory,</span></span></span><br><span class="line"><span class="function"><span class="params">                  DocumentConsumer consumer)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!StringUtils.hasText(name)) &#123;</span><br><span class="line">        <span class="keyword">for</span> (PropertySourceLoader loader : <span class="keyword">this</span>.propertySourceLoaders) &#123;</span><br><span class="line">            <span class="keyword">if</span> (canLoadFileExtension(loader, location)) &#123;</span><br><span class="line">                load(loader, location, profile, filterFactory.getDocumentFilter(profile), consumer);</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"File extension of config file location '"</span> + location + <span class="string">"' is not known to any PropertySourceLoader. If the location is meant to reference "</span> + <span class="string">"a directory, it must end in '/'"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    Set&lt;String&gt; processed = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (PropertySourceLoader loader : <span class="keyword">this</span>.propertySourceLoaders) &#123;</span><br><span class="line">        <span class="keyword">for</span> (String fileExtension : loader.getFileExtensions()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (processed.add(fileExtension)) &#123;</span><br><span class="line">                loadForFileExtension(loader, location + name, <span class="string">"."</span> + fileExtension, profile, filterFactory, consumer);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">loadForFileExtension</span><span class="params">(PropertySourceLoader loader, String prefix, String fileExtension, Profile profile, DocumentFilterFactory filterFactory, DocumentConsumer consumer)</span> </span>&#123;</span><br><span class="line">    DocumentFilter defaultFilter = filterFactory.getDocumentFilter(<span class="keyword">null</span>);</span><br><span class="line">    DocumentFilter profileFilter = filterFactory.getDocumentFilter(profile);</span><br><span class="line">    <span class="keyword">if</span> (profile != <span class="keyword">null</span>) &#123; <span class="comment">// 若设置了环境则加载对应环境的配置文件</span></span><br><span class="line">        String profileSpecificFile = prefix + <span class="string">"-"</span> + profile + fileExtension;</span><br><span class="line">        load(loader, profileSpecificFile, profile, defaultFilter, consumer);</span><br><span class="line">        load(loader, profileSpecificFile, profile, profileFilter, consumer);</span><br><span class="line">        <span class="keyword">for</span> (Profile processedProfile : <span class="keyword">this</span>.processedProfiles) &#123;</span><br><span class="line">            <span class="keyword">if</span> (processedProfile != <span class="keyword">null</span>) &#123;</span><br><span class="line">                String previouslyLoaded = prefix + <span class="string">"-"</span> + processedProfile + fileExtension;</span><br><span class="line">                load(loader, previouslyLoaded, profile, profileFilter, consumer);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    load(loader, prefix + fileExtension, profile, profileFilter, consumer);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">load</span><span class="params">(PropertySourceLoader loader, String location, Profile profile, DocumentFilter filter, DocumentConsumer consumer)</span> </span>&#123;</span><br><span class="line">    Resource[] resources = getResources(location);</span><br><span class="line">    <span class="keyword">for</span> (Resource resource : resources) &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (resource == <span class="keyword">null</span> || !resource.exists()) &#123;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!StringUtils.hasText(StringUtils.getFilenameExtension(resource.getFilename()))) &#123;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            String name = <span class="string">"applicationConfig: ["</span> + getLocationName(location, resource) + <span class="string">"]"</span>;</span><br><span class="line">            List&lt;Document&gt; documents = loadDocuments(loader, name, resource);</span><br><span class="line">            <span class="keyword">if</span> (CollectionUtils.isEmpty(documents)) &#123;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            List&lt;Document&gt; loaded = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">            <span class="keyword">for</span> (Document document : documents) &#123;</span><br><span class="line">                <span class="keyword">if</span> (filter.match(document)) &#123;</span><br><span class="line">                    addActiveProfiles(document.getActiveProfiles());</span><br><span class="line">                    addIncludedProfiles(document.getIncludeProfiles());</span><br><span class="line">                    loaded.add(document);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            Collections.reverse(loaded);</span><br><span class="line">            <span class="keyword">if</span> (!loaded.isEmpty()) &#123;</span><br><span class="line">                loaded.forEach((document) -&gt; consumer.accept(profile, document));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            StringBuilder description = getDescription(<span class="string">"Failed to load property source from "</span>, location, resource, profile);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(description.toString(), ex);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> List&lt;Document&gt; <span class="title">loadDocuments</span><span class="params">(PropertySourceLoader loader, String name, Resource resource)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    DocumentsCacheKey cacheKey = <span class="keyword">new</span> DocumentsCacheKey(loader, resource);</span><br><span class="line">    List&lt;Document&gt; documents = <span class="keyword">this</span>.loadDocumentsCache.get(cacheKey);</span><br><span class="line">    <span class="keyword">if</span> (documents == <span class="keyword">null</span>) &#123; <span class="comment">// 调用具体的PropertySourceLoader去加载解析配置文件</span></span><br><span class="line">        List&lt;PropertySource&lt;?&gt;&gt; loaded = loader.load(name, resource);</span><br><span class="line">        documents = asDocuments(loaded);</span><br><span class="line">        <span class="keyword">this</span>.loadDocumentsCache.put(cacheKey, documents);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> documents;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>若是在<strong><code>Spring Cloud</code></strong>项目中会通过<code>ApplicationListener</code>加载<strong><code>BootstrapApplicationListener</code></strong>，在该监听器中的<strong><code>bootstrapServiceContext</code></strong>方法中添加了<strong><code>MapPropertySource</code></strong>配置，将<strong><code>spring.config.name</code></strong>值设置为<strong><code>configName</code></strong>，<strong><code>configName</code></strong>默认值为<strong><code>bootstrap</code></strong>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">org.springframework.context.ApplicationListener=\</span><br><span class="line">org.springframework.cloud.bootstrap.BootstrapApplicationListener,\</span><br><span class="line">org.springframework.cloud.bootstrap.LoggingSystemShutdownListener,\</span><br><span class="line">org.springframework.cloud.context.restart.RestartListener</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BootstrapApplicationListener</span> <span class="keyword">implements</span> <span class="title">ApplicationListener</span>&lt;<span class="title">ApplicationEnvironmentPreparedEvent</span>&gt;, <span class="title">Ordered</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> String BOOTSTRAP_PROPERTY_SOURCE_NAME = <span class="string">"bootstrap"</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onApplicationEvent</span><span class="params">(ApplicationEnvironmentPreparedEvent event)</span> </span>&#123;</span><br><span class="line">        ConfigurableEnvironment environment = event.getEnvironment();</span><br><span class="line">        <span class="keyword">if</span> (!environment.getProperty(<span class="string">"spring.cloud.bootstrap.enabled"</span>, Boolean<span class="class">.<span class="keyword">class</span>, <span class="title">true</span>)) </span>&#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (environment.getPropertySources().contains(BOOTSTRAP_PROPERTY_SOURCE_NAME)) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        ConfigurableApplicationContext context = <span class="keyword">null</span>;</span><br><span class="line">        <span class="comment">// 很明显configName默认值为bootstrap</span></span><br><span class="line">        String configName = environment.resolvePlaceholders(<span class="string">"$&#123;spring.cloud.bootstrap.name:bootstrap&#125;"</span>);</span><br><span class="line">        <span class="keyword">for</span> (ApplicationContextInitializer&lt;?&gt; initializer : event.getSpringApplication().getInitializers()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (initializer <span class="keyword">instanceof</span> ParentContextApplicationContextInitializer) &#123;</span><br><span class="line">                context = findBootstrapContext((ParentContextApplicationContextInitializer) initializer, configName);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (context == <span class="keyword">null</span>) &#123;</span><br><span class="line">            context = bootstrapServiceContext(environment, event.getSpringApplication(), configName);</span><br><span class="line">            event.getSpringApplication().addListeners(<span class="keyword">new</span> CloseContextOnFailureApplicationListener(context));</span><br><span class="line">        &#125;</span><br><span class="line">        apply(context, event.getSpringApplication(), environment);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Nacos配置中心Server原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/nacos/Nacos集群CP模式/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Nacos集群CP模式</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

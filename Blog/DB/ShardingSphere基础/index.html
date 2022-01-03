@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        ShardingSphere基础 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="ShardingSphere">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="ShardingSphere包含ShardingJDBC、ShardingProxy和ShardingSidecar三个重要的产品。ShardingJDBC是用来做客户端分库分表的产品，而ShardingProxy是用来做服务端分库分表的产品，其中ShardingSidecar是针对Service Mesh定位的一个分库分表插件。 ShardingJDBC为轻量级Java框架，是客户端的一个工具包">
+<meta name="keywords" content="ShardingSphere">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ShardingSphere基础">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/DB/ShardingSphere基础/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="ShardingSphere包含ShardingJDBC、ShardingProxy和ShardingSidecar三个重要的产品。ShardingJDBC是用来做客户端分库分表的产品，而ShardingProxy是用来做服务端分库分表的产品，其中ShardingSidecar是针对Service Mesh定位的一个分库分表插件。 ShardingJDBC为轻量级Java框架，是客户端的一个工具包">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/shardingjdbc功能图.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/shardingproxy功能图.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/ShardingSphere主要流程.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/SQL抽象语法树.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/sql解析整体结构.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/ShardingSphere路由引擎.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/ShardingSphere改写引擎.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/ShardingSphere执行引擎.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/ShardingSphere归并引擎.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/雪花算法.png">
+<meta property="og:updated_time" content="2021-12-10T10:59:33.833Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ShardingSphere基础">
+<meta name="twitter:description" content="ShardingSphere包含ShardingJDBC、ShardingProxy和ShardingSidecar三个重要的产品。ShardingJDBC是用来做客户端分库分表的产品，而ShardingProxy是用来做服务端分库分表的产品，其中ShardingSidecar是针对Service Mesh定位的一个分库分表插件。 ShardingJDBC为轻量级Java框架，是客户端的一个工具包">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/DB/shardingjdbc功能图.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file active"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-DB/ShardingSphere基础" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/DB/">DB</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/ShardingSphere/">ShardingSphere</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/DB/ShardingSphere基础/">
+            <time datetime="2021-12-07T16:00:00.000Z" itemprop="datePublished">2021-12-08</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            ShardingSphere基础
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p><strong><code>ShardingSphere</code></strong>包含<strong><code>ShardingJDBC</code></strong>、<strong><code>ShardingProxy</code></strong>和<strong><code>ShardingSidecar</code></strong>三个重要的产品。<strong><code>ShardingJDBC</code></strong>是用来做<strong>客户端分库分表</strong>的产品，而<strong><code>ShardingProxy</code></strong>是用来做<strong>服务端分库分表</strong>的产品，其中<strong><code>ShardingSidecar</code></strong>是针对Service Mesh定位的一个分库分表插件。</p>
+<p><strong><code>ShardingJDBC</code></strong>为轻量级Java框架，是客户端的一个工具包，<strong>在Java的JDBC层提供的额外服务</strong>。它使⽤客户端直连数据库，以Jar包形式提供服务<strong>无需额外部署和依赖</strong>，可理解为<strong>增强版的<code>JDBC</code>驱动</strong>，<strong>完全兼容<code>JDBC</code>和各种<code>ORM</code>框架</strong>。所有分库分表逻辑均由业务方自己控制，功能相对灵活，支持的数据库也非常多，但对业务侵入大，需要业务方自己定制所有的分库分表逻辑。</p>
+<p><img src="../../../../images/DB/shardingjdbc功能图.png" alt></p>
+<p><strong><code>ShardingProxy</code></strong>为透明化的数据库代理端，是一个独立部署的服务，提供<strong>封装了数据库二进制协议的服务端版本</strong>，<strong>⽤于完成对异构语言的⽀持</strong>。对业务方无侵入，业务方可以像用一个普通的MySQL服务一样进行数据交互，基本上感觉不到后端分库分表逻辑的存在，但也意味着功能会比较固定，能够支持的数据库也比较少；目前提供<strong><code>MySQL</code></strong>和<strong><code>PostgreSQL</code></strong>版本，可使用任何兼容<strong><code>MySQL/PostgreSQL</code></strong>协议的访问客户端。</p>
+<p><img src="../../../../images/DB/shardingproxy功能图.png" alt></p>
+<p><strong><code>ShardingSphere</code></strong>核心功能是<strong>数据分片</strong>和<strong>读写分离</strong>，通过<strong><code>ShardingJDBC</code></strong>应用可<strong>透明</strong>的使用<strong><code>JDBC</code></strong>访问已经分库<strong>分表、读写分离的多个数据源</strong>，而不用关心数据源的数量以及数据如何分布。</p>
+<ul>
+<li><strong>逻辑表</strong>：<strong>水平拆分</strong>的数据库的<strong>相同逻辑</strong>和<strong>数据结构表</strong>的总称</li>
+<li><strong>真实表</strong>：在分片的数据库中<strong>真实存在的物理表</strong></li>
+<li><strong>数据节点</strong>：数据分片的最小单元，由<strong>数据源名称</strong>和<strong>数据表</strong>组成</li>
+<li><strong>绑定表</strong>：<strong>分片规则一致的主表和子表</strong></li>
+<li><strong>广播表</strong>：也叫<strong>公共表</strong>指<strong>所有分片数据源中都存在的表</strong>，<strong>表结构</strong>和<strong>表中的数据</strong>在每个数据库中都<strong>完全一致</strong></li>
+<li><strong>分片键</strong>：<strong>用于分片的数据库字段</strong>，是将数据库或表进行<strong>水平拆分的关键字段</strong>，SQL中若没有分片字段，将会执行全路由，性能会很差。</li>
+<li><strong>分片算法</strong>：<strong>通过分片算法将数据进行分片</strong>，支持通过<strong><code>=</code></strong>、<strong><code>BETWEEN</code></strong>和<strong><code>IN</code></strong>分片，分片算法需要由应用开发者自行实现，灵活度非常高</li>
+<li><strong>分片策略</strong>：真正用于进行分片操作的是<strong>分片键<code>+</code>分片算法</strong>即分片策略，在<strong><code>ShardingJDBC</code></strong>中一般采用基于<strong><code>Groovy</code>表达式</strong>的<strong><code>inline</code></strong>分片策略，<strong>通过一个包含分片键的算法表达式来制定分片策略</strong>，如<strong><code>t_user_$-&gt;{u_id%8}</code></strong>。</li>
+</ul>
+<h3 id="分片算法"><a href="#分片算法" class="headerlink" title="分片算法"></a>分片算法</h3><p><strong><code>ShardingJDBC</code></strong>整个分库分表的核心在于配置的<strong>分片算法</strong>，使用<strong><code>inline</code></strong>分片算法提供一个<strong>分片键</strong>和一个<strong>分片表达式</strong>来制定<strong>分片算法</strong>，该方式<strong>配置简单</strong>，<strong>功能灵活</strong>，是分库分表<strong>最佳</strong>的配置方式，且可满足绝大多数分库分片场景。但若针对一些更为复杂的分片策略，如<strong>多分片键</strong>、<strong>按范围分片</strong>等场景，<strong><code>inline</code></strong>分片算法就不能满足了，ShardingSphere还提供的其他几种分片策略，目前提供了<strong>五种</strong>分片策略。</p>
+<h4 id="NoneShardingStrategy"><a href="#NoneShardingStrategy" class="headerlink" title="NoneShardingStrategy"></a>NoneShardingStrategy</h4><p><strong>不分片</strong>，严格来说不算是一种分片策略了，只是<strong><code>ShardingSphere</code></strong>也提供了这么一个配置。</p>
+<h4 id="InlineShardingStrategy"><a href="#InlineShardingStrategy" class="headerlink" title="InlineShardingStrategy"></a>InlineShardingStrategy</h4><p><strong>最常用</strong>的分片方式，通过<strong><code>inline.sharding-column</code></strong>配置<strong>分片键</strong>，通过<strong><code>algorithm-expression</code></strong>配置<strong>分片表达式</strong>，最终<strong>按照分片表达式来进行分片</strong>。通过<strong><code>table-strategy</code></strong>配置<strong>表的分片策略</strong>，通过<strong><code>database-strategy</code></strong>配置<strong>库的分片策略</strong>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># inline分片策略</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.inline.sharding-column=cid</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.inline.algorithm-expression=course_$-&gt;&#123;cid%2+1&#125;</span><br><span class="line"></span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.inline.sharding-column=cid</span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.inline.algorithm-expression=m$-&gt;&#123;cid%2+1&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="StandardShardingStrategy"><a href="#StandardShardingStrategy" class="headerlink" title="StandardShardingStrategy"></a>StandardShardingStrategy</h4><p><strong>只支持单分片键</strong>的标准分片策略，通过<strong><code>standard.sharding-column</code></strong>配置分片键，通过<strong><code>standard.precise-algorithm-class-name</code></strong>配置按照<strong><code>=</code></strong>或<strong><code>IN</code></strong>逻辑的<strong>精确分片算法类名</strong>且该类必须实现<strong><code>io.shardingsphere.api.algorithm.sharding.standard.PreciseShardingAlgorithm</code></strong>接口，通过<strong><code>standard.range-algorithm-class-name</code></strong>配置按照<strong><code>Between</code>条件</strong>进行的<strong>范围分片算法类名</strong>且该类必须实现<strong><code>io.shardingsphere.api.algorithm.sharding.standard.RangeShardingAlgorithm</code></strong>接口，<strong>分库</strong>和<strong>分表</strong>的<strong>精确分片算法</strong>和<strong>范围分片算法</strong>都是实现这两个接口。<strong>精确分片算法是必须提供的，范围分片算法是可选的</strong>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.standard.sharding-column=cid</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.standard.precise-algorithm-class-name=com.eleven.icode.shardingsphere.algorithem.MyPreciseTableShardingAlgorithm</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.standard.range-algorithm-class-name=com.eleven.icode.shardingsphere.algorithem.MyRangeTableShardingAlgorithm</span><br><span class="line"></span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.standard.sharding-column=cid</span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.standard.precise-algorithm-class-name=com.eleven.icode.shardingsphere.algorithem.MyPreciseDSShardingAlgorithm</span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.standard.range-algorithm-class-name=com.eleven.icode.shardingsphere.algorithem.MyRangeDSShardingAlgorithm</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyPreciseTableShardingAlgorithm</span> <span class="keyword">implements</span> <span class="title">PreciseShardingAlgorithm</span>&lt;<span class="title">Long</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">doSharding</span><span class="params">(Collection&lt;String&gt; availableTargetNames, PreciseShardingValue&lt;Long&gt; shardingValue)</span> </span>&#123;</span><br><span class="line">        String logicTableName = shardingValue.getLogicTableName(); <span class="comment">// 获取逻辑表</span></span><br><span class="line">        String cid = shardingValue.getColumnName(); <span class="comment">// 获取分片键</span></span><br><span class="line">        Long cidValue = shardingValue.getValue();</span><br><span class="line">        <span class="comment">// 实现 course_$-&gt;&#123;cid%2+1)</span></span><br><span class="line">        BigInteger shardingValueB = BigInteger.valueOf(cidValue);</span><br><span class="line">        BigInteger resB = shardingValueB.mod(<span class="keyword">new</span> BigInteger(<span class="string">"2"</span>)).add(<span class="keyword">new</span> BigInteger(<span class="string">"1"</span>));</span><br><span class="line">        String key = logicTableName + <span class="string">"_"</span> + resB;</span><br><span class="line">        <span class="keyword">if</span> (availableTargetNames.contains(key)) &#123; <span class="comment">// couse_1, course_2</span></span><br><span class="line">            <span class="keyword">return</span> key;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"route "</span> + key + <span class="string">" is not supported ,please check your config"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyRangeTableShardingAlgorithm</span> <span class="keyword">implements</span> <span class="title">RangeShardingAlgorithm</span>&lt;<span class="title">Long</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Collection&lt;String&gt; <span class="title">doSharding</span><span class="params">(Collection&lt;String&gt; availableTargetNames, RangeShardingValue&lt;Long&gt; shardingValue)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// select * from course where cid between 1 and 100;</span></span><br><span class="line">        Long upperVal = shardingValue.getValueRange().upperEndpoint(); <span class="comment">//100</span></span><br><span class="line">        Long lowerVal = shardingValue.getValueRange().lowerEndpoint(); <span class="comment">//1</span></span><br><span class="line">        <span class="comment">// TODO 完成具体的分表策略</span></span><br><span class="line">        String logicTableName = shardingValue.getLogicTableName();</span><br><span class="line">        <span class="keyword">return</span> Arrays.asList(logicTableName + <span class="string">"_1"</span>, logicTableName + <span class="string">"_2"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="ComplexShardingStrategy"><a href="#ComplexShardingStrategy" class="headerlink" title="ComplexShardingStrategy"></a>ComplexShardingStrategy</h4><p><strong>支持多分片键</strong>的复杂分片策略，通过<strong><code>complex.sharding-columns</code></strong>配置<strong>分片键</strong>，多个分片键用<strong>逗号分隔</strong>，通过<strong><code>complex.algorithm-class-name</code></strong>配置按<strong>多个分片列进行综合分片</strong>的<strong>分片算法实现类</strong>，且该实现类必须实现<strong><code>org.apache.shardingsphere.api.sharding.complex.ComplexKeysShardingAlgorithm</code></strong>接口。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.complex.sharding-columns= cid, user_id</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.complex.algorithm-class-name=com.eleven.icode.shardingsphere.algorithem.MyComplexTableShardingAlgorithm</span><br><span class="line"></span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.complex.sharding-columns=cid, user_id</span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.complex.algorithm-class-name=com.eleven.icode.shardingsphere.algorithem.MyComplexDSShardingAlgorithm</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyComplexTableShardingAlgorithm</span> <span class="keyword">implements</span> <span class="title">ComplexKeysShardingAlgorithm</span>&lt;<span class="title">Long</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Collection&lt;String&gt; <span class="title">doSharding</span><span class="params">(Collection&lt;String&gt; availableTargetNames, ComplexKeysShardingValue&lt;Long&gt; shardingValue)</span> </span>&#123;</span><br><span class="line">        Range&lt;Long&gt; cidRange = shardingValue.getColumnNameAndRangeValuesMap().get(<span class="string">"cid"</span>);</span><br><span class="line">        Collection&lt;Long&gt; userIdCol = shardingValue.getColumnNameAndShardingValuesMap().get(<span class="string">"user_id"</span>);</span><br><span class="line">        Long upperVal = cidRange.upperEndpoint();</span><br><span class="line">        Long lowerVal = cidRange.lowerEndpoint();</span><br><span class="line">        List&lt;String&gt; res = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (Long userId : userIdCol) &#123;<span class="comment">// course_&#123;userID%2+1&#125;</span></span><br><span class="line">            BigInteger userIdB = BigInteger.valueOf(userId);</span><br><span class="line">            BigInteger target = userIdB.mod(<span class="keyword">new</span> BigInteger(<span class="string">"2"</span>)).add(<span class="keyword">new</span> BigInteger(<span class="string">"1"</span>));</span><br><span class="line">            res.add(shardingValue.getLogicTableName() + <span class="string">"_"</span> + target);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> res;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="HintShardingStrategy"><a href="#HintShardingStrategy" class="headerlink" title="HintShardingStrategy"></a>HintShardingStrategy</h4><p><strong>不需要分片键的强制分片策略</strong>，其<strong>分片键不跟<code>SQL</code>语句关联而是程序指定</strong>。对于一些复杂的情况如<strong><code>select count(*) from (select userid from t_user where userid in (1,3,5,7,9))</code></strong>这样的SQL语句，无法通过SQL语句指定一个分片键，这时就可通过程序给他指定一个分片键，如按userid奇偶分片的策略下，可指定1作为分片键，然后自行指定他的分片策略。</p>
+<p>通过<strong><code>hint.algorithm-class-name</code></strong>配置分片算法实现类，且该类必须实现<strong><code>org.apache.shardingsphere.api.sharding.hint.HintShardingAlgorithm</code></strong>接口，该算法类同样需要分片键，通过<strong><code>HintManager.addDatabaseShardingValue</code></strong>方法指定<strong>分库分片键</strong>和通过<strong><code>HintManager.addTableShardingValue</code></strong>方法指定<strong>分表分片键</strong>。使用时该分片键是<strong>线程隔离</strong>的，<strong>只在当前线程有效</strong>，建议使用之后立即关闭，或者用<strong><code>try</code></strong>资源方式打开。</p>
+<p><strong><code>Hint</code>分片策略</strong>并<strong>没有完全按照<code>SQL</code>解析树来构建分片策略</strong>，绕开了SQL解析，对某些比较复杂语句，Hint分片策略性能有可能会比较好。但Hint强制路由在使用时有非常多的限制：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 不支持UNION</span></span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> t_order1 <span class="keyword">UNION</span> <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> t_order2</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl_name (col1, col2, …) <span class="keyword">SELECT</span> col1, col2, … <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col3 = ?</span><br><span class="line"><span class="comment">-- 不支持多层子查询</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(*) <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> t_order o <span class="keyword">WHERE</span> o.id <span class="keyword">IN</span> (<span class="keyword">SELECT</span> <span class="keyword">id</span> <span class="keyword">FROM</span> t_order <span class="keyword">WHERE</span> <span class="keyword">status</span> = ?))</span><br><span class="line"><span class="comment">-- 不支持函数计算，ShardingSphere只能通过SQL字面提取用于分片的值</span></span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> t_order <span class="keyword">WHERE</span> <span class="keyword">to_date</span>(create_time, <span class="string">'yyyy-mm-dd'</span>) = <span class="string">'2019-01-01'</span>;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.hint.algorithm-class-name=com.eleven.icode.shardingsphere.algorithem.MyHintTableShardingAlgorithm</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyHintTableShardingAlgorithm</span> <span class="keyword">implements</span> <span class="title">HintShardingAlgorithm</span>&lt;<span class="title">Integer</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Collection&lt;String&gt; <span class="title">doSharding</span><span class="params">(Collection&lt;String&gt; availableTargetNames, HintShardingValue&lt;Integer&gt; shardingValue)</span> </span>&#123;</span><br><span class="line">        String key = shardingValue.getLogicTableName() + <span class="string">"_"</span> + shardingValue.getValues().toArray()[<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">if</span> (availableTargetNames.contains(key)) &#123;</span><br><span class="line">            <span class="keyword">return</span> Arrays.asList(key);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"route "</span> + key + <span class="string">" is not supported ,please check your config"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="实例"><a href="#实例" class="headerlink" title="实例"></a>实例</h3><p>首先定义一个数据源m1，并对m1进行实际的JDBC参数配置，<strong><code>spring.shardingsphere.sharding.tables.course</code></strong>开头的一系列属性即定义了一个名为course的<strong>逻辑表</strong>，<strong><code>actual-data-nodes</code></strong>属性即定义course<strong>逻辑表的实际数据分布情况</strong>，他分布在m1.course_1和m1.course_2两个表。<strong><code>key-generator</code></strong>属性配置<strong>主键列</strong>以及<strong>主键生成策略</strong>，<strong><code>ShardingJDBC</code></strong>默认提供了<strong><code>UUID</code></strong>和<strong><code>SNOWFLAKE</code></strong>两种<strong>分布式主键生成策略</strong>。<strong><code>table-strategy</code></strong>属性配置<strong>分库分表策略</strong>，分片键为cid属性，分片算法为course_$-&gt;{cid%2+1}，表示按照cid模2+1的结果，然后加上前面的course__ 部分作为前缀就是其实际表结果，<strong>该表达式计算出来的结果需要能够与实际数据分布中的一种情况对应上否则就会报错</strong>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"># 配置数据源，可配置多个，用逗号分隔</span><br><span class="line">spring.shardingsphere.datasource.names=m1</span><br><span class="line"># 数据源m1</span><br><span class="line">spring.shardingsphere.datasource.m1.type=com.alibaba.druid.pool.DruidDataSource</span><br><span class="line">spring.shardingsphere.datasource.m1.driver-class-name=com.mysql.cj.jdbc.Driver</span><br><span class="line">spring.shardingsphere.datasource.m1.url=jdbc:mysql://localhost:3307/coursedb?serverTimezone=GMT%2B8</span><br><span class="line">spring.shardingsphere.datasource.m1.username=root</span><br><span class="line">spring.shardingsphere.datasource.m1.password=root</span><br><span class="line"># 通过groovy脚本配置真实表分布，指定course表分布情况，配置表在哪个数据库里面，表名称都是什么</span><br><span class="line">spring.shardingsphere.sharding.tables.course.actual-data-nodes=m1.course_$-&gt;&#123;1..2&#125;</span><br><span class="line"># 指定course表里中主键cid生成策略SNOWFLAKE</span><br><span class="line">spring.shardingsphere.sharding.tables.course.key-generator.column=cid</span><br><span class="line">spring.shardingsphere.sharding.tables.course.key-generator.type=SNOWFLAKE</span><br><span class="line"># 雪花算法的一个可选参数</span><br><span class="line">spring.shardingsphere.sharding.tables.course.key-generator.props.worker.id=1</span><br><span class="line"># 通过groovy脚本指定分表分片策略，约定cid值偶数添加到course_1表，奇数添加到course_2表</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.inline.sharding-column=cid</span><br><span class="line"># 根据计算的字段算出对应的表名</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.inline.algorithm-expression=course_$-&gt;&#123;cid%2+1&#125;</span><br><span class="line"># 打开sql输出日志</span><br><span class="line">spring.shardingsphere.props.sql.show=true</span><br><span class="line"># 一个实体类对应两张表，覆盖</span><br><span class="line">spring.main.allow-bean-definition-overriding=true</span><br></pre></td></tr></table></figure>
+<p>通过上面的配置<strong><code>ShardingJDBC</code></strong>会帮我们完成具体的SQL转换以及数据的调用，不需要做其他特别的处理。最终这些配置被转换映射到<strong><code>ShardingRuleConfiguration</code></strong>中：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">tables:</span></span><br><span class="line">  <span class="attr">course:</span></span><br><span class="line">    <span class="attr">actualDataNodes:</span> <span class="string">m1.course_$-&gt;&#123;1..2&#125;</span>  <span class="comment"># 数据节点</span></span><br><span class="line">    <span class="attr">keyGenerator:</span>  <span class="comment"># 主键生成策略配置</span></span><br><span class="line">      <span class="attr">column:</span> <span class="string">cid</span>  <span class="comment"># 主键</span></span><br><span class="line">      <span class="attr">props:</span></span><br><span class="line">        <span class="attr">worker.id:</span> <span class="string">'1'</span></span><br><span class="line">      <span class="attr">type:</span> <span class="string">SNOWFLAKE</span>  <span class="comment"># 具体的主键生成策略</span></span><br><span class="line">    <span class="attr">logicTable:</span> <span class="string">course</span> <span class="comment"># 逻辑表</span></span><br><span class="line">    <span class="attr">tableStrategy:</span>     <span class="comment"># 分表策略</span></span><br><span class="line">      <span class="attr">inline:</span>		   <span class="comment"># 分片策略</span></span><br><span class="line">        <span class="attr">algorithmExpression:</span> <span class="string">course_$-&gt;&#123;cid%2+1&#125;</span>	<span class="comment"># 具体的分片算法</span></span><br><span class="line">        <span class="attr">shardingColumn:</span> <span class="string">cid</span>   <span class="comment"># 分片键</span></span><br></pre></td></tr></table></figure>
+<h4 id="多数据源"><a href="#多数据源" class="headerlink" title="多数据源"></a>多数据源</h4><p>多数据源的情况除了要配置分表分片策略，还需要配置分库分片策略，与前面的区别在于指定了多个数据源，<strong><code>actual-data-nodes</code></strong>数据节点配置所有变化，且增加了分库分片策略。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"># 配置数据源，可配置多个，用逗号分隔</span><br><span class="line">spring.shardingsphere.datasource.names=m1,m2</span><br><span class="line"># 数据源m1</span><br><span class="line">spring.shardingsphere.datasource.m1.type=com.alibaba.druid.pool.DruidDataSource</span><br><span class="line">spring.shardingsphere.datasource.m1.driver-class-name=com.mysql.cj.jdbc.Driver</span><br><span class="line">spring.shardingsphere.datasource.m1.url=jdbc:mysql://localhost:3307/coursedb?serverTimezone=GMT%2B8</span><br><span class="line">spring.shardingsphere.datasource.m1.username=root</span><br><span class="line">spring.shardingsphere.datasource.m1.password=root</span><br><span class="line"># 数据源m2</span><br><span class="line">spring.shardingsphere.datasource.m2.type=com.alibaba.druid.pool.DruidDataSource</span><br><span class="line">spring.shardingsphere.datasource.m2.driver-class-name=com.mysql.cj.jdbc.Driver</span><br><span class="line">spring.shardingsphere.datasource.m2.url=jdbc:mysql://localhost:3307/coursedb2?serverTimezone=GMT%2B8</span><br><span class="line">spring.shardingsphere.datasource.m2.username=root</span><br><span class="line">spring.shardingsphere.datasource.m2.password=root</span><br><span class="line"># 通过groovy脚本配置真实表分布，指定course表分布情况，配置表在哪个数据库里面，表名称都是什么</span><br><span class="line">spring.shardingsphere.sharding.tables.course.actual-data-nodes=m$-&gt;&#123;1..2&#125;.course_$-&gt;&#123;1..2&#125;</span><br><span class="line"># 指定course表里中主键cid生成策略SNOWFLAKE</span><br><span class="line">spring.shardingsphere.sharding.tables.course.key-generator.column=cid</span><br><span class="line">spring.shardingsphere.sharding.tables.course.key-generator.type=SNOWFLAKE</span><br><span class="line"># 雪花算法的一个可选参数</span><br><span class="line">spring.shardingsphere.sharding.tables.course.key-generator.props.worker.id=1</span><br><span class="line"># 通过groovy脚本指定分表分片策略，约定cid值偶数添加到course_1表，奇数添加到course_2表</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.inline.sharding-column=cid</span><br><span class="line"># 根据计算的字段算出对应的表名</span><br><span class="line">spring.shardingsphere.sharding.tables.course.table-strategy.inline.algorithm-expression=course_$-&gt;&#123;cid%2+1&#125;</span><br><span class="line"># 分库策略</span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.inline.sharding-column=cid</span><br><span class="line">spring.shardingsphere.sharding.tables.course.database-strategy.inline.algorithm-expression=m$-&gt;&#123;cid%2+1&#125;</span><br><span class="line"># 打开sql输出日志</span><br><span class="line">spring.shardingsphere.props.sql.show=true</span><br><span class="line"># 一个实体类对应两张表，覆盖</span><br><span class="line">spring.main.allow-bean-definition-overriding=true</span><br></pre></td></tr></table></figure>
+<h4 id="广播表配置"><a href="#广播表配置" class="headerlink" title="广播表配置"></a>广播表配置</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 广播表配置</span><br><span class="line">spring.shardingsphere.sharding.broadcast-tables=t_dict</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.column=dict_id</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.type=SNOWFLAKE</span><br></pre></td></tr></table></figure>
+<h4 id="绑定表"><a href="#绑定表" class="headerlink" title="绑定表"></a>绑定表</h4><p>绑定表之间的<strong>多表关联查询不会出现笛卡尔积关联</strong>，关联查询效率将⼤⼤提升。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"># 配置数据源，可配置多个，用逗号分隔</span><br><span class="line">spring.shardingsphere.datasource.names=m1</span><br><span class="line"># 数据源m1</span><br><span class="line">spring.shardingsphere.datasource.m1.type=com.alibaba.druid.pool.DruidDataSource</span><br><span class="line">spring.shardingsphere.datasource.m1.driver-class-name=com.mysql.cj.jdbc.Driver</span><br><span class="line">spring.shardingsphere.datasource.m1.url=jdbc:mysql://localhost:3306/coursedb?serverTimezone=GMT%2B8</span><br><span class="line">spring.shardingsphere.datasource.m1.username=root</span><br><span class="line">spring.shardingsphere.datasource.m1.password=root</span><br><span class="line"># 通过groovy脚本配置真实表分布，指定t_dict表分布情况，配置表在哪个数据库里面，表名称都是什么</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.actual-data-nodes=m1.t_dict_$-&gt;&#123;1..2&#125;</span><br><span class="line"></span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.column=dict_id</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.type=SNOWFLAKE</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.props.worker.id=1</span><br><span class="line"># t_dict表的分片键和分片算法</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.table-strategy.inline.sharding-column=ustatus</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.table-strategy.inline.algorithm-expression=t_dict_$-&gt;&#123;ustatus.toInteger()%2+1&#125;</span><br><span class="line"># 通过groovy脚本配置真实表分布，指定user表分布情况，配置表在哪个数据库里面，表名称都是什么</span><br><span class="line">spring.shardingsphere.sharding.tables.user.actual-data-nodes=m1.t_user_$-&gt;&#123;1..2&#125;</span><br><span class="line"># 指定user表里中主键user_id生成策略SNOWFLAKE</span><br><span class="line">spring.shardingsphere.sharding.tables.user.key-generator.column=user_id</span><br><span class="line">spring.shardingsphere.sharding.tables.user.key-generator.type=SNOWFLAKE</span><br><span class="line">spring.shardingsphere.sharding.tables.user.key-generator.props.worker.id=1</span><br><span class="line"># user表的分片键和分片算法</span><br><span class="line">spring.shardingsphere.sharding.tables.user.table-strategy.inline.sharding-column=ustatus</span><br><span class="line">spring.shardingsphere.sharding.tables.user.table-strategy.inline.algorithm-expression=t_user_$-&gt;&#123;ustatus.toInteger()%2+1&#125;</span><br><span class="line"># 绑定表示</span><br><span class="line">spring.shardingsphere.sharding.binding-tables[0]=user,t_dict</span><br><span class="line"># 打开sql输出日志</span><br><span class="line">spring.shardingsphere.props.sql.show = true</span><br><span class="line"># 一个实体类对应两张表，覆盖</span><br><span class="line">spring.main.allow-bean-definition-overriding=true</span><br></pre></td></tr></table></figure>
+<h4 id="读写分离"><a href="#读写分离" class="headerlink" title="读写分离"></a>读写分离</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"># 配置主从数据源，要基于MySQL主从架构。</span><br><span class="line">spring.shardingsphere.datasource.names=m0,s0</span><br><span class="line"># 数据源m0</span><br><span class="line">spring.shardingsphere.datasource.m0.type=com.alibaba.druid.pool.DruidDataSource</span><br><span class="line">spring.shardingsphere.datasource.m0.driver-class-name=com.mysql.cj.jdbc.Driver</span><br><span class="line">spring.shardingsphere.datasource.m0.url=jdbc:mysql://localhost:3307/masterdemo?serverTimezone=GMT%2B8</span><br><span class="line">spring.shardingsphere.datasource.m0.username=root</span><br><span class="line">spring.shardingsphere.datasource.m0.password=root</span><br><span class="line"># 数据源s0</span><br><span class="line">spring.shardingsphere.datasource.s0.type=com.alibaba.druid.pool.DruidDataSource</span><br><span class="line">spring.shardingsphere.datasource.s0.driver-class-name=com.mysql.cj.jdbc.Driver</span><br><span class="line">spring.shardingsphere.datasource.s0.url=jdbc:mysql://localhost:3308/masterdemo?serverTimezone=GMT%2B8</span><br><span class="line">spring.shardingsphere.datasource.s0.username=root</span><br><span class="line">spring.shardingsphere.datasource.s0.password=root</span><br><span class="line"># 读写分离规则，m0主库，s0从库</span><br><span class="line">spring.shardingsphere.sharding.master-slave-rules.ds0.master-data-source-name=m0</span><br><span class="line">spring.shardingsphere.sharding.master-slave-rules.ds0.slave-data-source-names[0]=s0</span><br><span class="line"># 基于读写分离的表分片</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.actual-data-nodes=ds0.t_dict</span><br><span class="line"># 指定t_dict表里中主键dict_id生成策略SNOWFLAKE</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.column=dict_id</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.type=SNOWFLAKE</span><br><span class="line">spring.shardingsphere.sharding.tables.t_dict.key-generator.props.worker.id=1</span><br><span class="line"># 打开sql输出日志</span><br><span class="line">spring.shardingsphere.props.sql.show = true</span><br><span class="line"># 一个实体类对应两张表，覆盖</span><br><span class="line">spring.main.allow-bean-definition-overriding=true</span><br></pre></td></tr></table></figure>
+<h3 id="核心原理"><a href="#核心原理" class="headerlink" title="核心原理"></a>核心原理</h3><p><img src="../../../../images/DB/ShardingSphere主要流程.png" alt></p>
+<h4 id="解析引擎"><a href="#解析引擎" class="headerlink" title="解析引擎"></a>解析引擎</h4><p>解析过程分为<strong>词法解析</strong>和<strong>语法解析</strong>，词法解析器用于<strong>将SQL拆解为不可再分的原子符号</strong>称为<strong><code>Token</code></strong>，并根据不同数据库方言所提供的字典，将其归类为<strong>关键字</strong>、<strong>表达式</strong>、<strong>字面量</strong>和<strong>操作符</strong>，再使用<strong>语法解析器</strong>将SQL转换为Abstract Syntax Tree<strong>抽象语法树</strong>简称AST。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="keyword">id</span>, <span class="keyword">name</span> <span class="keyword">FROM</span> t_user <span class="keyword">WHERE</span> <span class="keyword">status</span> = <span class="string">'ACTIVE'</span> <span class="keyword">AND</span> age &gt; <span class="number">18</span></span><br></pre></td></tr></table></figure>
+<p><img src="../../../../images/DB/SQL抽象语法树.png" alt></p>
+<p>SQL解析是整个分库分表的核心，其性能和兼容性是最重要的衡量指标，灰色表示需要进⼀步拆分，关键字的Token用绿色表示。</p>
+<p><img src="../../../../images/DB/sql解析整体结构.png" alt></p>
+<h4 id="路由引擎"><a href="#路由引擎" class="headerlink" title="路由引擎"></a>路由引擎</h4><p>根据解析上下文匹配数据库和表的分片策略，生成路由路径，<strong><code>ShardingSphere</code></strong>分片策略主要分为<strong>单片路由</strong>即分片键操作符是<strong>等号</strong>、<strong>多片路由</strong>即分片键的操作符是<strong><code>IN</code></strong>和<strong>范围路由</strong>即分片键的操作符是<strong><code>Between</code></strong>，<strong>不携带分片键</strong>的SQL则是<strong>广播路由</strong>。</p>
+<p><strong>分片策略</strong>通常可由<strong>数据库内置</strong>也可由<strong>用户方配置</strong>，<strong>内置分片策略</strong>大致可分为<strong>尾数取模</strong>、<strong>哈希</strong>、<strong>范围</strong>、<strong>标签</strong>、<strong>时间</strong>等，由<strong>用户方配置</strong>的分片策略则更加灵活，可根据使用方需求<strong>定制复合分片策略</strong>。实际使用时应<strong>尽量使用分片路由</strong>明确路由策略，因为<strong>广播路由影响过大不利于集群管理及扩展</strong>。</p>
+<p><img src="../../../../images/DB/ShardingSphere路由引擎.png" alt></p>
+<ul>
+<li><strong>全库表路由</strong>：<strong>不带分片键</strong>的<strong><code>DQL</code></strong>、<strong><code>DML</code></strong>、<strong><code>DDL</code></strong>语句会<strong>遍历所有库表逐一执行</strong>。如<strong><code>select * from course</code></strong>或<strong><code>select * from course where ustatus=&#39;1&#39;</code></strong>不带分片键</li>
+<li><strong>全库路由</strong>：对数据库的操作都会<strong>遍历所有真实库</strong>，如<strong><code>set autocommit=0</code></strong></li>
+<li><strong>全实例路由</strong>：<strong><code>DCL</code></strong>语句<strong>每个数据库实例只执行一次</strong>，如<code>**CREATE USER customer@127.0.0.1 identified BY &#39;123&#39;</code>**;</li>
+<li><strong>单播路由</strong>：<strong>从任意库中获取数据</strong>即可，如<strong><code>DESCRIBE course</code></strong></li>
+<li><strong>阻断路由</strong>：<strong>屏蔽<code>SQL</code>对数据库的操作</strong>，如<strong><code>USE coursedb</code></strong>不会在真实库中执行，虚拟表操作不需要切换数据库</li>
+</ul>
+<h4 id="改写引擎"><a href="#改写引擎" class="headerlink" title="改写引擎"></a>改写引擎</h4><p>只需要面向<strong>逻辑库</strong>和<strong>逻辑表</strong>来写SQL，最终由<strong><code>ShardigSphere</code></strong>的<strong>改写引擎</strong>将SQL改写为在真实数据库中可正确执行的语句，SQL改写分为<strong>正确性改写</strong>和<strong>优化改写</strong>。</p>
+<p><img src="../../../../images/DB/ShardingSphere改写引擎.png" alt></p>
+<h4 id="执行引擎"><a href="#执行引擎" class="headerlink" title="执行引擎"></a>执行引擎</h4><p>ShardingSphere并不是简单的将改写完的SQL提交到数据库执行，<strong>执行引擎的目标是自动化的平衡资源控制和执行效率</strong>。<strong>连接模式</strong>分为<strong>内存限制模式<code>MEMORY_STRICTLY</code></strong>和<strong>连接限制模式<code>CONNECTION_STRICTLY</code></strong>。</p>
+<ul>
+<li><strong>内存限制模式</strong>：<strong>只关注一个数据库连接的处理数量，通常一张真实表一个数据库连接</strong></li>
+<li><strong>连接限制模式</strong>：<strong>只关注数据库连接的数量，较大的查询会进行串行操作</strong></li>
+</ul>
+<p><img src="../../../../images/DB/ShardingSphere执行引擎.png" alt></p>
+<p>这两个模式通过<strong><code>spring.shardingsphere.props.max.connections.size.per.query=50</code></strong>参数配置，<strong>默认值为<code>1</code></strong>，参见源码<strong><code>ConfigurationPropertyKey</code></strong>类。ShardingSphere会根据<strong>路由到某一个数据源的路由结果</strong>计算出<strong>所有需在数据库上执行的<code>SQL</code>数量</strong>，<strong>用该数量除以用户的配置项</strong>，得到<strong>每个数据库连接需执行的SQL数量</strong>。若<strong>数量<code>&gt;1</code>选择连接限制模式</strong>，<strong>数量<code>&lt;=1</code>就会选择内存限制模式</strong>。</p>
+<ul>
+<li><strong>内存限制模式不限制连接数</strong>，<strong>建立多个数据连接并发控制每个连接只去读取一个数据分片的数据</strong>，可最快把所有需要的数据读出来。且在<strong>归并阶段</strong>选择以<strong>每一条数据为单位进行归并</strong>即<strong>流式归并</strong>，归并完一批数据后释放内存，可很好的提高数据归并的效率，且<strong>防止出现内存溢出</strong>或<strong>垃圾回收频繁</strong>，吞吐量比较大，适合<strong><code>OLAP</code></strong>场景</li>
+<li><strong>连接限制模式限制连接数</strong>，<strong>至少有一个数据库连接会要去读取多个数据分片的数据</strong>，数据库连接采用<strong>串行</strong>方式依次读取<strong>多个数据分片的数据</strong>，将数据全部读到内存，进行统一数据归并即<strong>内存归并</strong>，归并效率会比较高适合<strong><code>OLTP</code></strong>场景</li>
+</ul>
+<h4 id="归并引擎"><a href="#归并引擎" class="headerlink" title="归并引擎"></a>归并引擎</h4><p>将从各个数据节点获取的多数据结果集，组合成为一个结果集并正确的返回至请求客户端，有<strong>流式归并</strong>和<strong>内存归并</strong>两种归并方式：</p>
+<ul>
+<li><strong>流式归并</strong>：<strong>一条一条数据的方式进行归并</strong></li>
+<li><strong>内存归并</strong>：<strong>将所有结果集都查询到内存中进行统一归并</strong></li>
+</ul>
+<p><img src="../../../../images/DB/ShardingSphere归并引擎.png" alt></p>
+<h3 id="分布式主键"><a href="#分布式主键" class="headerlink" title="分布式主键"></a>分布式主键</h3><p>内置生成器支持<strong><code>UUID</code></strong>和<strong><code>SNOWFLAKE</code></strong>，并抽离出分布式主键生成器的接口，方便用户自行实现自定义的自增主键生成器。</p>
+<h4 id="UUID"><a href="#UUID" class="headerlink" title="UUID"></a>UUID</h4><p>采用UUID.randomUUID()的方式产生唯一且不重复的分布式主键。最终生成一个字符串类型的主键。缺点是生成的主键无序。</p>
+<h4 id="SNOWFLAKE"><a href="#SNOWFLAKE" class="headerlink" title="SNOWFLAKE"></a>SNOWFLAKE</h4><p>雪花算法能保证<strong>不同进程主键不重复相同进程主键有序</strong>，二进制形式包含4部分，从高位到低位分表为：<strong><code>1bit</code>符号位</strong>、<strong><code>41bit</code>时间戳位</strong>、<strong><code>10bit</code>工作进程位</strong>，<strong><code>12bit</code>序列号位</strong>。<strong>毫秒数在高位自增序列在低位</strong>，整个ID<strong>趋势递增</strong>；不依赖第三方组件<strong>稳定性高</strong>，生成ID<strong>性能也非常高</strong>；<strong>可根据自身业务特性分配<code>bit</code>位</strong>，<strong>非常灵活</strong>；但<strong>强依赖机器时钟，若机器上时钟回拨会导致发号重复</strong>。</p>
+<ul>
+<li><p><strong><code>1bit</code>符号位</strong>：预留的符号位<strong>恒为零</strong></p>
+</li>
+<li><p><strong><code>41bit</code>时间戳位</strong>：41位时间戳可容纳毫秒数为2的41次幂，一年所使用的毫秒数为<strong><code>365 * 24 * 60 * 60 * 1000 Math.pow(2, 41) / (365 * 24 * 60 * 60 * 1000L) = 69.73</code></strong>年不重复</p>
+</li>
+<li><p><strong>10bit工作进程位</strong>：该标志<strong>Java进程内唯一</strong>，若分布式应用部署应保证每个工作进程的id不同，<strong>默认为<code>0</code></strong>，<strong>可通过属性设置</strong></p>
+</li>
+<li><p><strong><code>12bit</code>序列号位</strong>：该序列用来在<strong>同一个毫秒内生成不同的ID</strong>，若在该毫秒内生成数量超过<strong><code>4096</code></strong>即2的12次幂，则生成器会等待到下个毫秒继续生成。</p>
+</li>
+</ul>
+<p><img src="../../../../images/DB/雪花算法.png" alt></p>
+<h3 id="SQL使用限制"><a href="#SQL使用限制" class="headerlink" title="SQL使用限制"></a>SQL使用限制</h3><h4 id="支持的SQL"><a href="#支持的SQL" class="headerlink" title="支持的SQL"></a>支持的SQL</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name	</span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> (col1 = ? <span class="keyword">or</span> col2 = ?) <span class="keyword">and</span> col3 = ?	</span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col1 = ? <span class="keyword">ORDER</span> <span class="keyword">BY</span> col2 <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> ?	</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(*), <span class="keyword">SUM</span>(col1), <span class="keyword">MIN</span>(col1), <span class="keyword">MAX</span>(col1), <span class="keyword">AVG</span>(col1) <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col1 = ?	</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(col1) <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col2 = ? <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1 <span class="keyword">ORDER</span> <span class="keyword">BY</span> col3 <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> ?, ?	</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl_name (col1, col2,…) <span class="keyword">VALUES</span> (?, ?, ….)	</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl_name <span class="keyword">VALUES</span> (?, ?,….)	</span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl_name (col1, col2, …) <span class="keyword">VALUES</span> (?, ?, ….), (?, ?, ….)	</span><br><span class="line"><span class="comment">-- INSERT表和SELECT表必须为相同表或绑定表</span></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl_name (col1, col2, …) <span class="keyword">SELECT</span> col1, col2, … <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col3 = ?</span><br><span class="line"><span class="comment">-- REPLACE表和SELECT表必须为相同表或绑定表</span></span><br><span class="line"><span class="keyword">REPLACE</span> <span class="keyword">INTO</span> tbl_name (col1, col2, …) <span class="keyword">SELECT</span> col1, col2, … <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col3 = ?</span><br><span class="line"><span class="keyword">UPDATE</span> tbl_name <span class="keyword">SET</span> col1 = ? <span class="keyword">WHERE</span> col2 = ?	</span><br><span class="line"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col1 = ?	</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tbl_name (col1 <span class="built_in">int</span>, …)	</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">TABLE</span> tbl_name <span class="keyword">ADD</span> col1 <span class="built_in">varchar</span>(<span class="number">10</span>)	</span><br><span class="line"><span class="keyword">DROP</span> <span class="keyword">TABLE</span> tbl_name	</span><br><span class="line"><span class="keyword">TRUNCATE</span> <span class="keyword">TABLE</span> tbl_name	</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> idx_name <span class="keyword">ON</span> tbl_name	</span><br><span class="line"><span class="keyword">DROP</span> <span class="keyword">INDEX</span> idx_name <span class="keyword">ON</span> tbl_name	</span><br><span class="line"><span class="keyword">DROP</span> <span class="keyword">INDEX</span> idx_name	</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> * <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col1 = ?	</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(<span class="keyword">DISTINCT</span> col1) <span class="keyword">FROM</span> tbl_name	</span><br><span class="line"><span class="keyword">SELECT</span> subquery_alias.col1 <span class="keyword">FROM</span> (<span class="keyword">select</span> tbl_name.col1 <span class="keyword">from</span> tbl_name <span class="keyword">where</span> tbl_name.col2=?) subquery_alias</span><br></pre></td></tr></table></figure>
+<h4 id="不支持的SQL"><a href="#不支持的SQL" class="headerlink" title="不支持的SQL"></a>不支持的SQL</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- VALUES语句不支持运算表达式</span></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl_name (col1, col2, …) <span class="keyword">VALUES</span>(<span class="number">1</span>+<span class="number">2</span>, ?, …)</span><br><span class="line"><span class="comment">-- SELECT子句暂不支持使用*号简写及内置的分布式主键生成器</span></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> tbl_name (col1, col2, …) <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col3 = ?</span><br><span class="line"><span class="comment">-- SELECT子句暂不支持使用*号简写及内置的分布式主键生成器</span></span><br><span class="line"><span class="keyword">REPLACE</span> <span class="keyword">INTO</span> tbl_name (col1, col2, …) <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col3 = ?</span><br><span class="line"><span class="comment">-- UNION</span></span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name1 <span class="keyword">UNION</span> <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name2</span><br><span class="line"><span class="comment">-- UNION ALL</span></span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name1 <span class="keyword">UNION</span> <span class="keyword">ALL</span> <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name2</span><br><span class="line"><span class="comment">-- 详见DISTINCT支持情况详细说明</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">SUM</span>(<span class="keyword">DISTINCT</span> col1), <span class="keyword">SUM</span>(col1) <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="comment">-- 会导致全路由</span></span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> <span class="keyword">to_date</span>(create_time, <span class="string">'yyyy-mm-dd'</span>) = ?</span><br><span class="line"><span class="comment">-- 暂不支持加括号的查询</span></span><br><span class="line">(<span class="keyword">SELECT</span> * <span class="keyword">FROM</span> tbl_name)</span><br><span class="line"><span class="comment">-- 查询列是函数表达式时，查询列前不能使用表名，若查询表存在别名，则可使用表的别名</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">MAX</span>(tbl_name.col1) <span class="keyword">FROM</span> tbl_name</span><br></pre></td></tr></table></figure>
+<h4 id="DISTINCT支持的SQL"><a href="#DISTINCT支持的SQL" class="headerlink" title="DISTINCT支持的SQL"></a>DISTINCT支持的SQL</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> * <span class="keyword">FROM</span> tbl_name <span class="keyword">WHERE</span> col1 = ?</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> col1 <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> col1, col2, col3 <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> col1 <span class="keyword">FROM</span> tbl_name <span class="keyword">ORDER</span> <span class="keyword">BY</span> col1</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> col1 <span class="keyword">FROM</span> tbl_name <span class="keyword">ORDER</span> <span class="keyword">BY</span> col2</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span>(col1) <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">AVG</span>(<span class="keyword">DISTINCT</span> col1) <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">SUM</span>(<span class="keyword">DISTINCT</span> col1) <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(<span class="keyword">DISTINCT</span> col1) <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(<span class="keyword">DISTINCT</span> col1) <span class="keyword">FROM</span> tbl_name <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(<span class="keyword">DISTINCT</span> col1 + col2) <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(<span class="keyword">DISTINCT</span> col1), <span class="keyword">SUM</span>(<span class="keyword">DISTINCT</span> col1) <span class="keyword">FROM</span> tbl_name</span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">COUNT</span>(<span class="keyword">DISTINCT</span> col1), col1 <span class="keyword">FROM</span> tbl_name <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1</span><br><span class="line"><span class="keyword">SELECT</span> col1, <span class="keyword">COUNT</span>(<span class="keyword">DISTINCT</span> col1) <span class="keyword">FROM</span> tbl_name <span class="keyword">GROUP</span> <span class="keyword">BY</span> col1</span><br></pre></td></tr></table></figure>
+<h4 id="DISTINCT不支持的SQL"><a href="#DISTINCT不支持的SQL" class="headerlink" title="DISTINCT不支持的SQL"></a>DISTINCT不支持的SQL</h4><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 查询列是函数表达式时，查询列前不能使用表名，若查询表存在别名，则可使用表的别名</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="keyword">SUM</span>(<span class="keyword">DISTINCT</span> tbl_name.col1), <span class="keyword">SUM</span>(tbl_name.col1) <span class="keyword">FROM</span> tbl_name</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/Netty/IO模型基础/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        IO模型基础
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/DB/MySQL主从架构/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">MySQL主从架构</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        MongoDB基础 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="MongoDB">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="MongoDB的安装和启动，MongoDB启动默认使用/data/db路径作为数据存放路径，也可通过--dbpath参数指定其他路径，若未创建则启动报错，通过--auth参数以授权模式启动，通过--logpath参数设置日志文件存储路径。 MongoDB基于安全性考虑，默认安装后只会绑定本地回环IP即127.0.0.1，可通过启动服务时--bind_ip绑定IP。绑定后登陆时也需要通过该IP登陆。">
+<meta name="keywords" content="MongoDB">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MongoDB基础">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/DB/MongoDB基础/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="MongoDB的安装和启动，MongoDB启动默认使用/data/db路径作为数据存放路径，也可通过--dbpath参数指定其他路径，若未创建则启动报错，通过--auth参数以授权模式启动，通过--logpath参数设置日志文件存储路径。 MongoDB基于安全性考虑，默认安装后只会绑定本地回环IP即127.0.0.1，可通过启动服务时--bind_ip绑定IP。绑定后登陆时也需要通过该IP登陆。">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/MongoDB/分片集群组成.png">
+<meta property="og:updated_time" content="2021-12-07T11:13:22.385Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MongoDB基础">
+<meta name="twitter:description" content="MongoDB的安装和启动，MongoDB启动默认使用/data/db路径作为数据存放路径，也可通过--dbpath参数指定其他路径，若未创建则启动报错，通过--auth参数以授权模式启动，通过--logpath参数设置日志文件存储路径。 MongoDB基于安全性考虑，默认安装后只会绑定本地回环IP即127.0.0.1，可通过启动服务时--bind_ip绑定IP。绑定后登陆时也需要通过该IP登陆。">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/DB/MongoDB/分片集群组成.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file active"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-DB/MongoDB基础" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/DB/">DB</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/MongoDB/">MongoDB</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/DB/MongoDB基础/">
+            <time datetime="2021-12-05T16:00:00.000Z" itemprop="datePublished">2021-12-06</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            MongoDB基础
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>MongoDB的安装和启动，MongoDB启动<strong>默认</strong>使用<strong><code>/data/db</code></strong>路径作为<strong>数据存放路径</strong>，也可通过<strong><code>--dbpath</code></strong>参数指定其他路径，若未创建则启动报错，通过<strong><code>--auth</code></strong>参数以<strong>授权模式启动</strong>，通过<strong><code>--logpath</code></strong>参数设置日志文件存储路径。</p>
+<p>MongoDB基于安全性考虑，默认安装后只会绑定<strong>本地回环<code>IP</code></strong>即<strong><code>127.0.0.1</code></strong>，可通过启动服务时<strong><code>--bind_ip</code></strong>绑定<strong><code>IP</code></strong>。绑定后登陆时也需要通过该IP登陆。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-rhel70-4.4.2.tgz</span><br><span class="line">tar -xvzf  mongodb-linux-x86_64-rhel70-4.4.2.tgz</span><br><span class="line">mkdir -p /data/db # 该路径是MongoDB默认的数据存放路径</span><br><span class="line"><span class="meta">#</span> --auth以授权模式启动，--logpath指定日志文件，--dbpath指定数据存放路径，若省略默认使用/data/db路径</span><br><span class="line">bin/mongod --auth --logpath /data/db/logpath/output --dbpath /data/db --bind_ip 192.168.109.200 --fork</span><br><span class="line"><span class="meta">#</span> 登陆 若是本机--host和--port可省略</span><br><span class="line">bin/mongo -host 192.168.109.200 -u eleven</span><br><span class="line"><span class="meta">#</span> 设置密码，登陆mongo后</span><br><span class="line">use admin # 切换数据库到admin</span><br><span class="line">db.createUser(&#123;user: "eleven", pwd: "eleven", roles: ["root"]&#125;) # 创建用户</span><br><span class="line">show users # 查看所有用户信息</span><br><span class="line">db.shutdownServer()  # 停掉服务</span><br><span class="line">exit # 退出mongo</span><br></pre></td></tr></table></figure>
+<h4 id="MongoDB基本操作"><a href="#MongoDB基本操作" class="headerlink" title="MongoDB基本操作"></a>MongoDB基本操作</h4><p><strong><code>writeConcern</code></strong>定义了本次文档创建操作的<strong>安全写级别</strong>， <strong>安全写级别用来判断一次数据库写入操作是否成功</strong>，安全写级别越高，丢失数据的风险就越低，但写入操作延迟也可能更高。<strong><code>writeConcern</code></strong>决定<strong>一个写操作落到多少个节点上才算成功</strong>。 发起写操作的程序将阻塞到写操作到达指定的节点数为止：</p>
+<ul>
+<li><strong><code>0</code></strong>：发起写操作，<strong>不关心是否成功</strong></li>
+<li><strong><code>1-</code> 集群中最大数据节点数</strong>：写操作<strong>需要被复制到指定节点数</strong>才算成功</li>
+<li><strong><code>majority</code></strong>：写操作需要<strong>被复制到大多数节点上才算成功</strong>，过半机制</li>
+</ul>
+<p>插入文档时若<strong>没有显示指定主键</strong>，MongoDB将默认创建一个主键，字段固定为<strong><code>_id</code></strong>，<strong><code>ObjectId()</code></strong>可快速生成12字节id作为主键，<strong><code>ObjectId</code>前四个字节</strong>代表<strong>主键生成时间</strong>，<strong>精确到秒</strong>。主键ID在客户端驱动生成，一定程度上代表了顺序性但不保证顺序性， 可通过<strong><code>ObjectId(&quot;id值&quot;).getTimestamp()</code></strong>获取创建时间。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> insertOne和insertMany命令不支持explain命令</span><br><span class="line">db.collection.insertMany([&#123;&lt;JSON对象1&gt;&#125;,&#123;&lt;JSON对象2&gt;&#125;],&#123;writeConcern: 安全级别,ordered: true/false&#125;)   # 批量添加文档</span><br><span class="line">db.collection.insert(&lt;JSON对象&gt;, &#123;writeConcern: 安全级别&#125;)   	  # 添加单个文档</span><br><span class="line">db.collection.insertOne(&lt;JSON对象&gt;, &#123;writeConcern: 安全级别&#125;) # 添加单个文档</span><br></pre></td></tr></table></figure>
+<p>ordered决定<strong>是否按顺序写入</strong>，顺序写入时，一旦遇到错误，便会退出，剩余的文档无论正确与否，都不会写入，乱序写入，则只要文档可正确写入，不管前面的文档是否是错误的文档。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">db.collection.find(&#123;&#125;)               # 查询所有的文档 </span><br><span class="line">db.collection.find(&#123;&#125;).pretty()      # 返回格式化后的文档</span><br><span class="line">db.collection.find(&#123;qty:0, status:"D"&#125;) # 精准等值查询</span><br><span class="line">db.collection.find(&#123;"size.uom": "in"&#125;)  # 嵌套对象精准查询</span><br><span class="line"><span class="meta">#</span> 返回指定字段，默认会返回_id字段，同样可以通过指定_id:0，剩余字段不能混合指定</span><br><span class="line">db.collection.find(&#123;&#125;, &#123;item: 1, status: 1&#125;)</span><br><span class="line"><span class="meta">#</span> and和or条件查询，以及$in，$nin，$exists</span><br><span class="line">db.collection.find(&#123;$and:[&#123;"qty":0&#125;,&#123;"status":"A"&#125;]&#125;).pretty()</span><br><span class="line">db.collection.find(&#123;$or:[&#123;"qty":0&#125;,&#123;"status":"A"&#125;]&#125;).pretty()</span><br></pre></td></tr></table></figure>
+<p>复合主键，若<strong>字段顺序变换</strong>即使内容完全一致，也会当做不同的对象被创建</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">db.demeDoc.insert(&#123;_id: &#123;product_name: 1, product_type: 2&#125;, supplierId: "001", create_Time: new Date()&#125;)</span><br></pre></td></tr></table></figure>
+<p>逻辑操作符匹配</p>
+<ul>
+<li><strong><code>$not</code></strong>：匹配<strong>筛选条件不成立</strong>的文档  </li>
+<li><strong><code>$and</code></strong>：匹配<strong>多个筛选条件同时满足</strong>的文档</li>
+<li><strong><code>$or</code></strong>：匹配<strong>至少一个筛选条件成立</strong>的文档</li>
+<li><strong><code>$nor</code></strong>：匹配<strong>多个筛选条件全部不满足</strong>的文档</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">db.members.find(&#123;points: &#123;$not: &#123; $lt: 100&#125;&#125;&#125;);</span><br><span class="line">db.members.find(&#123;$and: [&#123;nickName:&#123;$eq : "曹操"&#125;&#125;, &#123;points:&#123;$gt: 1000&#125;&#125;]&#125;);</span><br><span class="line">db.members.find(&#123;nickName:&#123;$eq: "曹操"&#125;, points:&#123;$gt: 1000&#125;&#125;); # 当作用在不同字段上可省略 $and</span><br><span class="line">db.members.find(&#123;points:&#123;$gte:1000, $lte:2000&#125;&#125;); # 当作用在同一字段时可简化</span><br><span class="line">db.members.find(&#123;$or: [&#123;nickName:&#123;$eq : "曹操"&#125;&#125;, &#123;points:&#123;$gt: 1000&#125;&#125;]&#125;);</span><br></pre></td></tr></table></figure>
+<p>默认<strong><code>count()</code></strong>不考虑<strong><code>skip</code></strong>和<strong><code>limit</code></strong>效果，若希望考虑limit和skip，需要设置为true。 分布式环境下count不保证数据绝对正确。当同时应用sort，skip，limit时，<strong>应用顺序为<code>sort</code>，<code>skip</code>，<code>limit</code></strong>。可<strong>使用<code>$slice</code>返回数组中部分元素</strong>，可使用<strong><code>$elementMatch</code></strong>进行<strong>数组元素匹配</strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">db.members.find().skip(1).limit(10).count();</span><br><span class="line">db.members.find().skip(1).limit(10).count(true);</span><br><span class="line">db.members.find().sort(&#123;field: 1/-1&#125;); # 排序，1：顺序，-1：逆序</span><br><span class="line">db.members.find(&#123;&#125;,&#123;_id:0, nickName:1, points:1, address: &#123;$slice:1&#125;&#125;); # 返回第一个元素</span><br><span class="line">db.members.find(&#123;&#125;,&#123;_id:0, nickName:1, points:1, tag: &#123;$elemMatch: &#123;$eq: "00"&#125;&#125;&#125;);</span><br></pre></td></tr></table></figure>
+<p><strong>投影设置</strong>：{field:  &lt;1：1表示需要返回，0：表示不需要返回，只能为0或1，非主键字段不能同时混选0或1&gt;}</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">db.members.find(&#123;&#125;,&#123;_id:0, nickName:1, points:1&#125;)</span><br></pre></td></tr></table></figure>
+<p><strong>更新操作</strong>，<strong><code>updateOne/updateMany</code></strong>方法要求更新条件部分必须具有以下之一，否则将报错</p>
+<ul>
+<li>$set   给符合条件的文档新增一个字段，有该字段则修改其值</li>
+<li>$unset  给符合条件的文档，删除一个字段</li>
+<li>$push： 增加一个对象到数组底部 </li>
+<li>$pop：从数组底部删除一个对象 </li>
+<li>$pull：如果匹配指定的值，从数组中删除相应的对象</li>
+<li>$pullAll：如果匹配任意的值，从数据中删除相应的对象</li>
+<li>$addToSet：如果不存在则增加一个值到数组</li>
+<li>$rename：重命名字段</li>
+<li>$inc：加减字段值</li>
+<li>$mul：相乘字段值</li>
+<li>$min：采用最小值  </li>
+<li>$max：次用最大值</li>
+</ul>
+<p><strong>默认只会更新第一个匹配的值</strong>，可通过设置options <strong><code>{multi: true}</code></strong>设置匹配多个文档并更新</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> &lt;query&gt; 定义了更新时的筛选条件</span><br><span class="line"><span class="meta">#</span> &lt;update&gt; 文档提供了更新内容</span><br><span class="line"><span class="meta">#</span> &lt;options&gt; 声明了一些更新操作的参数</span><br><span class="line">db.collection.update(&lt;query&gt;,&lt;update&gt;,&lt;options&gt;)</span><br><span class="line"><span class="meta">#</span> 默认删除所有满足条件的文档，可设定参数&#123;justOne:true&#125;，只删除满足条件的第一条文档</span><br><span class="line">db.collection.remove(&lt;query&gt;,&lt;options&gt;)</span><br><span class="line"><span class="meta">#</span> 删除集合，不但删除集合内的所有文档，且删除集合的索引</span><br><span class="line">db.collection.drop(&#123;writeConcern:&lt;doc&gt;&#125;)</span><br></pre></td></tr></table></figure>
+<h4 id="聚合操作"><a href="#聚合操作" class="headerlink" title="聚合操作"></a>聚合操作</h4><h5 id="聚合表达式"><a href="#聚合表达式" class="headerlink" title="聚合表达式"></a>聚合表达式</h5><ul>
+<li><strong><code>$&lt;field&gt;.&lt;sub_field&gt;</code></strong>：获取字段信息，sub_field字段可0个或多个</li>
+<li><strong><code>$literal: &lt;value&gt;</code></strong>：常量表达式</li>
+<li><strong><code>$$&lt;variable&gt;</code></strong>：系统变量表达式</li>
+<li><strong><code>$$CURRENT</code></strong>：指示管道中当前操作的文档</li>
+</ul>
+<h5 id="聚合管道阶段"><a href="#聚合管道阶段" class="headerlink" title="聚合管道阶段"></a>聚合管道阶段</h5><p>筛选管道操作和其他管道操作配合时候时，尽量放到开始阶段，可减少后续管道操作符要操作的文档数，提升效率</p>
+<ul>
+<li>$project：对输入文档进行再次投影</li>
+<li>$match：对输入文档进行筛选</li>
+<li>$limit：筛选出管道内前 N 篇文档</li>
+<li>$skip：跳过管道内前N篇文档</li>
+<li>$unwind：展开输入文档中的数组字段</li>
+<li>$sort：对输入文档进行排序</li>
+<li>$lookup：对输入文档进行查询操作</li>
+<li>$group：对输入文档进行分组</li>
+<li>$out：对管道中的文档输出</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">db.userInfo.aggregate(&#123;$project:&#123;name:"$nickName"&#125;&#125;) # 将原始字段投影成指定名称</span><br><span class="line">db.userInfo.aggregate(&#123;$project:&#123; name:"$nickName",_id:0,age:1&#125;&#125;); # 也可剔除不需要的字段</span><br><span class="line">db.userInfo.aggregate(&#123;$match:&#123;nickName:"lisi"&#125;&#125;); # 文档筛选</span><br><span class="line">db.userInfo.aggregate([&#123;$match:&#123;$and:[&#123;age:&#123;$gte:20&#125;&#125;,&#123;nickName:&#123;$eq:"lisi"&#125;&#125;]&#125;&#125;, &#123;$project: &#123;_id:0, name: "$nickName", age:1&#125;&#125;]);</span><br><span class="line">db.userInfo.aggregate(&#123;$limit:1&#125;);</span><br><span class="line">db.userInfo.aggregate(&#123;$skip:1&#125;);</span><br><span class="line">db.userInfo.aggregate(&#123;$unwind:&#123;path:"$tags"&#125;&#125;); # tags是一个数组</span><br><span class="line">db.userInfo.aggregate(&#123;$unwind:&#123;path:"$tags",includeArrayIndex:"arrIndex"&#125;&#125;); # 赋值给指定的字段</span><br><span class="line"><span class="meta">#</span> 展开时保留空数组，或者不存在数组字段的文档</span><br><span class="line">db.userInfo.aggregate(&#123;$unwind:&#123;path: "$tags",includeArrayIndex:"arrIndex",preserveNullAndEmptyArrays:true&#125;&#125;);</span><br><span class="line"><span class="meta">#</span> 对文档进行排序：1正序，-1倒序 </span><br><span class="line">db.userInfo.aggregate(&#123;$sort:&#123;age:-1&#125;&#125;);</span><br><span class="line"><span class="meta">#</span> 单一字段值进行关联查询</span><br><span class="line">db.accountDetail.aggregate(&#123;$lookup:&#123; from: "需要关联的文档",localField: "本地字段"，foreignField: "外部文档关联字段"，as "作为新的字段，添加到文档中"&#125;);</span><br></pre></td></tr></table></figure>
+<h4 id="索引"><a href="#索引" class="headerlink" title="索引"></a>索引</h4><p>索引默认名称是索引键和索引中每个键的方向即1或-1的连接，使用下划线作为分隔符， 也可以通过指定name来自定义索引名称；</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">db.collection.createIndex(&lt;keys&gt;, &lt;options&gt;) # 创建索引</span><br><span class="line">db.members.createIndex(&#123;name:1&#125;，&#123;name: "index_name"&#125;);</span><br><span class="line">db.members.getIndexes(); # 查询集合中已经存在的索引</span><br><span class="line">db.members.createIndex(&#123; name:1,age:-1&#125;); # 复合索引，按name升序排age降序</span><br><span class="line">db.members.createIndex(&#123;age:1&#125;,&#123;unique:true&#125;); # 唯一性索引</span><br><span class="line">db.sparsedemo.createIndex(&#123;name:1&#125;,&#123;unique:true ,sparse:true&#125;); # 稀疏索引</span><br><span class="line"><span class="meta">#</span> 日期字段或包含日期元素的数组字段，可使用设定生存时间的索引，来自动删除字段值超过生存时间的文档</span><br><span class="line">db.members.createIndex(&#123;create_time:1&#125;,&#123;expireAfterSeconds:30&#125;);</span><br></pre></td></tr></table></figure>
+<h4 id="复制集"><a href="#复制集" class="headerlink" title="复制集"></a>复制集</h4><p>MongoDB复制集主要意义在于<strong>实现服务高可用</strong>，类似于Redis哨兵模式，数据写入Primary主节点时将数据复制到另一个Secondary副本节点上，主节点发生故障时自动选举出一个新的替代节点。实现高可用的同时，复制集还有如下作用</p>
+<ul>
+<li><strong>数据分发</strong>：将数据从一个区域复制到另一个区域，减少另一个区域的读延迟</li>
+<li><strong>读写分离</strong>：不同类型的压力分别在不同的节点上执行</li>
+<li><strong>异地容灾</strong>：在数据中心故障时快速切换到异地</li>
+</ul>
+<p>典型的复制集由<strong>三个</strong>或<strong>三个以上</strong>具有<strong>投票权</strong>的节点组成，其中一个<strong><code>Primary</code>主节点接收写入操作</strong>，<strong>读操作</strong>和<strong>选举时投票</strong>，两个或多个<strong><code>Secondary</code>从节点复制主节点上的新数据</strong>和<strong>选举时投票</strong>。</p>
+<p>当一个修改操作到达主节点时，它对数据的操作将被记录下来，这些记录称为<strong><code>oplog</code></strong>，从节点通过从主节点上不断获取新进入主节点的<strong><code>oplog</code></strong>，并在自己的数据上<strong>回放</strong>，以此保持跟主节点的数据一致。</p>
+<p><strong>具有投票权</strong>的节点之间<strong>两两互相发送心跳</strong>，当<strong>5次心跳未收</strong>到时判断为节点<strong>失联</strong>，若<strong>主节点失联</strong>，从节点会发起选举，选出新的主节点，若<strong>从节点失联</strong>则<strong>不会产生新的选举</strong>，选举基于<strong><code>RAFT</code>一致性算法</strong>实现，<strong>选举成功的必要条件是大多数投票节点存活</strong>，<strong>复制集中最多可有<code>50</code>个节点，但具有投票权的节点最多<code>7</code>个</strong>。</p>
+<p>整个集群必须有大多数节点存活，被选举为主节点的节点必须<strong>能够与多数节点建立连接</strong>，<strong>具有较新的<code>oplog</code></strong>，具有<strong>较高优先级</strong>。复制集节点有以下的选配项：</p>
+<ul>
+<li><strong><code>v</code></strong>：是否具有投票权，有则参与投票</li>
+<li><strong><code>priority</code></strong>：优先级，优先级越高的节点越优先成为主节点。优先级为0的节点无法成为主节点,默认值为1。</li>
+<li><strong><code>hidden</code></strong>：隐藏，复制数据，但对应用不可见。隐藏节点可具有投票权，但优先级必须为0</li>
+<li><strong><code>slaveDelay</code></strong>：延迟，复制n秒之前的数据，保持与主节点的时间差</li>
+<li><strong><code>buildIndexes</code></strong>：从节点不建立索引</li>
+</ul>
+<p><strong><code>mongod -f /data/db/mongod.conf</code></strong>，默认情况下<strong>非主节点不允许读数据</strong>，可通过执行<strong><code>rs.secondaryOk()</code></strong>开启读权限</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">systemLog:</span></span><br><span class="line">  <span class="attr">destination:</span> <span class="string">file</span></span><br><span class="line">  <span class="attr">path:</span> <span class="string">/data/db/mongod.log</span></span><br><span class="line">  <span class="attr">logAppend:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">storage:</span></span><br><span class="line">  <span class="attr">dbPath:</span> <span class="string">/data/db1</span></span><br><span class="line"><span class="attr">net:</span></span><br><span class="line">  <span class="attr">bindIp:</span> <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span></span><br><span class="line">  <span class="attr">port:</span> <span class="number">28017</span></span><br><span class="line"><span class="attr">replication:</span></span><br><span class="line">  <span class="attr">replSetName:</span> <span class="string">rs0</span></span><br><span class="line"><span class="attr">processManagement:</span></span><br><span class="line">  <span class="attr">fork:</span> <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+<h4 id="分片集群"><a href="#分片集群" class="headerlink" title="分片集群"></a>分片集群</h4><p><img src="../../../../images/DB/MongoDB/分片集群组成.png" alt></p>
+<p><strong><code>mongos</code>路由节点</strong>： <strong>提供集群单一入口，转发应用端请求，选择合适的数据节点进行读写，合并多个数据节点的返回</strong>。<strong>无状态</strong>，建议<strong><code>mongos</code></strong>节点集群部署以提供高可用性。客户请求应发给mongos而不是分片服务器，当查询包含分片键时，mongos将查询发送到指定分片，否则mongos将查询发送到所有分片，并汇总所有查询结果。 </p>
+<p><strong>配置节点</strong>:  普通的mongod进程， 建议以复制集部署，提供高可用，提供集群元数据存储分片数据分布的数据。<strong>主节点故障时配置服务器进入只读模式</strong>，<strong>只读模式下数据段分裂和集群平衡都不可执行</strong>。<strong>整个复制集故障时，分片集群不可用</strong>。</p>
+<p><strong>数据节点</strong>：以复制集为单位，横向扩展<strong>最大<code>1024</code>分片</strong>，<strong>分片之间数据不重复</strong>，所有数据在一起才可以完整工作。</p>
+<p><strong>数据段的分裂</strong>，当数据段尺寸过大，或包含过多文档时，触发数据段分裂，只有新增、更新文档时才可能自动触发数据段分裂，数据段分裂通过更新元数据来实现</p>
+<p><strong>集群的平衡</strong>，后台运行的平衡器负责监视和调整集群的平衡，当最大和最小分片之间的数据段数量相差过大时触发 ，集群中添加或移除分片时也会触发</p>
+<p>MongoDB<strong>分片集群特点</strong>：应用全透明，数据自动均衡，动态扩容，无需下线</p>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/DB/MySQL主从架构/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        MySQL主从架构
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/MQ/Kafka基础/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Kafka基础</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

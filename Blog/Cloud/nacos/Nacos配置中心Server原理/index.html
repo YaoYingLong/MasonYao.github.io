@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Nacos配置中心Server原理 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="SpringCloud,Nacos">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="服务端配置加载Nacos启动时通过DumpService的子类ExternalDumpService在初始化时调用dumpOperate来完成配置从数据库加载到缓存和写入磁盘中缓存文件中。先会通过dumpConfigInfo方法执行DumpAllProcessor的process方法将数据库中的数据刷到内存中，且将变化的数据通知客户端。且会每10分钟执行一次数据库逾期数据清理，默认逾期时间30天。">
+<meta name="keywords" content="SpringCloud,Nacos">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos配置中心Server原理">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/nacos/Nacos配置中心Server原理/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="服务端配置加载Nacos启动时通过DumpService的子类ExternalDumpService在初始化时调用dumpOperate来完成配置从数据库加载到缓存和写入磁盘中缓存文件中。先会通过dumpConfigInfo方法执行DumpAllProcessor的process方法将数据库中的数据刷到内存中，且将变化的数据通知客户端。且会每10分钟执行一次数据库逾期数据清理，默认逾期时间30天。">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2021-11-06T12:34:31.807Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Nacos配置中心Server原理">
+<meta name="twitter:description" content="服务端配置加载Nacos启动时通过DumpService的子类ExternalDumpService在初始化时调用dumpOperate来完成配置从数据库加载到缓存和写入磁盘中缓存文件中。先会通过dumpConfigInfo方法执行DumpAllProcessor的process方法将数据库中的数据刷到内存中，且将变化的数据通知客户端。且会每10分钟执行一次数据库逾期数据清理，默认逾期时间30天。">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-Cloud/nacos/Nacos配置中心Server原理" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/nacos/">nacos</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Nacos/">Nacos</a>, <a class="tag-link" href="/tags/SpringCloud/">SpringCloud</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">
+            <time datetime="2021-10-30T16:00:00.000Z" itemprop="datePublished">2021-10-31</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Nacos配置中心Server原理
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <h4 id="服务端配置加载"><a href="#服务端配置加载" class="headerlink" title="服务端配置加载"></a>服务端配置加载</h4><p>Nacos启动时通过<strong><code>DumpService</code></strong>的子类<strong><code>ExternalDumpService</code></strong>在初始化时调用<strong><code>dumpOperate</code></strong>来完成配置从数据库加载到缓存和写入磁盘中缓存文件中。先会通过<strong><code>dumpConfigInfo</code></strong>方法执行<strong><code>DumpAllProcessor</code></strong>的<strong><code>process</code></strong>方法<strong>将数据库中的数据刷到内存中</strong>，且<strong>将变化的数据通知客户端</strong>。且会<strong>每<code>10</code>分钟</strong>执行一次<strong>数据库逾期数据清理</strong>，<strong>默认逾期时间<code>30</code>天</strong>。且<strong>每<code>6</code>小时</strong>会<strong>将数据库中数据再刷一遍到内存中以及磁盘缓存文件中</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ExternalDumpService</span> <span class="keyword">extends</span> <span class="title">DumpService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@PostConstruct</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        dumpOperate(processor, dumpAllProcessor, dumpAllBetaProcessor, dumpAllTagProcessor);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">DumpService</span> </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> DumpProcessor processor;</span><br><span class="line">    <span class="keyword">protected</span> DumpAllProcessor dumpAllProcessor;</span><br><span class="line">    <span class="keyword">protected</span> DumpAllBetaProcessor dumpAllBetaProcessor;</span><br><span class="line">    <span class="keyword">protected</span> DumpAllTagProcessor dumpAllTagProcessor;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> PersistService persistService;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> ServerMemberManager memberManager;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">DumpService</span><span class="params">(PersistService persistService, ServerMemberManager memberManager)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.persistService = persistService;</span><br><span class="line">        <span class="keyword">this</span>.memberManager = memberManager;</span><br><span class="line">        <span class="keyword">this</span>.processor = <span class="keyword">new</span> DumpProcessor(<span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">this</span>.dumpAllProcessor = <span class="keyword">new</span> DumpAllProcessor(<span class="keyword">this</span>); <span class="comment">// 全量Dump配置信息的Processor</span></span><br><span class="line">        <span class="keyword">this</span>.dumpAllBetaProcessor = <span class="keyword">new</span> DumpAllBetaProcessor(<span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">this</span>.dumpAllTagProcessor = <span class="keyword">new</span> DumpAllTagProcessor(<span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">this</span>.dumpTaskMgr = <span class="keyword">new</span> TaskManager(<span class="string">"com.alibaba.nacos.server.DumpTaskManager"</span>);</span><br><span class="line">        <span class="keyword">this</span>.dumpTaskMgr.setDefaultTaskProcessor(processor);</span><br><span class="line">        <span class="keyword">this</span>.dumpAllTaskMgr = <span class="keyword">new</span> TaskManager(<span class="string">"com.alibaba.nacos.server.DumpAllTaskManager"</span>);</span><br><span class="line">        <span class="keyword">this</span>.dumpAllTaskMgr.setDefaultTaskProcessor(dumpAllProcessor);</span><br><span class="line">        <span class="keyword">this</span>.dumpAllTaskMgr.addProcessor(DumpAllTask.TASK_ID, dumpAllProcessor);</span><br><span class="line">        <span class="keyword">this</span>.dumpAllTaskMgr.addProcessor(DumpAllBetaTask.TASK_ID, dumpAllBetaProcessor);</span><br><span class="line">        <span class="keyword">this</span>.dumpAllTaskMgr.addProcessor(DumpAllTagTask.TASK_ID, dumpAllTagProcessor);</span><br><span class="line">        DynamicDataSource.getInstance().getDataSource();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">dumpOperate</span><span class="params">(DumpProcessor processor, DumpAllProcessor dumpAllProcessor, DumpAllBetaProcessor dumpAllBetaProcessor, DumpAllTagProcessor dumpAllTagProcessor)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            Runnable dumpAll = () -&gt; dumpAllTaskMgr.addTask(DumpAllTask.TASK_ID, <span class="keyword">new</span> DumpAllTask());</span><br><span class="line">            Runnable dumpAllBeta = () -&gt; dumpAllTaskMgr.addTask(DumpAllBetaTask.TASK_ID, <span class="keyword">new</span> DumpAllBetaTask());</span><br><span class="line">            Runnable dumpAllTag = () -&gt; dumpAllTaskMgr.addTask(DumpAllTagTask.TASK_ID, <span class="keyword">new</span> DumpAllTagTask());</span><br><span class="line">            Runnable clearConfigHistory = () -&gt; &#123; <span class="comment">// 清理数据库过期的数据</span></span><br><span class="line">                <span class="keyword">if</span> (canExecute()) &#123; <span class="comment">// 若服务端成员列表中第一个成员是本机</span></span><br><span class="line">                    <span class="keyword">try</span> &#123; <span class="comment">// 默认过期时间为30天</span></span><br><span class="line">                        Timestamp startTime = getBeforeStamp(TimeUtils.getCurrentTime(), <span class="number">24</span> * getRetentionDays());</span><br><span class="line">                        <span class="keyword">int</span> totalCount = persistService.findConfigHistoryCountByTime(startTime); <span class="comment">// 查询数据库逾期数据条数(超过30天)</span></span><br><span class="line">                        <span class="keyword">if</span> (totalCount &gt; <span class="number">0</span>) &#123; <span class="comment">// 若逾期数据条数大于0</span></span><br><span class="line">                            <span class="keyword">int</span> pageSize = <span class="number">1000</span>;</span><br><span class="line">                            <span class="keyword">int</span> removeTime = (totalCount + pageSize - <span class="number">1</span>) / pageSize;</span><br><span class="line">                            <span class="keyword">while</span> (removeTime &gt; <span class="number">0</span>) &#123; <span class="comment">// 分页处理</span></span><br><span class="line">                                persistService.removeConfigHistory(startTime, pageSize); <span class="comment">// 将数据从数据库批量删除</span></span><br><span class="line">                                removeTime--;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                dumpConfigInfo(dumpAllProcessor); <span class="comment">// 全量Dump配置信息</span></span><br><span class="line">                DiskUtil.clearAllBeta();  <span class="comment">// update Beta cache</span></span><br><span class="line">                <span class="keyword">if</span> (persistService.isExistTable(BETA_TABLE_NAME)) &#123;</span><br><span class="line">                    dumpAllBetaProcessor.process(<span class="keyword">new</span> DumpAllBetaTask());</span><br><span class="line">                &#125;</span><br><span class="line">                DiskUtil.clearAllTag(); <span class="comment">// update Tag cache</span></span><br><span class="line">                <span class="keyword">if</span> (persistService.isExistTable(TAG_TABLE_NAME)) &#123;</span><br><span class="line">                    dumpAllTagProcessor.process(<span class="keyword">new</span> DumpAllTagTask());</span><br><span class="line">                &#125;</span><br><span class="line">                List&lt;ConfigInfoChanged&gt; configList = persistService.findAllAggrGroup(); <span class="comment">// add to dump aggr</span></span><br><span class="line">                <span class="keyword">if</span> (configList != <span class="keyword">null</span> &amp;&amp; !configList.isEmpty()) &#123;</span><br><span class="line">                    total = configList.size();</span><br><span class="line">                    List&lt;List&lt;ConfigInfoChanged&gt;&gt; splitList = splitList(configList, INIT_THREAD_COUNT);</span><br><span class="line">                    <span class="keyword">for</span> (List&lt;ConfigInfoChanged&gt; list : splitList) &#123;</span><br><span class="line">                        MergeAllDataWorker work = <span class="keyword">new</span> MergeAllDataWorker(list);</span><br><span class="line">                        work.start();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.SERVER_ERROR, <span class="string">"Nacos Server did not start because dumpservice bean construction failure :\n"</span> + e.getMessage(), e);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!EnvUtil.getStandaloneMode()) &#123;</span><br><span class="line">                Runnable heartbeat = () -&gt; &#123; <span class="comment">// 更新心跳检测文件中的时间</span></span><br><span class="line">                    String heartBeatTime = TimeUtils.getCurrentTime().toString(); <span class="comment">// 或去当前心跳的时间</span></span><br><span class="line">                    <span class="keyword">try</span> &#123;  <span class="comment">// write disk</span></span><br><span class="line">                        DiskUtil.saveHeartBeatToDisk(heartBeatTime);</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;;</span><br><span class="line">                ConfigExecutor.scheduleConfigTask(heartbeat, <span class="number">0</span>, <span class="number">10</span>, TimeUnit.SECONDS); <span class="comment">// 10s执行一次心跳</span></span><br><span class="line">                <span class="keyword">long</span> initialDelay = <span class="keyword">new</span> Random().nextInt(INITIAL_DELAY_IN_MINUTE) + <span class="number">10</span>; <span class="comment">// 第一次随机时间执行</span></span><br><span class="line">                ConfigExecutor.scheduleConfigTask(dumpAll, initialDelay, DUMP_ALL_INTERVAL_IN_MINUTE, TimeUnit.MINUTES); <span class="comment">// 每6小时执行一次，将dumpAll添加到任务队列中</span></span><br><span class="line">                ConfigExecutor.scheduleConfigTask(dumpAllBeta, initialDelay, DUMP_ALL_INTERVAL_IN_MINUTE, TimeUnit.MINUTES);</span><br><span class="line">                ConfigExecutor.scheduleConfigTask(dumpAllTag, initialDelay, DUMP_ALL_INTERVAL_IN_MINUTE, TimeUnit.MINUTES);</span><br><span class="line">            &#125;</span><br><span class="line">            ConfigExecutor.scheduleConfigTask(clearConfigHistory, <span class="number">10</span>, <span class="number">10</span>, TimeUnit.MINUTES); <span class="comment">// 每10分钟执行一次清理数据库过期的数据</span></span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            TimerContext.end(dumpFileContext, LogUtil.DUMP_LOG);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>若<strong>不是</strong>通过<strong><code>isQuickStart</code></strong>方式启动的，或通过<strong><code>isQuickStart</code></strong>方式启动但<strong>最后心跳时间大于6小时</strong>，则<strong>先清理磁盘中的缓存文件</strong>，再通过<strong><code>DumpAllProcessor</code></strong>将数据<strong>从数据库加载到磁盘和和缓存中</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">DumpService</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">dumpConfigInfo</span><span class="params">(DumpAllProcessor dumpAllProcessor)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> timeStep = <span class="number">6</span>;</span><br><span class="line">        Boolean isAllDump = <span class="keyword">true</span>;</span><br><span class="line">        <span class="comment">// initial dump all</span></span><br><span class="line">        FileInputStream fis = <span class="keyword">null</span>;</span><br><span class="line">        Timestamp heartheatLastStamp = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (isQuickStart()) &#123; <span class="comment">// 默认为false</span></span><br><span class="line">                File heartbeatFile = DiskUtil.heartBeatFile(); <span class="comment">// 心跳文件</span></span><br><span class="line">                <span class="keyword">if</span> (heartbeatFile.exists()) &#123;</span><br><span class="line">                    fis = <span class="keyword">new</span> FileInputStream(heartbeatFile);</span><br><span class="line">                    String heartheatTempLast = IoUtils.toString(fis, Constants.ENCODE);</span><br><span class="line">                    heartheatLastStamp = Timestamp.valueOf(heartheatTempLast);</span><br><span class="line">                    <span class="keyword">if</span> (TimeUtils.getCurrentTime().getTime() - heartheatLastStamp.getTime() &lt; timeStep * <span class="number">60</span> * <span class="number">60</span> * <span class="number">1000</span>) &#123;</span><br><span class="line">                        isAllDump = <span class="keyword">false</span>; <span class="comment">// 若当前时间减最近心跳时间小于6小时则不全量更新</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (isAllDump) &#123;  <span class="comment">// 若当前时间减最近心跳时间大于6小时则全量更新</span></span><br><span class="line">                DiskUtil.clearAll(); <span class="comment">// 清理磁盘缓存的配置信息文件</span></span><br><span class="line">                dumpAllProcessor.process(<span class="keyword">new</span> DumpAllTask());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;  <span class="comment">// 若当前时间减最近心跳时间小于6小时则不全量更新</span></span><br><span class="line">                Timestamp beforeTimeStamp = getBeforeStamp(heartheatLastStamp, timeStep); <span class="comment">// 6小时前</span></span><br><span class="line">                DumpChangeProcessor dumpChangeProcessor = <span class="keyword">new</span> DumpChangeProcessor(<span class="keyword">this</span>, beforeTimeStamp, TimeUtils.getCurrentTime());</span><br><span class="line">                dumpChangeProcessor.process(<span class="keyword">new</span> DumpChangeTask()); <span class="comment">// 处理6小时前到现在有变更的配置</span></span><br><span class="line">                Runnable checkMd5Task = () -&gt; &#123;</span><br><span class="line">                    List&lt;String&gt; diffList = ConfigCacheService.checkMd5();</span><br><span class="line">                    <span class="keyword">for</span> (String groupKey : diffList) &#123; <span class="comment">// 查询数据库中配置与缓存中配置对比，若发生变更，则写入磁盘缓存以及更新缓存通知客户端</span></span><br><span class="line">                        String[] dg = GroupKey.parseKey(groupKey);</span><br><span class="line">                        String dataId = dg[<span class="number">0</span>];</span><br><span class="line">                        String group = dg[<span class="number">1</span>];</span><br><span class="line">                        String tenant = dg[<span class="number">2</span>];</span><br><span class="line">                        ConfigInfoWrapper configInfo = persistService.queryConfigInfo(dataId, group, tenant);</span><br><span class="line">                        ConfigCacheService.dumpChange(dataId, group, tenant, configInfo.getContent(), configInfo.getLastModified());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;;</span><br><span class="line">                ConfigExecutor.scheduleConfigTask(checkMd5Task, <span class="number">0</span>, <span class="number">12</span>, TimeUnit.HOURS); <span class="comment">// 每12小时执行一次checkMd5Task</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>会通过分页查询数据库将数据批量加载到磁盘和内存中，通过<strong><code>ConfigCacheService</code></strong>的<strong><code>dump</code></strong>方法将数据写入磁盘，且缓存配置信息的md5到内存中，并发布<strong><code>LocalDataChangeEvent</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DumpAllProcessor</span> <span class="keyword">implements</span> <span class="title">NacosTaskProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(NacosTask task)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">long</span> currentMaxId = persistService.findConfigMaxId(); <span class="comment">// 查询MySQL获取最大的主键值，用于分页查询</span></span><br><span class="line">        <span class="keyword">long</span> lastMaxId = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">while</span> (lastMaxId &lt; currentMaxId) &#123; <span class="comment">// 从MySQL分页查询所有配置</span></span><br><span class="line">            Page&lt;ConfigInfoWrapper&gt; page = persistService.findAllConfigInfoFragment(lastMaxId, PAGE_SIZE); <span class="comment">// 每页大小默认为1000条配置</span></span><br><span class="line">            <span class="keyword">if</span> (page != <span class="keyword">null</span> &amp;&amp; page.getPageItems() != <span class="keyword">null</span> &amp;&amp; !page.getPageItems().isEmpty()) &#123;</span><br><span class="line">                <span class="keyword">for</span> (ConfigInfoWrapper cf : page.getPageItems()) &#123;</span><br><span class="line">                    <span class="keyword">long</span> id = cf.getId();</span><br><span class="line">                    lastMaxId = id &gt; lastMaxId ? id : lastMaxId;</span><br><span class="line">                    <span class="keyword">if</span> (cf.getDataId().equals(AggrWhitelist.AGGRIDS_METADATA)) &#123; <span class="comment">// dataId == com.alibaba.nacos.metadata.aggrIDs</span></span><br><span class="line">                        AggrWhitelist.load(cf.getContent());</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (cf.getDataId().equals(ClientIpWhiteList.CLIENT_IP_WHITELIST_METADATA)) &#123; <span class="comment">// com.alibaba.nacos.metadata.clientIpWhitelist</span></span><br><span class="line">                        ClientIpWhiteList.load(cf.getContent());</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (cf.getDataId().equals(SwitchService.SWITCH_META_DATAID)) &#123;</span><br><span class="line">                        SwitchService.load(cf.getContent());</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">// 将数据写入磁盘，缓存配置信息的md5到内存中，并发布LocalDataChangeEvent</span></span><br><span class="line">                    <span class="keyword">boolean</span> result = ConfigCacheService.dump(cf.getDataId(), cf.getGroup(), cf.getTenant(), cf.getContent(), cf.getLastModified(), cf.getType());</span><br><span class="line">                    <span class="keyword">final</span> String content = cf.getContent();</span><br><span class="line">                    <span class="keyword">final</span> String md5 = MD5Utils.md5Hex(content, Constants.ENCODE);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                lastMaxId += PAGE_SIZE;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConfigCacheService</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">dump</span><span class="params">(String dataId, String group, String tenant, String content, <span class="keyword">long</span> lastModifiedTs, String type)</span> </span>&#123;</span><br><span class="line">        String groupKey = GroupKey2.getKey(dataId, group, tenant);</span><br><span class="line">        CacheItem ci = makeSure(groupKey);</span><br><span class="line">        ci.setType(type);</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> lockResult = tryWriteLock(groupKey); <span class="comment">// 获取写锁</span></span><br><span class="line">        <span class="keyword">assert</span> (lockResult != <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (lockResult &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">final</span> String md5 = MD5Utils.md5Hex(content, Constants.ENCODE);</span><br><span class="line">            <span class="keyword">if</span> (md5.equals(ConfigCacheService.getContentMd5(groupKey))) &#123;                </span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!PropertyUtil.isDirectRead()) &#123; <span class="comment">// 非Standalone模式启动且非内嵌数据库</span></span><br><span class="line">                DiskUtil.saveToDisk(dataId, group, tenant, content); <span class="comment">// 将配置保存到磁盘文件中</span></span><br><span class="line">            &#125;</span><br><span class="line">            updateMd5(groupKey, md5, lastModifiedTs);<span class="comment">// 缓存配置信息的md5到内存中，并发布LocalDataChangeEvent</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException ioe) &#123;</span><br><span class="line">            <span class="keyword">if</span> (ioe.getMessage() != <span class="keyword">null</span>) &#123;</span><br><span class="line">                String errMsg = ioe.getMessage();</span><br><span class="line">                <span class="keyword">if</span> (NO_SPACE_CN.equals(errMsg) || NO_SPACE_EN.equals(errMsg) || errMsg.contains(DISK_QUATA_CN) || errMsg.contains(DISK_QUATA_EN)) &#123;</span><br><span class="line">                    System.exit(<span class="number">0</span>); <span class="comment">// 磁盘满自杀退出</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            releaseWriteLock(groupKey);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">updateMd5</span><span class="params">(String groupKey, String md5, <span class="keyword">long</span> lastModifiedTs)</span> </span>&#123;</span><br><span class="line">        CacheItem cache = makeSure(groupKey);</span><br><span class="line">        <span class="keyword">if</span> (cache.md5 == <span class="keyword">null</span> || !cache.md5.equals(md5)) &#123; <span class="comment">// 为空说明没有，不相等说明更新了</span></span><br><span class="line">            cache.md5 = md5;</span><br><span class="line">            cache.lastModifiedTs = lastModifiedTs; <span class="comment">// 更新最新更新时间</span></span><br><span class="line">            NotifyCenter.publishEvent(<span class="keyword">new</span> LocalDataChangeEvent(groupKey)); <span class="comment">// 发布更新事件，最终被LongPollingService订阅者监听</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="配置变更监听器触发"><a href="#配置变更监听器触发" class="headerlink" title="配置变更监听器触发"></a>配置变更监听器触发</h4><p>发布的<strong><code>LocalDataChangeEvent</code></strong>事件会被<strong><code>LongPollingService</code></strong>监听到，最终异步执行<strong><code>DataChangeTask</code></strong>任务，<strong>遍历所有的客户端长连接</strong>，这些长连接是<strong>客户启动时</strong>通过监听数据变化而创建的，每<strong><code>10ms</code></strong>执行一次，长连接<strong>超时时间</strong>为<strong><code>30s</code></strong>，服务端会持有长连接<strong><code>29.5s</code></strong>后才执行，<strong>比较客户端长链接请求的数据</strong>中否包含该<strong><code>groupKey</code></strong>，若包含直接<strong>响应长连接</strong>。客户端长连接请求时间间隔很短，即使更新时漏掉了某个长连接，但当常链接请求过来时，会发现数据变更了会立即返回。从而达到不漏掉任务客户端，且接近实时的效果。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">LongPollingService</span><span class="params">()</span> </span>&#123; <span class="comment">// 初始化LocalDataChangeEvent事件订阅者</span></span><br><span class="line">    allSubs = <span class="keyword">new</span> ConcurrentLinkedQueue&lt;ClientLongPolling&gt;();</span><br><span class="line">    ConfigExecutor.scheduleLongPolling(<span class="keyword">new</span> StatTask(), <span class="number">0L</span>, <span class="number">10L</span>, TimeUnit.SECONDS);</span><br><span class="line">    <span class="comment">// Register LocalDataChangeEvent to NotifyCenter.</span></span><br><span class="line">    NotifyCenter.registerToPublisher(LocalDataChangeEvent<span class="class">.<span class="keyword">class</span>, <span class="title">NotifyCenter</span>.<span class="title">ringBufferSize</span>)</span>;</span><br><span class="line">    <span class="comment">// Register A Subscriber to subscribe LocalDataChangeEvent.</span></span><br><span class="line">    NotifyCenter.registerSubscriber(<span class="keyword">new</span> Subscriber() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (isFixedPolling()) &#123;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (event <span class="keyword">instanceof</span> LocalDataChangeEvent) &#123;</span><br><span class="line">                    LocalDataChangeEvent evt = (LocalDataChangeEvent) event;</span><br><span class="line">                    ConfigExecutor.executeLongPolling(<span class="keyword">new</span> DataChangeTask(evt.groupKey, evt.isBeta, evt.betaIps));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="keyword">public</span> Class&lt;? extends Event&gt; subscribeType() &#123;</span><br><span class="line">            <span class="keyword">return</span> LocalDataChangeEvent<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">DataChangeTask</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123; <span class="comment">// 服务的push模式</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ConfigCacheService.getContentBetaMd5(groupKey);</span><br><span class="line">            <span class="keyword">for</span> (Iterator&lt;ClientLongPolling&gt; iter = allSubs.iterator(); iter.hasNext(); ) &#123;</span><br><span class="line">                ClientLongPolling clientSub = iter.next();</span><br><span class="line">                <span class="keyword">if</span> (clientSub.clientMd5Map.containsKey(groupKey)) &#123;</span><br><span class="line">                    <span class="comment">// If published tag is not in the beta list, then it skipped.</span></span><br><span class="line">                    <span class="keyword">if</span> (isBeta &amp;&amp; !CollectionUtils.contains(betaIps, clientSub.ip)) &#123;</span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="comment">// If published tag is not in the tag list, then it skipped.</span></span><br><span class="line">                    <span class="keyword">if</span> (StringUtils.isNotBlank(tag) &amp;&amp; !tag.equals(clientSub.tag)) &#123;</span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    getRetainIps().put(clientSub.ip, System.currentTimeMillis());</span><br><span class="line">                    iter.remove(); <span class="comment">// Delete subscribers' relationships.</span></span><br><span class="line">                    clientSub.sendResponse(Arrays.asList(groupKey)); <span class="comment">// 响应配置发送变化的key，调用长连接中的sendResponse方法给客户响应数据</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="服务端配置发布"><a href="#服务端配置发布" class="headerlink" title="服务端配置发布"></a>服务端配置发布</h4><p>服务端配置的发布是通过控制界面修改了配置点击发布，从而调用<strong><code>ConfigController</code></strong>的<strong><code>publishConfig</code></strong>方法完成配置的发布。首先会通过<strong><code>PersistService</code></strong>的<strong><code>insertOrUpdate</code></strong>方法<strong>将数据持久化到数据库</strong>。然后发布<strong><code>ConfigDataChangeEvent</code></strong>事件被订阅者<strong><code>AsyncNotifyService</code></strong>感知，从而<strong>通知其他成员节点</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PostMapping</span> <span class="comment">// 用户通过nacos-console控制界面修改了配置，点击发布调用该接口</span></span><br><span class="line"><span class="meta">@Secured</span>(action = ActionTypes.WRITE, parser = ConfigResourceParser<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> <span class="title">Boolean</span> <span class="title">publishConfig</span>(<span class="title">HttpServletRequest</span> <span class="title">request</span>, <span class="title">HttpServletResponse</span> <span class="title">response</span>,</span></span><br><span class="line"><span class="class">                             @<span class="title">RequestParam</span>(<span class="title">value</span> </span>= <span class="string">"dataId"</span>) String dataId, <span class="meta">@RequestParam</span>(value = <span class="string">"group"</span>) String group,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"tenant"</span>, required = <span class="keyword">false</span>, defaultValue = StringUtils.EMPTY) String tenant,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"content"</span>) String content, <span class="meta">@RequestParam</span>(value = <span class="string">"tag"</span>, required = <span class="keyword">false</span>) String tag,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"appName"</span>, required = <span class="keyword">false</span>) String appName,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"src_user"</span>, required = <span class="keyword">false</span>) String srcUser,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"config_tags"</span>, required = <span class="keyword">false</span>) String configTags,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"desc"</span>, required = <span class="keyword">false</span>) String desc,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"use"</span>, required = <span class="keyword">false</span>) String use,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"effect"</span>, required = <span class="keyword">false</span>) String effect,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"type"</span>, required = <span class="keyword">false</span>) String type,</span><br><span class="line">                             <span class="meta">@RequestParam</span>(value = <span class="string">"schema"</span>, required = <span class="keyword">false</span>) String schema) <span class="keyword">throws</span> NacosException &#123;</span><br><span class="line">    <span class="keyword">final</span> String srcIp = RequestUtil.getRemoteIp(request); <span class="comment">// 获取远程调用者IP</span></span><br><span class="line">    <span class="keyword">final</span> String requestIpApp = RequestUtil.getAppName(request);</span><br><span class="line">    srcUser = RequestUtil.getSrcUserName(request);</span><br><span class="line">    <span class="keyword">if</span> (!ConfigType.isValidType(type)) &#123; <span class="comment">//check type </span></span><br><span class="line">        type = ConfigType.getDefaultType().getType();</span><br><span class="line">    &#125;</span><br><span class="line">    ParamUtils.checkTenant(tenant); <span class="comment">// check tenant</span></span><br><span class="line">    ParamUtils.checkParam(dataId, group, <span class="string">"datumId"</span>, content);</span><br><span class="line">    ParamUtils.checkParam(tag);</span><br><span class="line">    Map&lt;String, Object&gt; configAdvanceInfo = <span class="keyword">new</span> HashMap&lt;String, Object&gt;(<span class="number">10</span>);</span><br><span class="line">    MapUtils.putIfValNoNull(configAdvanceInfo, <span class="string">"config_tags"</span>, configTags);</span><br><span class="line">    MapUtils.putIfValNoNull(configAdvanceInfo, <span class="string">"desc"</span>, desc);</span><br><span class="line">    MapUtils.putIfValNoNull(configAdvanceInfo, <span class="string">"use"</span>, use);</span><br><span class="line">    MapUtils.putIfValNoNull(configAdvanceInfo, <span class="string">"effect"</span>, effect);</span><br><span class="line">    MapUtils.putIfValNoNull(configAdvanceInfo, <span class="string">"type"</span>, type);</span><br><span class="line">    MapUtils.putIfValNoNull(configAdvanceInfo, <span class="string">"schema"</span>, schema);</span><br><span class="line">    ParamUtils.checkParam(configAdvanceInfo);</span><br><span class="line">    <span class="keyword">if</span> (AggrWhitelist.isAggrDataId(dataId)) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.NO_RIGHT, <span class="string">"dataId:"</span> + dataId + <span class="string">" is aggr"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">final</span> Timestamp time = TimeUtils.getCurrentTime();</span><br><span class="line">    String betaIps = request.getHeader(<span class="string">"betaIps"</span>);</span><br><span class="line">    ConfigInfo configInfo = <span class="keyword">new</span> ConfigInfo(dataId, group, tenant, appName, content);</span><br><span class="line">    configInfo.setType(type);</span><br><span class="line">    <span class="keyword">if</span> (StringUtils.isBlank(betaIps)) &#123;</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isBlank(tag)) &#123;</span><br><span class="line">            persistService.insertOrUpdate(srcIp, srcUser, configInfo, time, configAdvanceInfo, <span class="keyword">true</span>); <span class="comment">// 持久化数据到MySQL</span></span><br><span class="line">            <span class="comment">// ConfigDataChangeEvent事件被订阅者AsyncNotifyService感知</span></span><br><span class="line">            ConfigChangePublisher.notifyConfigChange(<span class="keyword">new</span> ConfigDataChangeEvent(<span class="keyword">false</span>, dataId, group, tenant, time.getTime()));</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            persistService.insertOrUpdateTag(configInfo, tag, srcIp, srcUser, time, <span class="keyword">true</span>); <span class="comment">// 持久化数据到MySQL</span></span><br><span class="line">            <span class="comment">// ConfigDataChangeEvent事件被订阅者AsyncNotifyService感知</span></span><br><span class="line">            ConfigChangePublisher.notifyConfigChange(<span class="keyword">new</span> ConfigDataChangeEvent(<span class="keyword">false</span>, dataId, group, tenant, tag, time.getTime()));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        persistService.insertOrUpdateBeta(configInfo, betaIps, srcIp, srcUser, time, <span class="keyword">true</span>); <span class="comment">// beta publish</span></span><br><span class="line">        <span class="comment">// ConfigDataChangeEvent事件被订阅者AsyncNotifyService感知</span></span><br><span class="line">        ConfigChangePublisher.notifyConfigChange(<span class="keyword">new</span> ConfigDataChangeEvent(<span class="keyword">true</span>, dataId, group, tenant, time.getTime()));</span><br><span class="line">    &#125;</span><br><span class="line">    ConfigTraceService.logPersistenceEvent(dataId, group, tenant, requestIpApp, time.getTime(), InetUtils.getSelfIP(), ConfigTraceService.PERSISTENCE_EVENT_PUB, content);</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当接收到<strong><code>ConfigDataChangeEvent</code></strong>变更事件后，首先<strong>遍历所有服务端成员</strong>，将变更配置的KEY以及成员信息封装到<strong><code>NotifySingleTask</code></strong>中，并放入阻塞队列中，通过<strong><code>AsyncTask</code></strong>中执行执行<strong><code>executeAsyncInvoke</code></strong>方法将<strong>更变数据</strong>通过调用服务端成员的<strong><code>/v1/cs/communication/dataChange</code></strong>接口同步给对方。<strong>若成员不是健康状态则延迟执行</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AsyncNotifyService</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">AsyncNotifyService</span><span class="params">(ServerMemberManager memberManager)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.memberManager = memberManager;</span><br><span class="line">        NotifyCenter.registerToPublisher(ConfigDataChangeEvent<span class="class">.<span class="keyword">class</span>, <span class="title">NotifyCenter</span>.<span class="title">ringBufferSize</span>)</span>;</span><br><span class="line">        NotifyCenter.registerSubscriber(<span class="keyword">new</span> Subscriber() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onEvent</span><span class="params">(Event event)</span> </span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (event <span class="keyword">instanceof</span> ConfigDataChangeEvent) &#123;</span><br><span class="line">                    ConfigDataChangeEvent evt = (ConfigDataChangeEvent) event;</span><br><span class="line">                    <span class="keyword">long</span> dumpTs = evt.lastModifiedTs;</span><br><span class="line">                    String dataId = evt.dataId;</span><br><span class="line">                    String group = evt.group;</span><br><span class="line">                    String tenant = evt.tenant;</span><br><span class="line">                    String tag = evt.tag;</span><br><span class="line">                    Collection&lt;Member&gt; ipList = memberManager.allMembers();</span><br><span class="line">                    Queue&lt;NotifySingleTask&gt; queue = <span class="keyword">new</span> LinkedList&lt;NotifySingleTask&gt;();</span><br><span class="line">                    <span class="keyword">for</span> (Member member : ipList) &#123; <span class="comment">// 将变更的配置信息同步给集群其它节点，包括自己</span></span><br><span class="line">                        queue.add(<span class="keyword">new</span> NotifySingleTask(dataId, group, tenant, tag, dumpTs, member.getAddress(), evt.isBeta));</span><br><span class="line">                    &#125;</span><br><span class="line">                    ConfigExecutor.executeAsyncNotify(<span class="keyword">new</span> AsyncTask(nacosAsyncRestTemplate, queue));</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Class&lt;? extends Event&gt; subscribeType() &#123;</span><br><span class="line">                <span class="keyword">return</span> ConfigDataChangeEvent<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">NotifySingleTask</span> <span class="keyword">extends</span> <span class="title">NotifyTask</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String target;</span><br><span class="line">    <span class="keyword">public</span> String url;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> isBeta;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String URL_PATTERN = <span class="string">"http://&#123;0&#125;&#123;1&#125;"</span> + Constants.COMMUNICATION_CONTROLLER_PATH + <span class="string">"/dataChange"</span> + <span class="string">"?dataId=&#123;2&#125;&amp;group=&#123;3&#125;"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String URL_PATTERN_TENANT = <span class="string">"http://&#123;0&#125;&#123;1&#125;"</span> + Constants.COMMUNICATION_CONTROLLER_PATH + <span class="string">"/dataChange?dataId=&#123;2&#125;&amp;group=&#123;3&#125;&amp;tenant=&#123;4&#125;"</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> failCount;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">NotifySingleTask</span><span class="params">(String dataId, String group, String tenant, String tag, <span class="keyword">long</span> lastModified, String target, <span class="keyword">boolean</span> isBeta)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(dataId, group, tenant, lastModified);</span><br><span class="line">        <span class="keyword">this</span>.target = target;</span><br><span class="line">        <span class="keyword">this</span>.isBeta = isBeta;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            dataId = URLEncoder.encode(dataId, Constants.ENCODE);</span><br><span class="line">            group = URLEncoder.encode(group, Constants.ENCODE);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (UnsupportedEncodingException e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isBlank(tenant)) &#123;</span><br><span class="line">            <span class="keyword">this</span>.url = MessageFormat.format(URL_PATTERN, target, EnvUtil.getContextPath(), dataId, group);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.url = MessageFormat.format(URL_PATTERN_TENANT, target, EnvUtil.getContextPath(), dataId, group, tenant);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isNotEmpty(tag)) &#123;</span><br><span class="line">            url = url + <span class="string">"&amp;tag="</span> + tag;</span><br><span class="line">        &#125;</span><br><span class="line">        failCount = <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">AsyncTask</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        executeAsyncInvoke();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">executeAsyncInvoke</span><span class="params">()</span> </span>&#123; <span class="comment">// 将更变数据通过调用其他成员的/v1/cs/communication/dataChange接口同步给对方</span></span><br><span class="line">        <span class="keyword">while</span> (!queue.isEmpty()) &#123;</span><br><span class="line">            NotifySingleTask task = queue.poll();</span><br><span class="line">            String targetIp = task.getTargetIP();</span><br><span class="line">            <span class="keyword">if</span> (memberManager.hasMember(targetIp)) &#123;</span><br><span class="line">                <span class="keyword">boolean</span> unHealthNeedDelay = memberManager.isUnHealth(targetIp);</span><br><span class="line">                <span class="keyword">if</span> (unHealthNeedDelay) &#123; <span class="comment">// 若成员不健康</span></span><br><span class="line">                    ConfigTraceService.logNotifyEvent(task.getDataId(), task.getGroup(), task.getTenant(), <span class="keyword">null</span>, task.getLastModified(), InetUtils.getSelfIP(), ConfigTraceService.NOTIFY_EVENT_UNHEALTH, <span class="number">0</span>, task.target);</span><br><span class="line">                    asyncTaskExecute(task);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    Header header = Header.newInstance();</span><br><span class="line">                    header.addParam(NotifyService.NOTIFY_HEADER_LAST_MODIFIED, String.valueOf(task.getLastModified()));</span><br><span class="line">                    header.addParam(NotifyService.NOTIFY_HEADER_OP_HANDLE_IP, InetUtils.getSelfIP());</span><br><span class="line">                    <span class="keyword">if</span> (task.isBeta) &#123;</span><br><span class="line">                        header.addParam(<span class="string">"isBeta"</span>, <span class="string">"true"</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                    AuthHeaderUtil.addIdentityToHeader(header);</span><br><span class="line">                    restTemplate.get(task.url, header, Query.EMPTY, String<span class="class">.<span class="keyword">class</span>, <span class="title">new</span> <span class="title">AsyncNotifyCallBack</span>(<span class="title">task</span>))</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终调用<strong><code>CommunicationController</code></strong>的<strong><code>notifyConfigInfo</code></strong>方法接收变更数据，最终调用<strong><code>DumpService</code></strong>的dump方法将任务放入<strong><code>NacosDelayTaskExecuteEngine</code></strong>的任务队列中。最终通过在<strong><code>DumpService</code>构造方法</strong>中设置好的<strong><code>DumpProcessor</code></strong>处理器来处理该任务。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@GetMapping</span>(<span class="string">"/dataChange"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> Boolean <span class="title">notifyConfigInfo</span><span class="params">(HttpServletRequest request, @RequestParam(<span class="string">"dataId"</span>)</span> String dataId, @<span class="title">RequestParam</span><span class="params">(<span class="string">"group"</span>)</span> String group,</span></span><br><span class="line"><span class="function">                                @<span class="title">RequestParam</span><span class="params">(value = <span class="string">"tenant"</span>, required = <span class="keyword">false</span>, defaultValue = StringUtils.EMPTY)</span> String tenant,</span></span><br><span class="line"><span class="function">                                @<span class="title">RequestParam</span><span class="params">(value = <span class="string">"tag"</span>, required = <span class="keyword">false</span>)</span> String tag) </span>&#123;</span><br><span class="line">    dataId = dataId.trim();</span><br><span class="line">    group = group.trim();</span><br><span class="line">    String lastModified = request.getHeader(NotifyService.NOTIFY_HEADER_LAST_MODIFIED);</span><br><span class="line">    <span class="keyword">long</span> lastModifiedTs = StringUtils.isEmpty(lastModified) ? -<span class="number">1</span> : Long.parseLong(lastModified);</span><br><span class="line">    String handleIp = request.getHeader(NotifyService.NOTIFY_HEADER_OP_HANDLE_IP);</span><br><span class="line">    String isBetaStr = request.getHeader(<span class="string">"isBeta"</span>);</span><br><span class="line">    <span class="keyword">if</span> (StringUtils.isNotBlank(isBetaStr) &amp;&amp; trueStr.equals(isBetaStr)) &#123;</span><br><span class="line">        dumpService.dump(dataId, group, tenant, lastModifiedTs, handleIp, <span class="keyword">true</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        dumpService.dump(dataId, group, tenant, tag, lastModifiedTs, handleIp);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">DumpService</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dump</span><span class="params">(String dataId, String group, String tenant, <span class="keyword">long</span> lastModified, String handleIp)</span> </span>&#123;</span><br><span class="line">        dump(dataId, group, tenant, lastModified, handleIp, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dump</span><span class="params">(String dataId, String group, String tenant, <span class="keyword">long</span> lastModified, String handleIp, <span class="keyword">boolean</span> isBeta)</span> </span>&#123;</span><br><span class="line">        String groupKey = GroupKey2.getKey(dataId, group, tenant);</span><br><span class="line">        dumpTaskMgr.addTask(groupKey, <span class="keyword">new</span> DumpTask(groupKey, lastModified, handleIp, isBeta));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>DumpProcessor</code></strong>处理器中，首先通过<strong><code>PersistService</code></strong>的<strong><code>findConfigInfo</code></strong>方法<strong>从数据库查询最新的数据</strong>，然后将<strong>变更信息即最新数据</strong>封装成了<strong><code>ConfigDumpEvent</code></strong>事件，通过<strong><code>DumpConfigHandler</code></strong>的<strong><code>configDump</code></strong>方法最终调用<strong><code>ConfigCacheService</code></strong>的<strong><code>dump</code></strong>方法将最新的数据更新到<strong>磁盘缓存文件</strong>中，以及<strong>缓存</strong>中并发布<strong><code>LocalDataChangeEvent</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DumpProcessor</span> <span class="keyword">implements</span> <span class="title">NacosTaskProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(NacosTask task)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> PersistService persistService = dumpService.getPersistService();</span><br><span class="line">        DumpTask dumpTask = (DumpTask) task;</span><br><span class="line">        String[] pair = GroupKey2.parseKey(dumpTask.getGroupKey());</span><br><span class="line">        String dataId = pair[<span class="number">0</span>];</span><br><span class="line">        String group = pair[<span class="number">1</span>];</span><br><span class="line">        String tenant = pair[<span class="number">2</span>];</span><br><span class="line">        <span class="keyword">long</span> lastModified = dumpTask.getLastModified();</span><br><span class="line">        String handleIp = dumpTask.getHandleIp();</span><br><span class="line">        <span class="keyword">boolean</span> isBeta = dumpTask.isBeta();</span><br><span class="line">        String tag = dumpTask.getTag();</span><br><span class="line">        ConfigDumpEvent.ConfigDumpEventBuilder build = ConfigDumpEvent.builder().namespaceId(tenant).dataId(dataId)</span><br><span class="line">            .group(group).isBeta(isBeta).tag(tag).lastModifiedTs(lastModified).handleIp(handleIp);</span><br><span class="line">        <span class="keyword">if</span> (isBeta) &#123;</span><br><span class="line">            <span class="comment">// beta发布，则dump数据，更新beta缓存，从数据库加载最新数据</span></span><br><span class="line">            ConfigInfo4Beta cf = persistService.findConfigInfo4Beta(dataId, group, tenant);</span><br><span class="line">            build.remove(Objects.isNull(cf));</span><br><span class="line">            build.betaIps(Objects.isNull(cf) ? <span class="keyword">null</span> : cf.getBetaIps());</span><br><span class="line">            build.content(Objects.isNull(cf) ? <span class="keyword">null</span> : cf.getContent());</span><br><span class="line">            <span class="keyword">return</span> DumpConfigHandler.configDump(build.build());</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (StringUtils.isBlank(tag)) &#123;</span><br><span class="line">                ConfigInfo cf = persistService.findConfigInfo(dataId, group, tenant); <span class="comment">// 从数据库加载最新数据</span></span><br><span class="line">                build.remove(Objects.isNull(cf));</span><br><span class="line">                build.content(Objects.isNull(cf) ? <span class="keyword">null</span> : cf.getContent());</span><br><span class="line">                build.type(Objects.isNull(cf) ? <span class="keyword">null</span> : cf.getType());</span><br><span class="line">                <span class="keyword">return</span> DumpConfigHandler.configDump(build.build());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                ConfigInfo4Tag cf = persistService.findConfigInfo4Tag(dataId, group, tenant, tag);  <span class="comment">// 从数据库加载最新数据</span></span><br><span class="line">                build.remove(Objects.isNull(cf));</span><br><span class="line">                build.content(Objects.isNull(cf) ? <span class="keyword">null</span> : cf.getContent());</span><br><span class="line">                <span class="keyword">return</span> DumpConfigHandler.configDump(build.build());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DumpConfigHandler</span> <span class="keyword">extends</span> <span class="title">Subscriber</span>&lt;<span class="title">ConfigDumpEvent</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">configDump</span><span class="params">(ConfigDumpEvent event)</span> </span>&#123; <span class="comment">// 该方法删除了多余代码逻辑</span></span><br><span class="line">        <span class="keyword">final</span> String dataId = event.getDataId();</span><br><span class="line">        <span class="keyword">final</span> String group = event.getGroup();</span><br><span class="line">        <span class="keyword">final</span> String namespaceId = event.getNamespaceId();</span><br><span class="line">        <span class="keyword">final</span> String content = event.getContent();</span><br><span class="line">        <span class="keyword">final</span> String type = event.getType();</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">long</span> lastModified = event.getLastModifiedTs();</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isBlank(event.getTag())) &#123;</span><br><span class="line">            <span class="keyword">if</span> (dataId.equals(AggrWhitelist.AGGRIDS_METADATA)) &#123;</span><br><span class="line">                AggrWhitelist.load(content);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (dataId.equals(ClientIpWhiteList.CLIENT_IP_WHITELIST_METADATA)) &#123;</span><br><span class="line">                ClientIpWhiteList.load(content);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (dataId.equals(SwitchService.SWITCH_META_DATAID)) &#123;</span><br><span class="line">                SwitchService.load(content);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">boolean</span> result;</span><br><span class="line">            <span class="keyword">if</span> (!event.isRemove()) &#123;</span><br><span class="line">                result = ConfigCacheService.dump(dataId, group, namespaceId, content, lastModified, type);</span><br><span class="line">                <span class="keyword">if</span> (result) &#123;</span><br><span class="line">                    ConfigTraceService.logDumpEvent(dataId, group, namespaceId, <span class="keyword">null</span>, lastModified, event.getHandleIp(), ConfigTraceService.DUMP_EVENT_OK, System.currentTimeMillis() - lastModified, content.length());</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                result = ConfigCacheService.remove(dataId, group, namespaceId);</span><br><span class="line">                <span class="keyword">if</span> (result) &#123;</span><br><span class="line">                    ConfigTraceService.logDumpEvent(dataId, group, namespaceId, <span class="keyword">null</span>, lastModified, event.getHandleIp(), ConfigTraceService.DUMP_EVENT_REMOVE_OK, System.currentTimeMillis() - lastModified, <span class="number">0</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> result;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Nacos配置中心Client原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">SpringBoot资源加载</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Seata集成原理 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="分布式事务">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Seata的集成包括两部分，一部分是对@GlobalTransactional、@GlobalLock等分布式事务注解的支持，一方面是对分支事务用到的一些RPC组件的处理，如RestTemplate、Feign以及添加SeataHandlerInterceptor等。 对于@GlobalTransactional、@GlobalLock等分布式事务注解支持是通过SeataAutoConfigura">
+<meta name="keywords" content="分布式事务">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Seata集成原理">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/seata/Seata集成原理/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Seata的集成包括两部分，一部分是对@GlobalTransactional、@GlobalLock等分布式事务注解的支持，一方面是对分支事务用到的一些RPC组件的处理，如RestTemplate、Feign以及添加SeataHandlerInterceptor等。 对于@GlobalTransactional、@GlobalLock等分布式事务注解支持是通过SeataAutoConfigura">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2021-11-09T13:58:02.782Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Seata集成原理">
+<meta name="twitter:description" content="Seata的集成包括两部分，一部分是对@GlobalTransactional、@GlobalLock等分布式事务注解的支持，一方面是对分支事务用到的一些RPC组件的处理，如RestTemplate、Feign以及添加SeataHandlerInterceptor等。 对于@GlobalTransactional、@GlobalLock等分布式事务注解支持是通过SeataAutoConfigura">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-Cloud/seata/Seata集成原理" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/seata/">seata</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/分布式事务/">分布式事务</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/seata/Seata集成原理/">
+            <time datetime="2021-11-07T16:00:00.000Z" itemprop="datePublished">2021-11-08</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Seata集成原理
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>Seata的集成包括两部分，一部分是对<strong><code>@GlobalTransactional</code></strong>、<strong><code>@GlobalLock</code></strong>等<strong>分布式事务</strong>注解的支持，一方面是对分支事务用到的一些RPC组件的处理，如<strong><code>RestTemplate</code></strong>、<strong><code>Feign</code></strong>以及添加<strong><code>SeataHandlerInterceptor</code></strong>等。</p>
+<p>对于<strong><code>@GlobalTransactional</code></strong>、<strong><code>@GlobalLock</code></strong>等<strong>分布式事务</strong>注解支持是通过<strong><code>SeataAutoConfiguration</code></strong>配置类中注入的<strong><code>GlobalTransactionScanner</code></strong>来完成。该类实现了<strong><code>InitializingBean</code></strong>接口在其初始化时，会通过<strong><code>afterPropertiesSet</code></strong>方法初始化<strong>资源管理器<code>RMClient</code></strong>和<strong>事务管理器<code>TMClient</code></strong>。且该类还实现了<strong><code>AbstractAutoProxyCreator</code></strong>接口，在Bean初始化时通过后置处理器给Bean上或Bean的方法上带有<strong><code>@GlobalTransactional</code></strong>、<strong><code>@GlobalLock</code></strong>注解的Bean创建代理。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@ComponentScan</span>(basePackages = <span class="string">"io.seata.spring.boot.autoconfigure.properties"</span>)</span><br><span class="line"><span class="meta">@ConditionalOnProperty</span>(prefix = StarterConstants.SEATA_PREFIX, name = <span class="string">"enabled"</span>, havingValue = <span class="string">"true"</span>, matchIfMissing = <span class="keyword">true</span>)</span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@EnableConfigurationProperties</span>(&#123;SeataProperties<span class="class">.<span class="keyword">class</span>&#125;)</span></span><br><span class="line"><span class="class"><span class="title">public</span> <span class="title">class</span> <span class="title">SeataAutoConfiguration</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="meta">@DependsOn</span>(&#123;BEAN_NAME_SPRING_APPLICATION_CONTEXT_PROVIDER, BEAN_NAME_FAILURE_HANDLER&#125;)</span><br><span class="line">    <span class="meta">@ConditionalOnMissingBean</span>(GlobalTransactionScanner<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">    <span class="title">public</span> <span class="title">GlobalTransactionScanner</span> <span class="title">globalTransactionScanner</span>(<span class="title">SeataProperties</span> <span class="title">seataProperties</span>, <span class="title">FailureHandler</span> <span class="title">failureHandler</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> GlobalTransactionScanner(seataProperties.getApplicationId(), seataProperties.getTxServiceGroup(), failureHandler);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GlobalTransactionScanner</span> <span class="keyword">extends</span> <span class="title">AbstractAutoProxyCreator</span> <span class="keyword">implements</span> <span class="title">ConfigurationChangeListener</span>, <span class="title">InitializingBean</span>, <span class="title">ApplicationContextAware</span>, <span class="title">DisposableBean</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterPropertiesSet</span><span class="params">()</span> </span>&#123; <span class="comment">// 初始化TMClient以及RMClient</span></span><br><span class="line">        ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, (ConfigurationChangeListener)<span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">if</span> (disableGlobalTransaction) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (initialized.compareAndSet(<span class="keyword">false</span>, <span class="keyword">true</span>)) &#123;</span><br><span class="line">            initClient();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initClient</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isNullOrEmpty(applicationId) || StringUtils.isNullOrEmpty(txServiceGroup)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(String.format(<span class="string">"applicationId: %s, txServiceGroup: %s"</span>, applicationId, txServiceGroup));</span><br><span class="line">        &#125;</span><br><span class="line">        TMClient.init(applicationId, txServiceGroup, accessKey, secretKey); <span class="comment">// 初始化TMClient</span></span><br><span class="line">        RMClient.init(applicationId, txServiceGroup); <span class="comment">// 初始化RMClient</span></span><br><span class="line">        registerSpringShutdownHook();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> Object <span class="title">wrapIfNecessary</span><span class="params">(Object bean, String beanName, Object cacheKey)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123; <span class="comment">// AOP逻辑，初始化Bean的后置处理器中调用此方法，添加全局事务拦截器</span></span><br><span class="line">            <span class="keyword">synchronized</span> (PROXYED_SET) &#123;</span><br><span class="line">                <span class="keyword">if</span> (PROXYED_SET.contains(beanName)) &#123;</span><br><span class="line">                    <span class="keyword">return</span> bean;</span><br><span class="line">                &#125;</span><br><span class="line">                interceptor = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">if</span> (TCCBeanParserUtils.isTccAutoProxy(bean, beanName, applicationContext)) &#123; <span class="comment">// TCC模式</span></span><br><span class="line">                    interceptor = <span class="keyword">new</span> TccActionInterceptor(TCCBeanParserUtils.getRemotingDesc(beanName));</span><br><span class="line">                    ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, (ConfigurationChangeListener)interceptor);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123; <span class="comment">// 使用@GlobalTransactional或者@GlobalLock注解</span></span><br><span class="line">                    Class&lt;?&gt; serviceInterface = SpringProxyUtils.findTargetClass(bean);</span><br><span class="line">                    Class&lt;?&gt;[] interfacesIfJdk = SpringProxyUtils.findInterfaces(bean);</span><br><span class="line">                    <span class="keyword">if</span> (!existsAnnotation(<span class="keyword">new</span> Class[]&#123;serviceInterface&#125;) &amp;&amp; !existsAnnotation(interfacesIfJdk)) &#123;</span><br><span class="line">                        <span class="keyword">return</span> bean; <span class="comment">// 若不存在@GlobalTransactional注解直接跳过生成AOP代理</span></span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (interceptor == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">if</span> (globalTransactionalInterceptor == <span class="keyword">null</span>) &#123;</span><br><span class="line">                            globalTransactionalInterceptor = <span class="keyword">new</span> GlobalTransactionalInterceptor(failureHandlerHook);</span><br><span class="line">                            ConfigurationCache.addConfigListener(ConfigurationKeys.DISABLE_GLOBAL_TRANSACTION, (ConfigurationChangeListener)globalTransactionalInterceptor);</span><br><span class="line">                        &#125;</span><br><span class="line">                        interceptor = globalTransactionalInterceptor;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (!AopUtils.isAopProxy(bean)) &#123;</span><br><span class="line">                    bean = <span class="keyword">super</span>.wrapIfNecessary(bean, beanName, cacheKey);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    AdvisedSupport advised = SpringProxyUtils.getAdvisedSupport(bean);</span><br><span class="line">                    Advisor[] advisor = buildAdvisors(beanName, getAdvicesAndAdvisorsForBean(<span class="keyword">null</span>, <span class="keyword">null</span>, <span class="keyword">null</span>));</span><br><span class="line">                    <span class="keyword">for</span> (Advisor avr : advisor) &#123;</span><br><span class="line">                        advised.addAdvisor(<span class="number">0</span>, avr);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                PROXYED_SET.add(beanName);</span><br><span class="line">                <span class="keyword">return</span> bean;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception exx) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(exx);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">existsAnnotation</span><span class="params">(Class&lt;?&gt;[] classes)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (CollectionUtils.isNotEmpty(classes)) &#123;</span><br><span class="line">            <span class="keyword">for</span> (Class&lt;?&gt; clazz : classes) &#123;</span><br><span class="line">                <span class="keyword">if</span> (clazz == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                GlobalTransactional trxAnno = clazz.getAnnotation(GlobalTransactional<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">                <span class="keyword">if</span> (trxAnno != <span class="keyword">null</span>) &#123; <span class="comment">// 类上是否被标注@GlobalTransactional注解</span></span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                Method[] methods = clazz.getMethods();</span><br><span class="line">                <span class="keyword">for</span> (Method method : methods) &#123;</span><br><span class="line">                    trxAnno = method.getAnnotation(GlobalTransactional<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">                    <span class="keyword">if</span> (trxAnno != <span class="keyword">null</span>) &#123; <span class="comment">// 方法上是否被标注@GlobalTransactional注解</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    GlobalLock lockAnno = method.getAnnotation(GlobalLock<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">                    <span class="keyword">if</span> (lockAnno != <span class="keyword">null</span>) &#123;  <span class="comment">// 方法上是否被标注@GlobalLock注解</span></span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>执行带有<strong><code>@GlobalTransactional</code></strong>注解的方法执行时会被<strong><code>GlobalTransactionalInterceptor</code></strong>拦截调用其<strong><code>invoke</code></strong>方法。最终通过<strong><code>TransactionalTemplate</code></strong>的<strong><code>execute</code></strong>来执行<strong>全局事务</strong>方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">GlobalTransactionalInterceptor</span> <span class="keyword">implements</span> <span class="title">ConfigurationChangeListener</span>, <span class="title">MethodInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> TransactionalTemplate transactionalTemplate = <span class="keyword">new</span> TransactionalTemplate();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> GlobalLockTemplate globalLockTemplate = <span class="keyword">new</span> GlobalLockTemplate();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(<span class="keyword">final</span> MethodInvocation methodInvocation)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        Class&lt;?&gt; targetClass = methodInvocation.getThis() != <span class="keyword">null</span> ? AopUtils.getTargetClass(methodInvocation.getThis()) : <span class="keyword">null</span>;</span><br><span class="line">        Method specificMethod = ClassUtils.getMostSpecificMethod(methodInvocation.getMethod(), targetClass);</span><br><span class="line">        <span class="keyword">if</span> (specificMethod != <span class="keyword">null</span> &amp;&amp; !specificMethod.getDeclaringClass().equals(Object<span class="class">.<span class="keyword">class</span>)) </span>&#123;</span><br><span class="line">            <span class="keyword">final</span> Method method = BridgeMethodResolver.findBridgedMethod(specificMethod);</span><br><span class="line">            <span class="keyword">final</span> GlobalTransactional globalTransactionalAnnotation = getAnnotation(method, targetClass, GlobalTransactional<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            <span class="keyword">final</span> GlobalLock globalLockAnnotation = getAnnotation(method, targetClass, GlobalLock<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            <span class="keyword">boolean</span> localDisable = disable || (degradeCheck &amp;&amp; degradeNum &gt;= degradeCheckAllowTimes);</span><br><span class="line">            <span class="keyword">if</span> (!localDisable) &#123;</span><br><span class="line">                <span class="keyword">if</span> (globalTransactionalAnnotation != <span class="keyword">null</span>) &#123; <span class="comment">// 处理被标注了@GlobalTransactional注解的方法</span></span><br><span class="line">                    <span class="keyword">return</span> handleGlobalTransaction(methodInvocation, globalTransactionalAnnotation);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (globalLockAnnotation != <span class="keyword">null</span>) &#123; <span class="comment">// 处理被标注了@GlobalLock注解的方法</span></span><br><span class="line">                    <span class="keyword">return</span> handleGlobalLock(methodInvocation, globalLockAnnotation);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> methodInvocation.proceed();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function">Object <span class="title">handleGlobalTransaction</span><span class="params">(<span class="keyword">final</span> MethodInvocation methodInvocation, <span class="keyword">final</span> GlobalTransactional globalTrxAnno)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        <span class="keyword">boolean</span> succeed = <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> transactionalTemplate.execute(<span class="keyword">new</span> TransactionalExecutor() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> Object <span class="title">execute</span><span class="params">()</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">                    <span class="keyword">return</span> methodInvocation.proceed();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="function"><span class="keyword">public</span> String <span class="title">name</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                    String name = globalTrxAnno.name();</span><br><span class="line">                    <span class="keyword">if</span> (!StringUtils.isNullOrEmpty(name)) &#123;</span><br><span class="line">                        <span class="keyword">return</span> name; <span class="comment">// 在@GlobalTransactional注解中声明了事务名称</span></span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">return</span> formatMethod(methodInvocation.getMethod()); <span class="comment">// 被@GlobalTransactional注解标注的方法的签名</span></span><br><span class="line">                &#125;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> TransactionInfo <span class="title">getTransactionInfo</span><span class="params">()</span> </span>&#123; <span class="comment">// reset the value of timeout</span></span><br><span class="line">                    <span class="keyword">int</span> timeout = globalTrxAnno.timeoutMills(); <span class="comment">// 全局事务超时时间</span></span><br><span class="line">                    <span class="keyword">if</span> (timeout &lt;= <span class="number">0</span> || timeout == DEFAULT_GLOBAL_TRANSACTION_TIMEOUT) &#123;</span><br><span class="line">                        timeout = defaultGlobalTransactionTimeout;</span><br><span class="line">                    &#125;</span><br><span class="line">                    TransactionInfo transactionInfo = <span class="keyword">new</span> TransactionInfo();</span><br><span class="line">                    transactionInfo.setTimeOut(timeout);</span><br><span class="line">                    transactionInfo.setName(name());</span><br><span class="line">                    transactionInfo.setPropagation(globalTrxAnno.propagation());</span><br><span class="line">                    transactionInfo.setLockRetryInternal(globalTrxAnno.lockRetryInternal());</span><br><span class="line">                    transactionInfo.setLockRetryTimes(globalTrxAnno.lockRetryTimes());</span><br><span class="line">                    Set&lt;RollbackRule&gt; rollbackRules = <span class="keyword">new</span> LinkedHashSet&lt;&gt;();</span><br><span class="line">                    <span class="keyword">for</span> (Class&lt;?&gt; rbRule : globalTrxAnno.rollbackFor()) &#123;</span><br><span class="line">                        rollbackRules.add(<span class="keyword">new</span> RollbackRule(rbRule));</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">for</span> (String rbRule : globalTrxAnno.rollbackForClassName()) &#123;</span><br><span class="line">                        rollbackRules.add(<span class="keyword">new</span> RollbackRule(rbRule));</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">for</span> (Class&lt;?&gt; rbRule : globalTrxAnno.noRollbackFor()) &#123;</span><br><span class="line">                        rollbackRules.add(<span class="keyword">new</span> NoRollbackRule(rbRule));</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">for</span> (String rbRule : globalTrxAnno.noRollbackForClassName()) &#123;</span><br><span class="line">                        rollbackRules.add(<span class="keyword">new</span> NoRollbackRule(rbRule));</span><br><span class="line">                    &#125;</span><br><span class="line">                    transactionInfo.setRollbackRules(rollbackRules);</span><br><span class="line">                    <span class="keyword">return</span> transactionInfo;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (TransactionalExecutor.ExecutionException e) &#123;</span><br><span class="line">            TransactionalExecutor.Code code = e.getCode();</span><br><span class="line">            <span class="keyword">switch</span> (code) &#123;</span><br><span class="line">                <span class="keyword">case</span> RollbackDone:</span><br><span class="line">                    <span class="keyword">throw</span> e.getOriginalException();</span><br><span class="line">                <span class="keyword">case</span> BeginFailure:</span><br><span class="line">                    succeed = <span class="keyword">false</span>;</span><br><span class="line">                    failureHandler.onBeginFailure(e.getTransaction(), e.getCause());</span><br><span class="line">                    <span class="keyword">throw</span> e.getCause();</span><br><span class="line">                <span class="keyword">case</span> CommitFailure:</span><br><span class="line">                    succeed = <span class="keyword">false</span>;</span><br><span class="line">                    failureHandler.onCommitFailure(e.getTransaction(), e.getCause());</span><br><span class="line">                    <span class="keyword">throw</span> e.getCause();</span><br><span class="line">                <span class="keyword">case</span> RollbackFailure:</span><br><span class="line">                    failureHandler.onRollbackFailure(e.getTransaction(), e.getOriginalException());</span><br><span class="line">                    <span class="keyword">throw</span> e.getOriginalException();</span><br><span class="line">                <span class="keyword">case</span> RollbackRetrying:</span><br><span class="line">                    failureHandler.onRollbackRetrying(e.getTransaction(), e.getOriginalException());</span><br><span class="line">                    <span class="keyword">throw</span> e.getOriginalException();</span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ShouldNeverHappenException(String.format(<span class="string">"Unknown TransactionalExecutor.Code: %s"</span>, code));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (degradeCheck) &#123;</span><br><span class="line">                EVENT_BUS.post(<span class="keyword">new</span> DegradeCheckEvent(succeed));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>TransactionalTemplate</code></strong>中是全局事务的核心逻辑，首先获取当前全局事务，若<strong>不为空则说明是嵌套事务</strong>，则将交易角色设置为<strong><code>GlobalTransactionRole.Participant</code></strong>，然后根据事务的传播属性做相应的处理，若为<strong>新事务</strong>则创建角色为<strong><code>GlobalTransactionRole.Launcher</code></strong>的新事务，且发送<strong><code>beginTransaction</code></strong>的请求给<strong>事务协调者<code>TC</code></strong>获取全局事务的<strong><code>Xid</code></strong>。然后执行业务逻辑，在业务逻辑中有分支事务的对分支事务处理，若发生异常则有<strong><code>Launcher</code></strong>角色向<strong>事务协调者TC</strong>发送回滚请求，从而<strong>通过<code>undo_log</code>回滚所有分支事务</strong>，若事务成功也是由<strong><code>Launcher</code></strong>角色向<strong>事务协调者TC</strong>发送提交请求。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TransactionalTemplate</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">execute</span><span class="params">(TransactionalExecutor business)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        <span class="comment">// 1. Get transactionInfo</span></span><br><span class="line">        TransactionInfo txInfo = business.getTransactionInfo();</span><br><span class="line">        <span class="keyword">if</span> (txInfo == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> ShouldNeverHappenException(<span class="string">"transactionInfo does not exist"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 获取当前全局事务，若不为空，则交易角色为GlobalTransactionRole.Participant</span></span><br><span class="line">        GlobalTransaction tx = GlobalTransactionContext.getCurrent();</span><br><span class="line">        Propagation propagation = txInfo.getPropagation(); <span class="comment">// 获取当前全局事务的传播属性</span></span><br><span class="line">        SuspendedResourcesHolder suspendedResourcesHolder = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">switch</span> (propagation) &#123; <span class="comment">// 根据事务的传播属性做相应的处理</span></span><br><span class="line">                <span class="keyword">case</span> NOT_SUPPORTED: <span class="comment">// 若事务存在，则将其暂停</span></span><br><span class="line">                    <span class="keyword">if</span> (existingTransaction(tx)) &#123;</span><br><span class="line">                        suspendedResourcesHolder = tx.suspend();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">return</span> business.execute(); <span class="comment">// 若不存在事务则直接执行业务方法</span></span><br><span class="line">                <span class="keyword">case</span> REQUIRES_NEW: <span class="comment">// 若事务存在，则暂停它，然后开始新的事务</span></span><br><span class="line">                    <span class="keyword">if</span> (existingTransaction(tx)) &#123;</span><br><span class="line">                        suspendedResourcesHolder = tx.suspend();</span><br><span class="line">                        tx = GlobalTransactionContext.createNew();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">break</span>; <span class="comment">// 继续执行新的事务</span></span><br><span class="line">                <span class="keyword">case</span> SUPPORTS: <span class="comment">// 若事务不存在，则在没有事务的情况下执行</span></span><br><span class="line">                    <span class="keyword">if</span> (notExistingTransaction(tx)) &#123;</span><br><span class="line">                        <span class="keyword">return</span> business.execute();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">break</span>; <span class="comment">// 若事务存在，继续执行事务</span></span><br><span class="line">                <span class="keyword">case</span> REQUIRED: <span class="comment">// 若当前事务存在，则使用当前事务执行，否则继续并使用新事务执行</span></span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> NEVER: <span class="comment">// 若事务存在，则抛出异常</span></span><br><span class="line">                    <span class="keyword">if</span> (existingTransaction(tx)) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> TransactionException(String.format(<span class="string">"Existing transaction found for transaction marked with propagation 'never', xid = %s"</span>, tx.getXid()));</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123; <span class="comment">// 直接执行业务方法</span></span><br><span class="line">                        <span class="keyword">return</span> business.execute();</span><br><span class="line">                    &#125;</span><br><span class="line">                <span class="keyword">case</span> MANDATORY: <span class="comment">// 事务不存在，则抛出异常。</span></span><br><span class="line">                    <span class="keyword">if</span> (notExistingTransaction(tx)) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> TransactionException(<span class="string">"No existing transaction found for transaction marked with propagation 'mandatory'"</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">break</span>; <span class="comment">// 继续并执行当前事务。</span></span><br><span class="line">                <span class="keyword">default</span>:</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> TransactionException(<span class="string">"Not Supported Propagation:"</span> + propagation);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (tx == <span class="keyword">null</span>) &#123; <span class="comment">// 若当前全局事务为null，则创建角色为GlobalTransactionRole.Launcher的新事务</span></span><br><span class="line">                tx = GlobalTransactionContext.createNew();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// set current tx config to holder</span></span><br><span class="line">            GlobalLockConfig previousConfig = replaceGlobalLockConfig(txInfo);</span><br><span class="line">            <span class="keyword">try</span> &#123;<span class="comment">// 若tx角色是GlobalTransactionRole.Launcher，则发送beginTransaction的请求给TC，否则什么都不做</span></span><br><span class="line">                beginTransaction(txInfo, tx); <span class="comment">// 开启全局事务</span></span><br><span class="line">                Object rs;</span><br><span class="line">                <span class="keyword">try</span> &#123;<span class="comment">// Do Your Business</span></span><br><span class="line">                    rs = business.execute(); <span class="comment">// 执行业务逻辑</span></span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable ex) &#123; <span class="comment">// 回滚所需的业务异常</span></span><br><span class="line">                    completeTransactionAfterThrowing(txInfo, tx, ex);</span><br><span class="line">                    <span class="keyword">throw</span> ex;</span><br><span class="line">                &#125;</span><br><span class="line">                commitTransaction(tx); <span class="comment">// 提交全局事务</span></span><br><span class="line">                <span class="keyword">return</span> rs;</span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123; <span class="comment">//5. clear</span></span><br><span class="line">                resumeGlobalLockConfig(previousConfig);</span><br><span class="line">                triggerAfterCompletion();</span><br><span class="line">                cleanUp();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123; <span class="comment">// If the transaction is suspended, resume it.</span></span><br><span class="line">            <span class="keyword">if</span> (suspendedResourcesHolder != <span class="keyword">null</span>) &#123;</span><br><span class="line">                tx.resume(suspendedResourcesHolder);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="数据源代理"><a href="#数据源代理" class="headerlink" title="数据源代理"></a>数据源代理</h4><p>不仅仅需要对<strong><code>@GlobalTransactional</code></strong>注解的支持，还需要对数据源<strong><code>DataSource</code></strong>对象创建<strong><code>DataSourceProxy</code></strong>代理。该逻辑是在<strong><code>SeataAutoConfiguration</code></strong>配置类中的<strong><code>SeataDataSourceConfiguration</code></strong>来完成。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@ConditionalOnProperty</span>(prefix = StarterConstants.SEATA_PREFIX, name = &#123;<span class="string">"enableAutoDataSourceProxy"</span>, <span class="string">"enable-auto-data-source-proxy"</span>&#125;, havingValue = <span class="string">"true"</span>, matchIfMissing = <span class="keyword">true</span>)</span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataDataSourceConfiguration</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Bean</span>(BEAN_NAME_SEATA_DATA_SOURCE_BEAN_POST_PROCESSOR)</span><br><span class="line">    <span class="meta">@ConditionalOnMissingBean</span>(SeataDataSourceBeanPostProcessor<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">    <span class="title">public</span> <span class="title">SeataDataSourceBeanPostProcessor</span> <span class="title">seataDataSourceBeanPostProcessor</span>(<span class="title">SeataProperties</span> <span class="title">seataProperties</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> SeataDataSourceBeanPostProcessor(seataProperties.getExcludesForAutoProxying(), seataProperties.getDataSourceProxyMode());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Bean</span>(BEAN_NAME_SEATA_AUTO_DATA_SOURCE_PROXY_CREATOR)</span><br><span class="line">    <span class="meta">@ConditionalOnMissingBean</span>(SeataAutoDataSourceProxyCreator<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">    <span class="title">public</span> <span class="title">SeataAutoDataSourceProxyCreator</span> <span class="title">seataAutoDataSourceProxyCreator</span>(<span class="title">SeataProperties</span> <span class="title">seataProperties</span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> SeataAutoDataSourceProxyCreator(seataProperties.isUseJdkProxy(), seataProperties.getExcludesForAutoProxying(), seataProperties.getDataSourceProxyMode());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先通过<strong><code>SeataDataSourceBeanPostProcessor</code></strong>后置处理器，在<strong><code>DataSource</code></strong>初始化完成后创建一个<strong><code>DataSourceProxy</code></strong>代理将其缓存到<strong><code>dataSourceProxyMap</code></strong>中。然后通过<strong><code>AbstractAutoProxyCreator</code></strong>的子类<strong><code>SeataAutoDataSourceProxyCreator</code></strong>给所有的<strong><code>DataSource</code></strong>真正的创建代理，在执行所有的<strong><code>DataSource</code></strong>的方法时会调用<strong><code>SeataAutoDataSourceProxyAdvice</code></strong>的<strong><code>Invoke</code></strong>方法，从<strong><code>dataSourceProxyMap</code></strong>中获取对应的缓存的代理对象，从而调用代理对象中的方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataDataSourceBeanPostProcessor</span> <span class="keyword">implements</span> <span class="title">BeanPostProcessor</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> List&lt;String&gt; excludes;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> BranchType dataSourceProxyMode;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SeataDataSourceBeanPostProcessor</span><span class="params">(String[] excludes, String dataSourceProxyMode)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.excludes = Arrays.asList(excludes);</span><br><span class="line">        <span class="keyword">this</span>.dataSourceProxyMode = BranchType.XA.name().equalsIgnoreCase(dataSourceProxyMode) ? BranchType.XA : BranchType.AT;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">postProcessAfterInitialization</span><span class="params">(Object bean, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (bean <span class="keyword">instanceof</span> DataSource) &#123; <span class="comment">// 给数据源创建代理对象</span></span><br><span class="line">            <span class="comment">//When not in the excludes, put and init proxy.</span></span><br><span class="line">            <span class="keyword">if</span> (!excludes.contains(bean.getClass().getName())) &#123; <span class="comment">// 对代理对象初始化</span></span><br><span class="line">                DataSourceProxyHolder.get().putDataSource((DataSource) bean, dataSourceProxyMode);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (bean <span class="keyword">instanceof</span> SeataDataSourceProxy) &#123;</span><br><span class="line">                <span class="keyword">return</span> ((SeataDataSourceProxy) bean).getTargetDataSource();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> bean;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataSourceProxyHolder</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> MAP_INITIAL_CAPACITY = <span class="number">8</span>;</span><br><span class="line">    <span class="keyword">private</span> ConcurrentHashMap&lt;DataSource, SeataDataSourceProxy&gt; dataSourceProxyMap;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> SeataDataSourceProxy <span class="title">putDataSource</span><span class="params">(DataSource dataSource, BranchType dataSourceProxyMode)</span> </span>&#123;</span><br><span class="line">        DataSource originalDataSource;</span><br><span class="line">        <span class="keyword">if</span> (dataSource <span class="keyword">instanceof</span> SeataDataSourceProxy) &#123;</span><br><span class="line">            SeataDataSourceProxy dataSourceProxy = (SeataDataSourceProxy) dataSource;</span><br><span class="line">            <span class="keyword">if</span> (dataSourceProxyMode == dataSourceProxy.getBranchType()) &#123;</span><br><span class="line">                <span class="keyword">return</span> (SeataDataSourceProxy)dataSource;</span><br><span class="line">            &#125;</span><br><span class="line">            originalDataSource = dataSourceProxy.getTargetDataSource();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            originalDataSource = dataSource;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> CollectionUtils.computeIfAbsent(<span class="keyword">this</span>.dataSourceProxyMap, originalDataSource, BranchType.XA == dataSourceProxyMode ? DataSourceProxyXA::<span class="keyword">new</span> : DataSourceProxy::<span class="keyword">new</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataAutoDataSourceProxyCreator</span> <span class="keyword">extends</span> <span class="title">AbstractAutoProxyCreator</span> </span>&#123; <span class="comment">// 给DataSource自动创建代理</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SeataAutoDataSourceProxyCreator</span><span class="params">(<span class="keyword">boolean</span> useJdkProxy, String[] excludes, String dataSourceProxyMode)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.excludes = Arrays.asList(excludes);</span><br><span class="line">        <span class="keyword">this</span>.advisor = <span class="keyword">new</span> DefaultIntroductionAdvisor(<span class="keyword">new</span> SeataAutoDataSourceProxyAdvice(dataSourceProxyMode));</span><br><span class="line">        setProxyTargetClass(!useJdkProxy);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">shouldSkip</span><span class="params">(Class&lt;?&gt; beanClass, String beanName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> !DataSource<span class="class">.<span class="keyword">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">beanClass</span>) || <span class="title">SeataProxy</span>.<span class="title">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">beanClass</span>) || <span class="title">excludes</span>.<span class="title">contains</span>(<span class="title">beanClass</span>.<span class="title">getName</span>())</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataAutoDataSourceProxyAdvice</span> <span class="keyword">implements</span> <span class="title">MethodInterceptor</span>, <span class="title">IntroductionInfo</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> BranchType dataSourceProxyMode;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Class&lt;? extends SeataDataSourceProxy&gt; dataSourceProxyClazz;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">SeataAutoDataSourceProxyAdvice</span><span class="params">(String dataSourceProxyMode)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (BranchType.AT.name().equalsIgnoreCase(dataSourceProxyMode)) &#123;</span><br><span class="line">            <span class="keyword">this</span>.dataSourceProxyMode = BranchType.AT;</span><br><span class="line">            <span class="keyword">this</span>.dataSourceProxyClazz = DataSourceProxy<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (BranchType.XA.name().equalsIgnoreCase(dataSourceProxyMode)) &#123;</span><br><span class="line">            <span class="keyword">this</span>.dataSourceProxyMode = BranchType.XA;</span><br><span class="line">            <span class="keyword">this</span>.dataSourceProxyClazz = DataSourceProxyXA<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Unknown dataSourceProxyMode: "</span> + dataSourceProxyMode);</span><br><span class="line">        &#125;</span><br><span class="line">        RootContext.setDefaultBranchType(<span class="keyword">this</span>.dataSourceProxyMode);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(MethodInvocation invocation)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!RootContext.requireGlobalLock() &amp;&amp; dataSourceProxyMode != RootContext.getBranchType()) &#123;</span><br><span class="line">            <span class="keyword">return</span> invocation.proceed();</span><br><span class="line">        &#125;</span><br><span class="line">        Method method = invocation.getMethod();</span><br><span class="line">        Object[] args = invocation.getArguments();</span><br><span class="line">        Method m = BeanUtils.findDeclaredMethod(dataSourceProxyClazz, method.getName(), method.getParameterTypes());</span><br><span class="line">        <span class="keyword">if</span> (m != <span class="keyword">null</span>) &#123;</span><br><span class="line">            SeataDataSourceProxy dataSourceProxy = DataSourceProxyHolder.get().putDataSource((DataSource) invocation.getThis(), dataSourceProxyMode);</span><br><span class="line">            <span class="keyword">return</span> m.invoke(dataSourceProxy, args); <span class="comment">// 调用DataSourceProxy的代理方法</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> invocation.proceed();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> Class&lt;?&gt;[] getInterfaces() &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Class[]&#123;SeataProxy<span class="class">.<span class="keyword">class</span>&#125;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>DataSourceProxy</code></strong>中创建了<strong><code>Connection</code></strong>的代理对象<strong><code>ConnectionProxy</code></strong>， 在<strong><code>ConnectionProxy</code></strong>重写了事务的提交回滚等方法，且在其超类<strong><code>AbstractConnectionProxy</code></strong>中为<strong><code>Statement</code></strong>和<strong><code>PreparedStatement</code></strong>也生成了代理对象<strong><code>StatementProxy</code></strong>和<strong><code>PreparedStatementProxy</code></strong>。在这些类中相应的扩展从而实现了分布式事务的相关逻辑。从此也可以知道<strong><code>Seata</code>的<code>AT</code>模式是依赖于数据库本地事务</strong>的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataSourceProxy</span> <span class="keyword">extends</span> <span class="title">AbstractDataSourceProxy</span> <span class="keyword">implements</span> <span class="title">Resource</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ConnectionProxy <span class="title">getConnection</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        Connection targetConnection = targetDataSource.getConnection();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ConnectionProxy(<span class="keyword">this</span>, targetConnection);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConnectionProxy</span> <span class="keyword">extends</span> <span class="title">AbstractConnectionProxy</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">commit</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            LOCK_RETRY_POLICY.execute(() -&gt; &#123;</span><br><span class="line">                doCommit();</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (SQLException e) &#123;</span><br><span class="line">            <span class="keyword">if</span> (targetConnection != <span class="keyword">null</span> &amp;&amp; !getAutoCommit()) &#123;</span><br><span class="line">                rollback();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> SQLException(e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">rollback</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        targetConnection.rollback();</span><br><span class="line">        <span class="keyword">if</span> (context.inGlobalTransaction() &amp;&amp; context.isBranchRegistered()) &#123;</span><br><span class="line">            report(<span class="keyword">false</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        context.reset();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setAutoCommit</span><span class="params">(<span class="keyword">boolean</span> autoCommit)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> ((context.inGlobalTransaction() || context.isGlobalLockRequire()) &amp;&amp; autoCommit &amp;&amp; !getAutoCommit()) &#123;</span><br><span class="line">            doCommit();</span><br><span class="line">        &#125;</span><br><span class="line">        targetConnection.setAutoCommit(autoCommit);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractConnectionProxy</span> <span class="keyword">implements</span> <span class="title">Connection</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Statement <span class="title">createStatement</span><span class="params">()</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        Statement targetStatement = getTargetConnection().createStatement();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> StatementProxy(<span class="keyword">this</span>, targetStatement);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> PreparedStatement <span class="title">prepareStatement</span><span class="params">(String sql)</span> <span class="keyword">throws</span> SQLException </span>&#123;</span><br><span class="line">        String dbType = getDbType();</span><br><span class="line">        PreparedStatement targetPreparedStatement = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">if</span> (BranchType.AT == RootContext.getBranchType()) &#123;</span><br><span class="line">            List&lt;SQLRecognizer&gt; sqlRecognizers = SQLVisitorFactory.get(sql, dbType);</span><br><span class="line">            <span class="keyword">if</span> (sqlRecognizers != <span class="keyword">null</span> &amp;&amp; sqlRecognizers.size() == <span class="number">1</span>) &#123;</span><br><span class="line">                SQLRecognizer sqlRecognizer = sqlRecognizers.get(<span class="number">0</span>);</span><br><span class="line">                <span class="keyword">if</span> (sqlRecognizer != <span class="keyword">null</span> &amp;&amp; sqlRecognizer.getSQLType() == SQLType.INSERT) &#123;</span><br><span class="line">                    TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dbType).getTableMeta(getTargetConnection(), sqlRecognizer.getTableName(), getDataSourceProxy().getResourceId());</span><br><span class="line">                    String[] pkNameArray = <span class="keyword">new</span> String[tableMeta.getPrimaryKeyOnlyName().size()];</span><br><span class="line">                    tableMeta.getPrimaryKeyOnlyName().toArray(pkNameArray);</span><br><span class="line">                    targetPreparedStatement = getTargetConnection().prepareStatement(sql,pkNameArray);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (targetPreparedStatement == <span class="keyword">null</span>) &#123;</span><br><span class="line">            targetPreparedStatement = getTargetConnection().prepareStatement(sql);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> PreparedStatementProxy(<span class="keyword">this</span>, targetPreparedStatement, sql);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="RPC集成"><a href="#RPC集成" class="headerlink" title="RPC集成"></a>RPC集成</h4><p>对于<strong><code>RestTemplate</code></strong>的集成是通过<strong><code>SeataRestTemplateAutoConfiguration</code></strong>配置类来完成的，通过<strong><code>@PostConstruct</code></strong>注解标注的初始化方法中给<strong><code>RestTemplate</code></strong>添加<strong><code>SeataRestTemplateInterceptor</code></strong>拦截器。该拦截器的作用就是若当前<strong>全局事务</strong>的<strong><code>Xid</code></strong>存在，则将其设置到请求的<strong><code>header</code></strong>中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span>(proxyBeanMethods = <span class="keyword">false</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataRestTemplateAutoConfiguration</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> SeataRestTemplateInterceptor <span class="title">seataRestTemplateInterceptor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> SeataRestTemplateInterceptor();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Autowired</span>(required = <span class="keyword">false</span>)</span><br><span class="line">    <span class="keyword">private</span> Collection&lt;RestTemplate&gt; restTemplates;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> SeataRestTemplateInterceptor seataRestTemplateInterceptor;</span><br><span class="line">    <span class="meta">@PostConstruct</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.restTemplates != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">for</span> (RestTemplate restTemplate : restTemplates) &#123;</span><br><span class="line">                List&lt;ClientHttpRequestInterceptor&gt; interceptors = <span class="keyword">new</span> ArrayList&lt;ClientHttpRequestInterceptor&gt;(restTemplate.getInterceptors());</span><br><span class="line">                interceptors.add(<span class="keyword">this</span>.seataRestTemplateInterceptor);</span><br><span class="line">                restTemplate.setInterceptors(interceptors);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataRestTemplateInterceptor</span> <span class="keyword">implements</span> <span class="title">ClientHttpRequestInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ClientHttpResponse <span class="title">intercept</span><span class="params">(HttpRequest httpRequest, <span class="keyword">byte</span>[] bytes, ClientHttpRequestExecution clientHttpRequestExecution)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        HttpRequestWrapper requestWrapper = <span class="keyword">new</span> HttpRequestWrapper(httpRequest);</span><br><span class="line">        String xid = RootContext.getXID();</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.isEmpty(xid)) &#123;</span><br><span class="line">            requestWrapper.getHeaders().add(RootContext.KEY_XID, xid);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> clientHttpRequestExecution.execute(requestWrapper, bytes);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于Feign的集成是通过<strong><code>SeataFeignClientAutoConfiguration</code></strong>中的内部配置类<strong><code>FeignBeanPostProcessorConfiguration</code></strong>中导入的后置处理器来完成，主要是通过<strong><code>SeataFeignObjectWrapper</code></strong>给<strong><code>Client</code></strong>对象创建了一个<strong><code>SeataFeignClient</code></strong>代理，在该代理中会将全局事务的<strong><code>Xid</code></strong>设置到<strong><code>Header</code></strong>中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span>(proxyBeanMethods = <span class="keyword">false</span>)</span><br><span class="line"><span class="meta">@ConditionalOnClass</span>(Client<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">@<span class="title">AutoConfigureBefore</span>(<span class="title">FeignAutoConfiguration</span>.<span class="title">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> <span class="title">class</span> <span class="title">SeataFeignClientAutoConfiguration</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Configuration</span>(proxyBeanMethods = <span class="keyword">false</span>)</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">FeignBeanPostProcessorConfiguration</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Bean</span></span><br><span class="line">        <span class="function">SeataBeanPostProcessor <span class="title">seataBeanPostProcessor</span><span class="params">(SeataFeignObjectWrapper seataFeignObjectWrapper)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> SeataBeanPostProcessor(seataFeignObjectWrapper);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Bean</span></span><br><span class="line">        <span class="function">SeataContextBeanPostProcessor <span class="title">seataContextBeanPostProcessor</span><span class="params">(BeanFactory beanFactory)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> SeataContextBeanPostProcessor(beanFactory);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Bean</span></span><br><span class="line">        <span class="function">SeataFeignObjectWrapper <span class="title">seataFeignObjectWrapper</span><span class="params">(BeanFactory beanFactory)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> SeataFeignObjectWrapper(beanFactory);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataBeanPostProcessor</span> <span class="keyword">implements</span> <span class="title">BeanPostProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">postProcessBeforeInitialization</span><span class="params">(Object bean, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.seataFeignObjectWrapper.wrap(bean);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataFeignObjectWrapper</span> </span>&#123;</span><br><span class="line">    <span class="function">Object <span class="title">wrap</span><span class="params">(Object bean)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (bean <span class="keyword">instanceof</span> Client &amp;&amp; !(bean <span class="keyword">instanceof</span> SeataFeignClient)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (bean <span class="keyword">instanceof</span> LoadBalancerFeignClient) &#123;</span><br><span class="line">                LoadBalancerFeignClient client = ((LoadBalancerFeignClient) bean);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> SeataLoadBalancerFeignClient(client.getDelegate(), factory(), clientFactory(), <span class="keyword">this</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (bean <span class="keyword">instanceof</span> FeignBlockingLoadBalancerClient) &#123;</span><br><span class="line">                FeignBlockingLoadBalancerClient client = (FeignBlockingLoadBalancerClient) bean;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> SeataFeignBlockingLoadBalancerClient(client.getDelegate(), beanFactory.getBean(BlockingLoadBalancerClient<span class="class">.<span class="keyword">class</span>), <span class="title">this</span>)</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> SeataFeignClient(<span class="keyword">this</span>.beanFactory, (Client) bean);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> bean;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataFeignClient</span> <span class="keyword">implements</span> <span class="title">Client</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Response <span class="title">execute</span><span class="params">(Request request, Request.Options options)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        Request modifiedRequest = getModifyRequest(request);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.delegate.execute(modifiedRequest, options);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Request <span class="title">getModifyRequest</span><span class="params">(Request request)</span> </span>&#123;</span><br><span class="line">        String xid = RootContext.getXID();</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isEmpty(xid)) &#123;</span><br><span class="line">            <span class="keyword">return</span> request;</span><br><span class="line">        &#125;</span><br><span class="line">        Map&lt;String, Collection&lt;String&gt;&gt; headers = <span class="keyword">new</span> HashMap&lt;&gt;(MAP_SIZE);</span><br><span class="line">        headers.putAll(request.headers());</span><br><span class="line">        List&lt;String&gt; seataXid = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        seataXid.add(xid);</span><br><span class="line">        headers.put(RootContext.KEY_XID, seataXid);</span><br><span class="line">        <span class="keyword">return</span> Request.create(request.method(), request.url(), headers, request.body(), request.charset());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这是针对请求发送的处理，对于<strong>分支事务接收到请求时</strong>也需要获取到<strong>全局事务</strong>的<strong><code>Xid</code></strong>设置到<strong><code>RootContext</code></strong>中，该功能是通过<strong><code>SeataHandlerInterceptorConfiguration</code></strong>配置类中添加<strong><code>SeataHandlerInterceptor</code></strong>拦截器来完成的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@ConditionalOnWebApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataHandlerInterceptorConfiguration</span> <span class="keyword">implements</span> <span class="title">WebMvcConfigurer</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addInterceptors</span><span class="params">(InterceptorRegistry registry)</span> </span>&#123;</span><br><span class="line">        registry.addInterceptor(<span class="keyword">new</span> SeataHandlerInterceptor()).addPathPatterns(<span class="string">"/**"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SeataHandlerInterceptor</span> <span class="keyword">implements</span> <span class="title">HandlerInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">preHandle</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler)</span> </span>&#123;</span><br><span class="line">        String xid = RootContext.getXID();</span><br><span class="line">        String rpcXid = request.getHeader(RootContext.KEY_XID);</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isBlank(xid) &amp;&amp; rpcXid != <span class="keyword">null</span>) &#123;</span><br><span class="line">            RootContext.bind(rpcXid);</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterCompletion</span><span class="params">(HttpServletRequest request, HttpServletResponse response, Object handler, Exception e)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isNotBlank(RootContext.getXID())) &#123;</span><br><span class="line">            String rpcXid = request.getHeader(RootContext.KEY_XID);</span><br><span class="line">            <span class="keyword">if</span> (StringUtils.isEmpty(rpcXid)) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            String unbindXid = RootContext.unbind();</span><br><span class="line">            <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!rpcXid.equalsIgnoreCase(unbindXid)) &#123;</span><br><span class="line">                <span class="keyword">if</span> (unbindXid != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    RootContext.bind(unbindXid);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/seata/Seata分布式事务原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Seata分布式事务原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/sentinel/常见限流算法/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">常见限流算法</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

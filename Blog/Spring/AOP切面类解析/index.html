@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        AOP切面类解析 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Spring,AOP">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Spring AOP是通过给一个类加上@Aspect注解来定义一个切面类，定义一个Pointcut方法，最后定义一系列的增强方法，这样就完成一个对象的切面操作。 通过@EnableAspectJAutoProxy注解开启AOP切面，该注解类上@Import(AspectJAutoProxyRegistrar.class)注解中AspectJAutoProxyRegistrar实现了ImportBe">
+<meta name="keywords" content="Spring,AOP">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AOP切面类解析">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Spring/AOP切面类解析/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Spring AOP是通过给一个类加上@Aspect注解来定义一个切面类，定义一个Pointcut方法，最后定义一系列的增强方法，这样就完成一个对象的切面操作。 通过@EnableAspectJAutoProxy注解开启AOP切面，该注解类上@Import(AspectJAutoProxyRegistrar.class)注解中AspectJAutoProxyRegistrar实现了ImportBe">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Spring/AnnotationAwareAspectJAutoProxyCreator类图.png">
+<meta property="og:updated_time" content="2021-09-27T15:28:36.507Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="AOP切面类解析">
+<meta name="twitter:description" content="Spring AOP是通过给一个类加上@Aspect注解来定义一个切面类，定义一个Pointcut方法，最后定义一系列的增强方法，这样就完成一个对象的切面操作。 通过@EnableAspectJAutoProxy注解开启AOP切面，该注解类上@Import(AspectJAutoProxyRegistrar.class)注解中AspectJAutoProxyRegistrar实现了ImportBe">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Spring/AnnotationAwareAspectJAutoProxyCreator类图.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/seata/Seata集成原理/">Seata集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/HotSpot收集算法实现/">HotSpot收集算法实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载的时机/">类加载的时机</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK7/">ConcurrentHashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码分析JDK8/">ConcurrentHashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file active"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/">Welcome YingLong's Blog</a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+        
+        <section id="main"><article id="post-Spring/AOP切面类解析" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Spring/">Spring</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/AOP/">AOP</a>, <a class="tag-link" href="/tags/Spring/">Spring</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Spring/AOP切面类解析/">
+            <time datetime="2021-09-26T16:00:00.000Z" itemprop="datePublished">2021-09-27</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            AOP切面类解析
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>Spring AOP是通过给一个类加上<strong><code>@Aspect</code>注解</strong>来定义一个<strong>切面类</strong>，定义一个<strong><code>Pointcut</code></strong>方法，最后定义一系列的增强方法，这样就完成一个对象的切面操作。</p>
+<p>通过<strong><code>@EnableAspectJAutoProxy</code>注解</strong>开启AOP切面，该注解类上<strong><code>@Import(AspectJAutoProxyRegistrar.class)</code></strong>注解中<strong><code>AspectJAutoProxyRegistrar</code></strong>实现了<strong><code>ImportBeanDefinitionRegistrar</code></strong>，其会通过<strong><code>registerBeanDefinitions</code></strong>方法为容器导入为Bean创建代理<strong><code>beanName</code></strong>为<strong><code>internalAutoProxyCreator</code></strong>的关键<strong><code>beanDefinition</code></strong>。type为<strong><code>AnnotationAwareAspectJAutoProxyCreator</code></strong>。</p>
+<p><img src="../../../../images/Spring/AnnotationAwareAspectJAutoProxyCreator类图.png" alt></p>
+<p><strong><code>@Import</code></strong>中<strong><code>ImportBeanDefinitionRegistrar</code></strong>接口<strong><code>registerBeanDefinitions</code></strong>方法<strong>调用时机</strong>是在<strong><code>invokeBeanFactoryPostProcessors</code></strong>的<strong><code>invokeBeanFactoryPostProcessors</code></strong>中<strong>解析完配置类后</strong>调用<strong><code>ConfigurationClassBeanDefinitionReader</code></strong>的<strong><code>loadBeanDefinitions</code></strong>方法，即在Bean实例化之前。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">AspectJAutoProxyRegistrar</span> <span class="keyword">implements</span> <span class="title">ImportBeanDefinitionRegistrar</span> </span>&#123;</span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerBeanDefinitions</span><span class="params">(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">      <span class="comment">// 注册名字internalAutoProxyCreator的AnnotationAwareAspectJAutoProxyCreator</span></span><br><span class="line">      AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);</span><br><span class="line">      <span class="comment">// 获得注解的属性</span></span><br><span class="line">      AnnotationAttributes enableAspectJAutoProxy = AnnotationConfigUtils.attributesFor(importingClassMetadata, EnableAspectJAutoProxy<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">      <span class="comment">// 根据其中的proxyTargetClass/exposeProxy设置beanDefinition属性</span></span><br><span class="line">      <span class="keyword">if</span> (enableAspectJAutoProxy != <span class="keyword">null</span>) &#123;</span><br><span class="line">         <span class="keyword">if</span> (enableAspectJAutoProxy.getBoolean(<span class="string">"proxyTargetClass"</span>)) &#123;</span><br><span class="line">            AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="keyword">if</span> (enableAspectJAutoProxy.getBoolean(<span class="string">"exposeProxy"</span>)) &#123;</span><br><span class="line">            AopConfigUtils.forceAutoProxyCreatorToExposeProxy(registry);</span><br><span class="line">         &#125;</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AopConfigUtils</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> BeanDefinition <span class="title">registerAspectJAnnotationAutoProxyCreatorIfNecessary</span><span class="params">(BeanDefinitionRegistry registry)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> BeanDefinition <span class="title">registerAspectJAnnotationAutoProxyCreatorIfNecessary</span><span class="params">(BeanDefinitionRegistry registry, @Nullable Object source)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> registerOrEscalateApcAsRequired(AnnotationAwareAspectJAutoProxyCreator<span class="class">.<span class="keyword">class</span>, <span class="title">registry</span>, <span class="title">source</span>)</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> BeanDefinition <span class="title">registerOrEscalateApcAsRequired</span><span class="params">(Class&lt;?&gt; cls, BeanDefinitionRegistry registry, @Nullable Object source)</span> </span>&#123;</span><br><span class="line">        Assert.notNull(registry, <span class="string">"BeanDefinitionRegistry must not be null"</span>);</span><br><span class="line">        <span class="keyword">if</span> (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) &#123;</span><br><span class="line">            BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);</span><br><span class="line">            <span class="keyword">if</span> (!cls.getName().equals(apcDefinition.getBeanClassName())) &#123;</span><br><span class="line">                <span class="keyword">int</span> currentPriority = findPriorityForClass(apcDefinition.getBeanClassName());</span><br><span class="line">                <span class="keyword">int</span> requiredPriority = findPriorityForClass(cls);</span><br><span class="line">                <span class="keyword">if</span> (currentPriority &lt; requiredPriority) &#123;</span><br><span class="line">                    apcDefinition.setBeanClassName(cls.getName());</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        RootBeanDefinition beanDefinition = <span class="keyword">new</span> RootBeanDefinition(cls);</span><br><span class="line">        beanDefinition.setSource(source);</span><br><span class="line">        beanDefinition.getPropertyValues().add(<span class="string">"order"</span>, Ordered.HIGHEST_PRECEDENCE);</span><br><span class="line">        beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);</span><br><span class="line">        registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition);</span><br><span class="line">        <span class="keyword">return</span> beanDefinition;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>finishBeanFactoryInitialization</code>第一个<code>Bean</code>创建时</strong>通过<strong><code>resolveBeforeInstantiation</code>第一次</strong>调用<strong>后置处理器</strong>时，调用<strong><code>AnnotationAwareAspectJAutoProxyCreator</code></strong>超类<strong><code>AbstractAutoProxyCreator</code></strong>中的<strong><code>postProcessBeforeInstantiation</code></strong>方法时，<strong>对所有的<code>AOP</code>切面类进行解析</strong>并将解析后的<strong><code>Advisors</code>列表缓存</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractAutoProxyCreator</span> <span class="keyword">extends</span> <span class="title">ProxyProcessorSupport</span> <span class="keyword">implements</span> <span class="title">SmartInstantiationAwareBeanPostProcessor</span>, <span class="title">BeanFactoryAware</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">postProcessBeforeInstantiation</span><span class="params">(Class&lt;?&gt; beanClass, String beanName)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">        Object cacheKey = getCacheKey(beanClass, beanName); <span class="comment">// 构建缓存key</span></span><br><span class="line">        <span class="comment">// 没有beanName或没有包含在targetSourcedBeans中，一般都不会包含，因为targetSource需要手动设置，一般情况不会设置</span></span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.hasLength(beanName) || !<span class="keyword">this</span>.targetSourcedBeans.contains(beanName)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">this</span>.advisedBeans.containsKey(cacheKey)) &#123; <span class="comment">// 被解析过 直接返回</span></span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 判断是不是基础的bean即是不是切面类、通知、切点等，判断是不是应该跳过 默认false，切面解析也在其中</span></span><br><span class="line">            <span class="keyword">if</span> (isInfrastructureClass(beanClass) || shouldSkip(beanClass, beanName)) &#123;</span><br><span class="line">                <span class="keyword">this</span>.advisedBeans.put(cacheKey, Boolean.FALSE);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// TargetSource代理逻辑的实现，在创建代理时默认是SingletonTargetSource，故若指定了TargetSource说明有自己的代理逻辑实现，在这就直接创建代理</span></span><br><span class="line">        TargetSource targetSource = getCustomTargetSource(beanClass, beanName);</span><br><span class="line">        <span class="keyword">if</span> (targetSource != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (StringUtils.hasLength(beanName)) &#123;</span><br><span class="line">                <span class="keyword">this</span>.targetSourcedBeans.add(beanName);</span><br><span class="line">            &#125;</span><br><span class="line">            Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource);</span><br><span class="line">            Object proxy = createProxy(beanClass, beanName, specificInterceptors, targetSource);</span><br><span class="line">            <span class="keyword">this</span>.proxyTypes.put(cacheKey, proxy.getClass());</span><br><span class="line">            <span class="keyword">return</span> proxy;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过<strong><code>isInfrastructureClass</code></strong>判断该类是否是<strong>切面类</strong>、<strong>通知</strong>、<strong>切点</strong>等，判断逻辑就是判断当前正在创建的类是否为<strong><code>Advice</code></strong>、<strong><code>Pointcut</code></strong>、<strong><code>Advisor</code></strong>、<strong><code>AopInfrastructureBean</code></strong>的<strong>子类</strong>，若<strong>是则直接跳过解析</strong>。或若该类上有<strong><code>@Aspect</code>注解</strong>且不是一个被<strong><code>AspectJ</code>编译过</strong>的类也<strong>跳过解析</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AnnotationAwareAspectJAutoProxyCreator</span> <span class="keyword">extends</span> <span class="title">AspectJAwareAdvisorAutoProxyCreator</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">isInfrastructureClass</span><span class="params">(Class&lt;?&gt; beanClass)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (<span class="keyword">super</span>.isInfrastructureClass(beanClass) || (<span class="keyword">this</span>.aspectJAdvisorFactory != <span class="keyword">null</span> &amp;&amp; <span class="keyword">this</span>.aspectJAdvisorFactory.isAspect(beanClass)));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractAutoProxyCreator</span> <span class="keyword">extends</span> <span class="title">ProxyProcessorSupport</span> <span class="keyword">implements</span> <span class="title">SmartInstantiationAwareBeanPostProcessor</span>, <span class="title">BeanFactoryAware</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> String AJC_MAGIC = <span class="string">"ajc$"</span>;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">isInfrastructureClass</span><span class="params">(Class&lt;?&gt; beanClass)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 若当前正在创建的Bean的class是Advice PointCut Advisor AopInfrastructureBean，直接跳过不需要解析</span></span><br><span class="line">        <span class="keyword">boolean</span> retVal = Advice<span class="class">.<span class="keyword">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">beanClass</span>) || <span class="title">Pointcut</span>.<span class="title">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">beanClass</span>) || <span class="title">Advisor</span>.<span class="title">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">beanClass</span>) || <span class="title">AopInfrastructureBean</span>.<span class="title">class</span>.<span class="title">isAssignableFrom</span>(<span class="title">beanClass</span>)</span>;</span><br><span class="line">        <span class="keyword">return</span> retVal;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isAspect</span><span class="params">(Class&lt;?&gt; clazz)</span> </span>&#123; <span class="comment">// 有没有切面注解 &amp;&amp; 没有被AspectJ编译过</span></span><br><span class="line">        <span class="keyword">return</span> (hasAspectAnnotation(clazz) &amp;&amp; !compiledByAjc(clazz));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">hasAspectAnnotation</span><span class="params">(Class&lt;?&gt; clazz)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (AnnotationUtils.findAnnotation(clazz, Aspect<span class="class">.<span class="keyword">class</span>) !</span>= <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">compiledByAjc</span><span class="params">(Class&lt;?&gt; clazz)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (Field field : clazz.getDeclaredFields()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (field.getName().startsWith(AJC_MAGIC)) &#123; </span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>; <span class="comment">// 至少一个属性前缀为"ajc$"</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>shouldSkip</code></strong>中的<strong><code>findCandidateAdvisors()</code></strong>会解析出所有的<strong><code>Advisor</code></strong>，这里的<strong><code>AspectJPointcutAdvisor</code></strong>是<strong><code>xml</code></strong>中advisor解析的对象，若aspect是当前beanName就说明当前bean是切面类则跳过。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AspectJAwareAdvisorAutoProxyCreator</span> <span class="keyword">extends</span> <span class="title">AbstractAdvisorAutoProxyCreator</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">shouldSkip</span><span class="params">(Class&lt;?&gt; beanClass, String beanName)</span> </span>&#123;</span><br><span class="line">       List&lt;Advisor&gt; candidateAdvisors = findCandidateAdvisors(); <span class="comment">// 找到所有定义的候选Advisors</span></span><br><span class="line">       <span class="keyword">for</span> (Advisor advisor : candidateAdvisors) &#123;</span><br><span class="line">          <span class="comment">// AspectJPointcutAdvisor是xml&lt;aop:advisor解析的对象，若&lt;aop:aspect ref="beanName"&gt;是当前beanName就说明当前bean是切面类则跳过。</span></span><br><span class="line">          <span class="keyword">if</span> (advisor <span class="keyword">instanceof</span> AspectJPointcutAdvisor &amp;&amp; ((AspectJPointcutAdvisor) advisor).getAspectName().equals(beanName)) &#123;</span><br><span class="line">             <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">          &#125;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span> <span class="keyword">super</span>.shouldSkip(beanClass, beanName);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过<strong><code>buildAspectJAdvisors</code></strong>去容器中获取所有切面信息保存到缓存中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AnnotationAwareAspectJAutoProxyCreator</span> <span class="keyword">extends</span> <span class="title">AspectJAwareAdvisorAutoProxyCreator</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> List&lt;Advisor&gt; <span class="title">findCandidateAdvisors</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 找出xml配置的Advisor、原生接口的AOP的Advisor、事务相关的advisor</span></span><br><span class="line">        List&lt;Advisor&gt; advisors = <span class="keyword">super</span>.findCandidateAdvisors();</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.aspectJAdvisorsBuilder != <span class="keyword">null</span>) &#123; <span class="comment">// 找出Aspect相关的信息之后封装为一个advisor</span></span><br><span class="line">            advisors.addAll(<span class="keyword">this</span>.aspectJAdvisorsBuilder.buildAspectJAdvisors());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> advisors; <span class="comment">// 返回所有的通知</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关于<strong><code>advisorRetrievalHelper</code></strong>的初始化，<strong><code>AbstractAdvisorAutoProxyCreator</code></strong>的父类<strong><code>AbstractAutoProxyCreator</code></strong>实现了<strong><code>BeanFactoryAware</code></strong>接口，而<strong><code>AbstractAutoProxyCreator</code></strong>是<strong>事务</strong>和<strong><code>AOP</code></strong>导入进来的<strong>后置处理器的顶级父类</strong>，在<strong>实例化<code>AOP</code></strong>和<strong>事务导入组件</strong>时会调用setBeanFactory的方法来注入Bean工厂，调用setBeanFactory会触发<strong><code>initBeanFactory</code></strong>的调用来<strong>实例化通知查找探测器</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractAdvisorAutoProxyCreator</span> <span class="keyword">extends</span> <span class="title">AbstractAutoProxyCreator</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> BeanFactoryAdvisorRetrievalHelper advisorRetrievalHelper;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> List&lt;Advisor&gt; <span class="title">findCandidateAdvisors</span><span class="params">()</span> </span>&#123; <span class="comment">// 通过通知者探测器帮助找到通知</span></span><br><span class="line">        Assert.state(<span class="keyword">this</span>.advisorRetrievalHelper != <span class="keyword">null</span>, <span class="string">"No BeanFactoryAdvisorRetrievalHelper available"</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.advisorRetrievalHelper.findAdvisorBeans();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setBeanFactory</span><span class="params">(BeanFactory beanFactory)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.setBeanFactory(beanFactory);</span><br><span class="line">        <span class="keyword">if</span> (!(beanFactory <span class="keyword">instanceof</span> ConfigurableListableBeanFactory)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"AdvisorAutoProxyCreator requires a ConfigurableListableBeanFactory: "</span> + beanFactory);</span><br><span class="line">        &#125;</span><br><span class="line">        initBeanFactory((ConfigurableListableBeanFactory) beanFactory);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initBeanFactory</span><span class="params">(ConfigurableListableBeanFactory beanFactory)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.advisorRetrievalHelper = <span class="keyword">new</span> BeanFactoryAdvisorRetrievalHelperAdapter(beanFactory);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>探测器字段<strong><code>cachedAdvisorBeanNames</code></strong>是用来<strong>缓存</strong>Advisor全类名，在<strong>第一个</strong>单实例bean实例化过程中把所有的advisor名称解析出来，若<strong><code>cachedAdvisorBeanNames</code></strong>为空则先获取容器中所有实现了Advisor接口的实现类，典型为<strong>事务注解<code>@EnableTransactionManagement</code></strong>导入<strong><code>ProxyTransactionManagementConfiguration</code></strong>配置类。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BeanFactoryAdvisorRetrievalHelper</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;Advisor&gt; <span class="title">findAdvisorBeans</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 探测器字段cachedAdvisorBeanNames是用来缓存Advisor全类名，在第一个单实例bean实例化过程中把该advisor名称解析出来</span></span><br><span class="line">        String[] advisorNames = <span class="keyword">this</span>.cachedAdvisorBeanNames;</span><br><span class="line">        <span class="keyword">if</span> (advisorNames == <span class="keyword">null</span>) &#123;</span><br><span class="line">            advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(<span class="keyword">this</span>.beanFactory, Advisor<span class="class">.<span class="keyword">class</span>, <span class="title">true</span>, <span class="title">false</span>)</span>;</span><br><span class="line">            <span class="keyword">this</span>.cachedAdvisorBeanNames = advisorNames;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (advisorNames.length == <span class="number">0</span>) &#123; <span class="comment">// 若在容器中没有找到，直接返回一个空的集合</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        &#125;</span><br><span class="line">        List&lt;Advisor&gt; advisors = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (String name : advisorNames) &#123; <span class="comment">// 容器中找到了配置的BeanFactoryTransactionAttributeSourceAdvisor</span></span><br><span class="line">            <span class="keyword">if</span> (isEligibleBean(name)) &#123; <span class="comment">// 判断其是不是一个合适的</span></span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">this</span>.beanFactory.isCurrentlyInCreation(name)) &#123; <span class="comment">// BeanFactoryTransactionAttributeSourceAdvisor是不是正在创建的bean</span></span><br><span class="line">                &#125; <span class="keyword">else</span> &#123; <span class="comment">// 不是的话</span></span><br><span class="line">                    <span class="keyword">try</span> &#123; <span class="comment">//显示的调用getBean方法方法创建BeanFactoryTransactionAttributeSourceAdvisor返回去</span></span><br><span class="line">                        advisors.add(<span class="keyword">this</span>.beanFactory.getBean(name, Advisor<span class="class">.<span class="keyword">class</span>))</span>;</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (BeanCreationException ex) &#123;</span><br><span class="line">                        Throwable rootCause = ex.getMostSpecificCause();</span><br><span class="line">                        <span class="keyword">if</span> (rootCause <span class="keyword">instanceof</span> BeanCurrentlyInCreationException) &#123;</span><br><span class="line">                            BeanCreationException bce = (BeanCreationException) rootCause;</span><br><span class="line">                            String bceBeanName = bce.getBeanName();</span><br><span class="line">                            <span class="keyword">if</span> (bceBeanName != <span class="keyword">null</span> &amp;&amp; <span class="keyword">this</span>.beanFactory.isCurrentlyInCreation(bceBeanName)) &#123;</span><br><span class="line">                                <span class="keyword">continue</span>;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">throw</span> ex;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> advisors;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>缓存字段<strong><code>aspectNames</code></strong>没有值，会在<strong><code>AnnotationAwareAspectJAutoProxyCreator</code></strong>注册之后，<strong>第一个单例执行后置处理器时触发解析切面的操作</strong>。这里获取的是Object类型的Bean的名称即获取所有的Bean。遍历解析Advisor的过程十分耗性能，解析后会加入了保存切面信息的缓存，事务模块的功能是直接去容器中获取Advisor类型的，选择范围小，且不消耗性能，故事务模块中没有加入缓存来保存事务相关的advisor。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> List&lt;Advisor&gt; <span class="title">buildAspectJAdvisors</span><span class="params">()</span> </span>&#123;</span><br><span class="line">   <span class="comment">// 用于保存切面的名称，该aspectNames是类级别的缓存，缓存已解析出的切面信息</span></span><br><span class="line">   List&lt;String&gt; aspectNames = <span class="keyword">this</span>.aspectBeanNames;</span><br><span class="line">   <span class="keyword">if</span> (aspectNames == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123; <span class="comment">// 加上同步锁， 防止多线程同时加载Aspect</span></span><br><span class="line">         aspectNames = <span class="keyword">this</span>.aspectBeanNames;</span><br><span class="line">         <span class="keyword">if</span> (aspectNames == <span class="keyword">null</span>) &#123; <span class="comment">// 双重检查加锁</span></span><br><span class="line">            List&lt;Advisor&gt; advisors = <span class="keyword">new</span> ArrayList&lt;&gt;(); <span class="comment">// 保存所有通知的集合</span></span><br><span class="line">            aspectNames = <span class="keyword">new</span> ArrayList&lt;&gt;(); <span class="comment">// 保存切面的名称的集合</span></span><br><span class="line">            <span class="comment">// 从容器中获取所有Bean，再遍历，该过程十分耗性能，解析后会加入了保存切面信息的缓存</span></span><br><span class="line">            String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(<span class="keyword">this</span>.beanFactory, Object<span class="class">.<span class="keyword">class</span>, <span class="title">true</span>, <span class="title">false</span>)</span>;</span><br><span class="line">            <span class="keyword">for</span> (String beanName : beanNames) &#123; <span class="comment">// 遍历从IOC容器中获取的所有bean的名称</span></span><br><span class="line">               <span class="keyword">if</span> (!isEligibleBean(beanName)) <span class="keyword">continue</span>;</span><br><span class="line">               Class&lt;?&gt; beanType = <span class="keyword">this</span>.beanFactory.getType(beanName); <span class="comment">// 通过beanName去容器中获取到对应class对象</span></span><br><span class="line">               <span class="keyword">if</span> (beanType == <span class="keyword">null</span>) <span class="keyword">continue</span>;</span><br><span class="line">               <span class="keyword">if</span> (<span class="keyword">this</span>.advisorFactory.isAspect(beanType)) &#123; <span class="comment">// 根据class对象判断是不是切面</span></span><br><span class="line">                  aspectNames.add(beanName); <span class="comment">// 是切面类，加入到缓存中</span></span><br><span class="line">                  <span class="comment">// 把beanName和class对象构建成为一个AspectMetadata</span></span><br><span class="line">                  AspectMetadata amd = <span class="keyword">new</span> AspectMetadata(beanType, beanName);</span><br><span class="line">                  <span class="keyword">if</span> (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) &#123;</span><br><span class="line">                     <span class="comment">//构建切面注解的实例工厂</span></span><br><span class="line">                     MetadataAwareAspectInstanceFactory factory = <span class="keyword">new</span> BeanFactoryAspectInstanceFactory(<span class="keyword">this</span>.beanFactory, beanName);</span><br><span class="line">                     <span class="comment">// 真正的去获取通知对象</span></span><br><span class="line">                     List&lt;Advisor&gt; classAdvisors = <span class="keyword">this</span>.advisorFactory.getAdvisors(factory);</span><br><span class="line">                     <span class="keyword">if</span> (<span class="keyword">this</span>.beanFactory.isSingleton(beanName)) &#123; <span class="comment">// 加入到缓存中</span></span><br><span class="line">                        <span class="keyword">this</span>.advisorsCache.put(beanName, classAdvisors);</span><br><span class="line">                     &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        <span class="keyword">this</span>.aspectFactoryCache.put(beanName, factory);</span><br><span class="line">                     &#125;</span><br><span class="line">                     advisors.addAll(classAdvisors);</span><br><span class="line">                  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                     <span class="keyword">if</span> (<span class="keyword">this</span>.beanFactory.isSingleton(beanName)) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Bean with name '"</span> + beanName + <span class="string">"' is a singleton, but aspect instantiation model is not singleton"</span>);</span><br><span class="line">                     &#125;</span><br><span class="line">                     MetadataAwareAspectInstanceFactory factory = <span class="keyword">new</span> PrototypeAspectInstanceFactory(<span class="keyword">this</span>.beanFactory, beanName);</span><br><span class="line">                     <span class="keyword">this</span>.aspectFactoryCache.put(beanName, factory);</span><br><span class="line">                     advisors.addAll(<span class="keyword">this</span>.advisorFactory.getAdvisors(factory));</span><br><span class="line">                  &#125;</span><br><span class="line">               &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.aspectBeanNames = aspectNames;</span><br><span class="line">            <span class="keyword">return</span> advisors;</span><br><span class="line">         &#125;</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">if</span> (aspectNames.isEmpty()) &#123;</span><br><span class="line">      <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="comment">// 真正的创建切面的时候，我们不需要去解析了而是直接去缓存中获取处</span></span><br><span class="line">   List&lt;Advisor&gt; advisors = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">   <span class="keyword">for</span> (String aspectName : aspectNames) &#123;</span><br><span class="line">      List&lt;Advisor&gt; cachedAdvisors = <span class="keyword">this</span>.advisorsCache.get(aspectName);</span><br><span class="line">      <span class="keyword">if</span> (cachedAdvisors != <span class="keyword">null</span>) &#123;</span><br><span class="line">         advisors.addAll(cachedAdvisors);</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">         MetadataAwareAspectInstanceFactory factory = <span class="keyword">this</span>.aspectFactoryCache.get(aspectName);</span><br><span class="line">         advisors.addAll(<span class="keyword">this</span>.advisorFactory.getAdvisors(factory));</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">return</span> advisors;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>遍历<strong>切面类</strong>中的所有除了被<strong><code>@Pointcut</code></strong>注解标注的方法，<strong>并将满足条件的每个方法都封装成一个<code>Advisor</code></strong>。这里<strong><code>getAdvisorMethods</code></strong>方法中对所有获取到的<strong>切面方法</strong>按照<strong><code>Around</code></strong>、<strong><code>Before</code></strong>、<strong><code>After</code></strong>、<strong><code>AfterReturning</code></strong>、<strong><code>AfterThrowing</code></strong>的顺序进行了排序。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReflectiveAspectJAdvisorFactory</span> <span class="keyword">extends</span> <span class="title">AbstractAspectJAdvisorFactory</span> <span class="keyword">implements</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;Advisor&gt; <span class="title">getAdvisors</span><span class="params">(MetadataAwareAspectInstanceFactory aspectInstanceFactory)</span> </span>&#123;</span><br><span class="line">        Class&lt;?&gt; aspectClass = aspectInstanceFactory.getAspectMetadata().getAspectClass(); <span class="comment">// 获取标记为Aspect的类</span></span><br><span class="line">        String aspectName = aspectInstanceFactory.getAspectMetadata().getAspectName(); <span class="comment">// 获取切面类的名称</span></span><br><span class="line">        validate(aspectClass); <span class="comment">// 校验切面类</span></span><br><span class="line">        <span class="comment">// 使用包装模式来包装MetadataAwareAspectInstanceFactory构建为MetadataAwareAspectInstanceFactory</span></span><br><span class="line">        MetadataAwareAspectInstanceFactory lazySingletonAspectInstanceFactory = <span class="keyword">new</span> LazySingletonAspectInstanceFactoryDecorator(aspectInstanceFactory);</span><br><span class="line">        List&lt;Advisor&gt; advisors = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        <span class="comment">// 获取到切面类中的所有方法，但是该方法不会解析标注了@PointCut注解的方法</span></span><br><span class="line">        <span class="keyword">for</span> (Method method : getAdvisorMethods(aspectClass)) &#123; <span class="comment">// 挨个去解析切面中的方法</span></span><br><span class="line">            Advisor advisor = getAdvisor(method, lazySingletonAspectInstanceFactory, advisors.size(), aspectName);</span><br><span class="line">            <span class="keyword">if</span> (advisor != <span class="keyword">null</span>) &#123;</span><br><span class="line">                advisors.add(advisor);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!advisors.isEmpty() &amp;&amp; lazySingletonAspectInstanceFactory.getAspectMetadata().isLazilyInstantiated()) &#123;</span><br><span class="line">            Advisor instantiationAdvisor = <span class="keyword">new</span> SyntheticInstantiationAdvisor(lazySingletonAspectInstanceFactory);</span><br><span class="line">            advisors.add(<span class="number">0</span>, instantiationAdvisor);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Field field : aspectClass.getDeclaredFields()) &#123;</span><br><span class="line">            Advisor advisor = getDeclareParentsAdvisor(field);</span><br><span class="line">            <span class="keyword">if</span> (advisor != <span class="keyword">null</span>) &#123;</span><br><span class="line">                advisors.add(advisor);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> advisors;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Advisor <span class="title">getAdvisor</span><span class="params">(Method candidateAdviceMethod, MetadataAwareAspectInstanceFactory aspectInstanceFactory, <span class="keyword">int</span> declarationOrderInAspect, String aspectName)</span> </span>&#123;</span><br><span class="line">        validate(aspectInstanceFactory.getAspectMetadata().getAspectClass());</span><br><span class="line">        <span class="comment">// 获得当前通知的切点表达式</span></span><br><span class="line">        AspectJExpressionPointcut expressionPointcut = getPointcut(candidateAdviceMethod, aspectInstanceFactory.getAspectMetadata().getAspectClass());</span><br><span class="line">        <span class="keyword">if</span> (expressionPointcut == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 将切点表达式和通知封装到InstantiationModelAwarePointcutAdvisorImpl对象中</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> InstantiationModelAwarePointcutAdvisorImpl(expressionPointcut, candidateAdviceMethod, <span class="keyword">this</span>, aspectInstanceFactory, declarationOrderInAspect, aspectName);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> AspectJExpressionPointcut <span class="title">getPointcut</span><span class="params">(Method candidateAdviceMethod, Class&lt;?&gt; candidateAspectClass)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 找到aspectJ的注解：@Pointcut、@Around、@Before、@After、@AfterReturning、@AfterThrowing</span></span><br><span class="line">        AspectJAnnotation&lt;?&gt; aspectJAnnotation = AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(candidateAdviceMethod);</span><br><span class="line">        <span class="keyword">if</span> (aspectJAnnotation == <span class="keyword">null</span>) &#123; <span class="comment">// 没有注解直接忽略</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        AspectJExpressionPointcut ajexp = <span class="keyword">new</span> AspectJExpressionPointcut(candidateAspectClass, <span class="keyword">new</span> String[<span class="number">0</span>], <span class="keyword">new</span> Class&lt;?&gt;[<span class="number">0</span>]);</span><br><span class="line">        ajexp.setExpression(aspectJAnnotation.getPointcutExpression());</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.beanFactory != <span class="keyword">null</span>) &#123;</span><br><span class="line">            ajexp.setBeanFactory(<span class="keyword">this</span>.beanFactory);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ajexp;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> List&lt;Method&gt; <span class="title">getAdvisorMethods</span><span class="params">(Class&lt;?&gt; aspectClass)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> List&lt;Method&gt; methods = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        ReflectionUtils.doWithMethods(aspectClass, method -&gt; &#123;</span><br><span class="line">            <span class="keyword">if</span> (AnnotationUtils.getAnnotation(method, Pointcut<span class="class">.<span class="keyword">class</span>) </span>== <span class="keyword">null</span>) &#123;</span><br><span class="line">                methods.add(method);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        methods.sort(METHOD_COMPARATOR);</span><br><span class="line">        <span class="keyword">return</span> methods;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Comparator&lt;Method&gt; METHOD_COMPARATOR;</span><br><span class="line">    <span class="keyword">static</span> &#123;</span><br><span class="line">        Comparator&lt;Method&gt; adviceKindComparator = <span class="keyword">new</span> ConvertingComparator&lt;&gt;(</span><br><span class="line">            <span class="keyword">new</span> InstanceComparator&lt;&gt;(Around<span class="class">.<span class="keyword">class</span>, <span class="title">Before</span>.<span class="title">class</span>, <span class="title">After</span>.<span class="title">class</span>, <span class="title">AfterReturning</span>.<span class="title">class</span>, <span class="title">AfterThrowing</span>.<span class="title">class</span>),</span></span><br><span class="line"><span class="class">            (<span class="title">Converter</span>&lt;<span class="title">Method</span>, <span class="title">Annotation</span>&gt;) <span class="title">method</span> -&gt; </span>&#123;</span><br><span class="line">                AspectJAnnotation&lt;?&gt; annotation = AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(method);</span><br><span class="line">                <span class="keyword">return</span> (annotation != <span class="keyword">null</span> ? annotation.getAnnotation() : <span class="keyword">null</span>);</span><br><span class="line">            &#125;);</span><br><span class="line">        Comparator&lt;Method&gt; methodNameComparator = <span class="keyword">new</span> ConvertingComparator&lt;&gt;(Method::getName);</span><br><span class="line">        METHOD_COMPARATOR = adviceKindComparator.thenComparing(methodNameComparator);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>找到方法上是否有<strong><code>@Pointcut</code></strong>、<strong><code>@Around</code></strong>、<strong><code>@Before</code></strong>、<strong><code>@After</code></strong>、<strong><code>@AfterReturning</code></strong>、<strong><code>@AfterThrowing</code></strong>等注解，并获取到注解上<strong>切面表达式</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractAspectJAdvisorFactory</span> <span class="keyword">implements</span> <span class="title">AspectJAdvisorFactory</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Class&lt;?&gt;[] ASPECTJ_ANNOTATION_CLASSES = <span class="keyword">new</span> Class&lt;?&gt;[] &#123;Pointcut<span class="class">.<span class="keyword">class</span>, <span class="title">Around</span>.<span class="title">class</span>, <span class="title">Before</span>.<span class="title">class</span>, <span class="title">After</span>.<span class="title">class</span>, <span class="title">AfterReturning</span>.<span class="title">class</span>, <span class="title">AfterThrowing</span>.<span class="title">class</span>&#125;</span>;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">static</span> AspectJAnnotation&lt;?&gt; findAspectJAnnotationOnMethod(Method method) &#123;</span><br><span class="line">        <span class="keyword">for</span> (Class&lt;?&gt; clazz : ASPECTJ_ANNOTATION_CLASSES) &#123;</span><br><span class="line">            AspectJAnnotation&lt;?&gt; foundAnnotation = findAnnotation(method, (Class&lt;Annotation&gt;) clazz);</span><br><span class="line">            <span class="keyword">if</span> (foundAnnotation != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> foundAnnotation;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过<strong><code>InstantiationModelAwarePointcutAdvisorImpl</code></strong>的<strong><code>instantiateAdvice</code></strong>方法将不同类型的注解方法解析成对应的Advice。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">InstantiationModelAwarePointcutAdvisorImpl</span> <span class="keyword">implements</span> <span class="title">InstantiationModelAwarePointcutAdvisor</span>, <span class="title">AspectJPrecedenceInformation</span>, <span class="title">Serializable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">InstantiationModelAwarePointcutAdvisorImpl</span><span class="params">(AspectJExpressionPointcut declaredPointcut, Method aspectJAdviceMethod, AspectJAdvisorFactory aspectJAdvisorFactory, MetadataAwareAspectInstanceFactory aspectInstanceFactory, <span class="keyword">int</span> declarationOrder, String aspectName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.declaredPointcut = declaredPointcut;<span class="comment">// 当前的切点</span></span><br><span class="line">        <span class="keyword">this</span>.declaringClass = aspectJAdviceMethod.getDeclaringClass();<span class="comment">// 切面的class对象</span></span><br><span class="line">        <span class="keyword">this</span>.methodName = aspectJAdviceMethod.getName();<span class="comment">// 切面方法的名称</span></span><br><span class="line">        <span class="keyword">this</span>.parameterTypes = aspectJAdviceMethod.getParameterTypes();<span class="comment">// 切面方法的参数类型</span></span><br><span class="line">        <span class="keyword">this</span>.aspectJAdviceMethod = aspectJAdviceMethod;<span class="comment">// 切面方法对象</span></span><br><span class="line">        <span class="keyword">this</span>.aspectJAdvisorFactory = aspectJAdvisorFactory;<span class="comment">// aspectj的通知工厂</span></span><br><span class="line">        <span class="keyword">this</span>.aspectInstanceFactory = aspectInstanceFactory;<span class="comment">// aspect的实例工厂</span></span><br><span class="line">        <span class="keyword">this</span>.declarationOrder = declarationOrder;<span class="comment">// 切面的顺序</span></span><br><span class="line">        <span class="keyword">this</span>.aspectName = aspectName;<span class="comment">// 切面的名称</span></span><br><span class="line">        <span class="comment">// 判断当前的切面对象是否需要延时加载</span></span><br><span class="line">        <span class="keyword">if</span> (aspectInstanceFactory.getAspectMetadata().isLazilyInstantiated()) &#123;</span><br><span class="line">            Pointcut preInstantiationPointcut = Pointcuts.union(aspectInstanceFactory.getAspectMetadata().getPerClausePointcut(), <span class="keyword">this</span>.declaredPointcut);</span><br><span class="line">            <span class="keyword">this</span>.pointcut = <span class="keyword">new</span> PerTargetInstantiationModelPointcut(<span class="keyword">this</span>.declaredPointcut, preInstantiationPointcut, aspectInstanceFactory);</span><br><span class="line">            <span class="keyword">this</span>.lazy = <span class="keyword">true</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.pointcut = <span class="keyword">this</span>.declaredPointcut;</span><br><span class="line">            <span class="keyword">this</span>.lazy = <span class="keyword">false</span>;</span><br><span class="line">            <span class="comment">// 把切面中的通知构造为一个一个的advice通知对象</span></span><br><span class="line">            <span class="keyword">this</span>.instantiatedAdvice = instantiateAdvice(<span class="keyword">this</span>.declaredPointcut);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> Advice <span class="title">instantiateAdvice</span><span class="params">(AspectJExpressionPointcut pointcut)</span> </span>&#123;</span><br><span class="line">        Advice advice = <span class="keyword">this</span>.aspectJAdvisorFactory.getAdvice(<span class="keyword">this</span>.aspectJAdviceMethod, pointcut, <span class="keyword">this</span>.aspectInstanceFactory, <span class="keyword">this</span>.declarationOrder, <span class="keyword">this</span>.aspectName);</span><br><span class="line">        <span class="keyword">return</span> (advice != <span class="keyword">null</span> ? advice : EMPTY_ADVICE);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>instantiateAdvice</code></strong>方法中调用<strong><code>getAdvice</code></strong>方法根据不同类型的注解生成对应的<strong><code>Advice</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReflectiveAspectJAdvisorFactory</span> <span class="keyword">extends</span> <span class="title">AbstractAspectJAdvisorFactory</span> <span class="keyword">implements</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Advice <span class="title">getAdvice</span><span class="params">(Method candidateAdviceMethod, AspectJExpressionPointcut expressionPointcut, MetadataAwareAspectInstanceFactory aspectInstanceFactory, <span class="keyword">int</span> declarationOrder, String aspectName)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 获取切面类的class对象</span></span><br><span class="line">        Class&lt;?&gt; candidateAspectClass = aspectInstanceFactory.getAspectMetadata().getAspectClass();</span><br><span class="line">        validate(candidateAspectClass);</span><br><span class="line">        <span class="comment">// 获取切面方法上的注解</span></span><br><span class="line">        AspectJAnnotation&lt;?&gt; aspectJAnnotation = AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(candidateAdviceMethod);</span><br><span class="line">        <span class="keyword">if</span> (aspectJAnnotation == <span class="keyword">null</span>) &#123; <span class="comment">// 解析出来的注解信息是否为null</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!isAspect(candidateAspectClass)) &#123; <span class="comment">// 判断这里的class对象是不是切面信息对象</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> AopConfigException(<span class="string">"Advice must be declared inside an aspect type: Offending method '"</span> + candidateAdviceMethod + <span class="string">"' in class ["</span> + candidateAspectClass.getName() + <span class="string">"]"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        AbstractAspectJAdvice springAdvice;</span><br><span class="line">        <span class="keyword">switch</span> (aspectJAnnotation.getAnnotationType()) &#123; <span class="comment">// 判断标注在方法上的注解类型</span></span><br><span class="line">            <span class="keyword">case</span> AtPointcut: <span class="comment">// 是PointCut注解则抛出异常，在外面传递进来的方法已经排除了pointcut的方法</span></span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">case</span> AtAround:   <span class="comment">//环绕通知 构建AspectJAroundAdvice</span></span><br><span class="line">                springAdvice = <span class="keyword">new</span> AspectJAroundAdvice(candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> AtBefore:  <span class="comment">//前置通知  构建AspectJMethodBeforeAdvice</span></span><br><span class="line">                springAdvice = <span class="keyword">new</span> AspectJMethodBeforeAdvice(candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> AtAfter:  <span class="comment">//后置通知 AspectJAfterAdvice</span></span><br><span class="line">                springAdvice = <span class="keyword">new</span> AspectJAfterAdvice(candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> AtAfterReturning: <span class="comment">//返回通知 AspectJAfterReturningAdvice</span></span><br><span class="line">                springAdvice = <span class="keyword">new</span> AspectJAfterReturningAdvice(candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);</span><br><span class="line">                AfterReturning afterReturningAnnotation = (AfterReturning) aspectJAnnotation.getAnnotation();</span><br><span class="line">                <span class="keyword">if</span> (StringUtils.hasText(afterReturningAnnotation.returning())) &#123;</span><br><span class="line">                    springAdvice.setReturningName(afterReturningAnnotation.returning());</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> AtAfterThrowing:  <span class="comment">//异常通知   AspectJAfterThrowingAdvice</span></span><br><span class="line">                springAdvice = <span class="keyword">new</span> AspectJAfterThrowingAdvice(candidateAdviceMethod, expressionPointcut, aspectInstanceFactory);</span><br><span class="line">                AfterThrowing afterThrowingAnnotation = (AfterThrowing) aspectJAnnotation.getAnnotation();</span><br><span class="line">                <span class="keyword">if</span> (StringUtils.hasText(afterThrowingAnnotation.throwing())) &#123;</span><br><span class="line">                    springAdvice.setThrowingName(afterThrowingAnnotation.throwing());</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"Unsupported advice type on method: "</span> + candidateAdviceMethod);</span><br><span class="line">        &#125;</span><br><span class="line">        springAdvice.setAspectName(aspectName); <span class="comment">// 配置构建出来的通知对象</span></span><br><span class="line">        springAdvice.setDeclarationOrder(declarationOrder);</span><br><span class="line">        String[] argNames = <span class="keyword">this</span>.parameterNameDiscoverer.getParameterNames(candidateAdviceMethod);</span><br><span class="line">        <span class="keyword">if</span> (argNames != <span class="keyword">null</span>) &#123;</span><br><span class="line">            springAdvice.setArgumentNamesFromStringArray(argNames);</span><br><span class="line">        &#125;</span><br><span class="line">        springAdvice.calculateArgumentBindings();</span><br><span class="line">        <span class="keyword">return</span> springAdvice;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Spring/AOP创建代理与调用/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        AOP创建代理与调用
+                    
+                </div>
+            </a>
+        
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>
