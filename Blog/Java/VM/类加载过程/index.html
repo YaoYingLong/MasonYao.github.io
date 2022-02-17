@@ -21,7 +21,7 @@
 <meta property="og:description" content="Class文件中描述的各种信息最终都需要加载到虚拟机中之后才能运行和使用，虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可被虚拟机直接使用的Java类型。 类型的加载、连接和初始化过程都是在程序运行期间完成的，这虽然会令类加载时稍微增加一些性能开销，但能够提供高度的灵活性，其天生的动态扩展性就是依赖运行期动态加载和动态连接。面向接口的应用程序可以等到运">
 <meta property="og:locale" content="en">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/%E7%B1%BB%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png">
-<meta property="og:updated_time" content="2022-01-18T11:32:07.769Z">
+<meta property="og:updated_time" content="2022-02-11T13:11:28.105Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="类加载过程">
 <meta name="twitter:description" content="Class文件中描述的各种信息最终都需要加载到虚拟机中之后才能运行和使用，虚拟机把描述类的数据从Class文件加载到内存，并对数据进行校验、转换解析和初始化，最终形成可被虚拟机直接使用的Java类型。 类型的加载、连接和初始化过程都是在程序运行期间完成的，这虽然会令类加载时稍微增加一些性能开销，但能够提供高度的灵活性，其天生的动态扩展性就是依赖运行期动态加载和动态连接。面向接口的应用程序可以等到运">
@@ -337,8 +337,6 @@
                         
             <ul class="unstyled" id="tree">
                 
-                    <li class="file"><a href="/Blog/Cloud/Seata/分布式事务/">分布式事务</a></li>
-                
                     <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
                 
                     <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
@@ -413,6 +411,8 @@
                     <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
                 
                     <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
                 
             </ul>
         
@@ -841,6 +841,27 @@
                         <a href="#" data-role="directory">
                             <i class="fa fa-folder"></i>
                             &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
                             杂记
                         </a>
                         
@@ -1213,12 +1234,12 @@
 </ul>
 <p>以上5种场景称为对一个类的<strong>主动引用</strong>，除此之外所有引用类的方式都不会触发初始化，称为<strong>被动引用</strong>，被动引用的几种情况：</p>
 <ul>
-<li>对于静态字段，只有直接定义这股份字段的类才会被初始化，其<strong>子类来引用父类</strong>的中定义的静态字段<strong>只会触发父类的初始化</strong>而不会触发子类的初始化。</li>
+<li>对于静态字段，只有直接定义该字段的类才会被初始化，其<strong>子类来引用父类</strong>的中定义的静态字段<strong>只会触发父类的初始化</strong>而不会触发子类的初始化。</li>
 <li><strong>通过数组定义来引用类</strong></li>
 <li><strong>常量的引用</strong>，常量在编译阶段会存入调用类的常量池种，本质上并没有直接引用到定义常量的类</li>
 </ul>
 <p><strong>接口</strong>的<strong>加载过程</strong>与<strong>类</strong>的加载过程<strong>稍微有些不同</strong>，<strong>接口中也有初始化过程</strong>，类中可以使用<strong>静态语句块<code>static{}</code></strong>，但是接口中<strong>不能使用<code>static{}</code></strong>语句块，但<strong>编译器</strong>任然会<strong>为接口生成<code>&lt;clinit&gt;</code>类构造器</strong>，用于<strong>初始化</strong>接口中定义的<strong>成员变量</strong>；接口与类的<strong>真正区别</strong>是，当类在初始化时，其父类都已经完成初始化，但接口在初始化时，并<strong>不要求其父类接口全部都完成初始化</strong>，只有在<strong>真正使用</strong>到父类接口的时候才会初始化，例如<strong>引用父类接口中定义的常量</strong>。</p>
-<h3 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h3><p><strong>加载</strong>阶段虚拟机要完成<strong><code>3</code></strong>件事：通过类的<strong>全限定名</strong>来获取定义此类得<strong>二进制字节流</strong>；将字节流所代表的<strong>静态存储结构</strong>转化为<strong>方法区</strong>的<strong>运行时数据</strong>；在<strong>内存中生成</strong>一个代表该类的<strong><code>java.lang.Class</code></strong>对象，作为<strong>方法区</strong>这个类的<strong>各种数据访问入口</strong>；</p>
+<h3 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h3><p><strong>加载</strong>阶段虚拟机要完成<strong><code>3</code></strong>件事：通过类的<strong>全限定名</strong>来获取定义此类的<strong>二进制字节流</strong>；将字节流所代表的<strong>静态存储结构</strong>转化为<strong>方法区</strong>的<strong>运行时数据</strong>；在<strong>内存中生成</strong>一个代表该类的<strong><code>java.lang.Class</code></strong>对象，作为<strong>方法区</strong>该类的<strong>各种数据访问入口</strong>；</p>
 <p>虚拟机<strong>没有明确规定</strong>二进制字节流要<strong>从哪里获取</strong>，<strong>怎样获取</strong>，相对于类加载过程的其他阶段，一个<strong>非数组类</strong>加载阶段中<strong>获取类二进制字节流</strong>的动作是开发人员<strong>可控性最强</strong>的，加载阶段既可以使用<strong>系统提供</strong>的<strong>引导类加载器</strong>来完成，也可以由<strong>自定义的类加载器</strong>来控制字节流的获取方式。一些典型的使用场景如下：</p>
 <ul>
 <li>从<strong>ZIP包中读取</strong>，<strong><code>JAR</code>、<code>EAR</code>、<code>WAR</code></strong>格式的基础</li>

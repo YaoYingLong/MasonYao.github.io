@@ -12,22 +12,24 @@
         <meta name="keywords" content="Cloud">
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <meta name="description" content="秒杀业务特性价格低廉、大幅推广、瞬时售空、定时上架、瞬时并发量高、限时、限量、限价、预热、持续时间短 秒杀业务设计 营销工具：系统整理的促销工具，可以对某些特定的工具详细解释 营销活动：从营销工具中提出创建一个活动 营销活动订单：针对营销活动产生的订单  商品级优惠：限时促销、限时抢购、秒杀、商品包邮 订单级优惠：满就赠、满立减、送优惠券、折扣、Vip折扣、订单包邮 全站级促销优惠：优惠券、优化券">
+    <meta name="description" content="秒杀业务特性秒杀具有瞬时高并发的特点，秒杀请求在时间上高度集中于某一特定的时间点（秒杀开始那一秒），就会导致一个特别高的流量峰值，它对资源的消耗是瞬时的。 但对秒杀场景来说，最终能够抢到商品的人数是固定的，也就是说100人和10000人发起请求的结果都是一样的，并发度越高，无效请求也越多。 但是从业务上来说，秒杀活动是希望更多的人来参与，开始之前希望有更多的人来刷页面，但是真正开始下单时，秒杀请求">
 <meta name="keywords" content="Cloud">
 <meta property="og:type" content="article">
 <meta property="og:title" content="秒杀问题及解决方案">
 <meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/秒杀问题及解决方案/index.html">
 <meta property="og:site_name" content="YingLong">
-<meta property="og:description" content="秒杀业务特性价格低廉、大幅推广、瞬时售空、定时上架、瞬时并发量高、限时、限量、限价、预热、持续时间短 秒杀业务设计 营销工具：系统整理的促销工具，可以对某些特定的工具详细解释 营销活动：从营销工具中提出创建一个活动 营销活动订单：针对营销活动产生的订单  商品级优惠：限时促销、限时抢购、秒杀、商品包邮 订单级优惠：满就赠、满立减、送优惠券、折扣、Vip折扣、订单包邮 全站级促销优惠：优惠券、优化券">
+<meta property="og:description" content="秒杀业务特性秒杀具有瞬时高并发的特点，秒杀请求在时间上高度集中于某一特定的时间点（秒杀开始那一秒），就会导致一个特别高的流量峰值，它对资源的消耗是瞬时的。 但对秒杀场景来说，最终能够抢到商品的人数是固定的，也就是说100人和10000人发起请求的结果都是一样的，并发度越高，无效请求也越多。 但是从业务上来说，秒杀活动是希望更多的人来参与，开始之前希望有更多的人来刷页面，但是真正开始下单时，秒杀请求">
 <meta property="og:locale" content="en">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/秒杀业务设计一.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/秒杀业务设计二.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/redis扣减库存一.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/redis扣减库存二.png">
-<meta property="og:updated_time" content="2022-02-08T11:19:48.178Z">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/Sentinel流控关联规则配置.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/服务降级总结.png">
+<meta property="og:updated_time" content="2022-02-09T03:18:40.076Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="秒杀问题及解决方案">
-<meta name="twitter:description" content="秒杀业务特性价格低廉、大幅推广、瞬时售空、定时上架、瞬时并发量高、限时、限量、限价、预热、持续时间短 秒杀业务设计 营销工具：系统整理的促销工具，可以对某些特定的工具详细解释 营销活动：从营销工具中提出创建一个活动 营销活动订单：针对营销活动产生的订单  商品级优惠：限时促销、限时抢购、秒杀、商品包邮 订单级优惠：满就赠、满立减、送优惠券、折扣、Vip折扣、订单包邮 全站级促销优惠：优惠券、优化券">
+<meta name="twitter:description" content="秒杀业务特性秒杀具有瞬时高并发的特点，秒杀请求在时间上高度集中于某一特定的时间点（秒杀开始那一秒），就会导致一个特别高的流量峰值，它对资源的消耗是瞬时的。 但对秒杀场景来说，最终能够抢到商品的人数是固定的，也就是说100人和10000人发起请求的结果都是一样的，并发度越高，无效请求也越多。 但是从业务上来说，秒杀活动是希望更多的人来参与，开始之前希望有更多的人来刷页面，但是真正开始下单时，秒杀请求">
 <meta name="twitter:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/秒杀业务设计一.png">
     
 
@@ -340,8 +342,6 @@
                         
             <ul class="unstyled" id="tree">
                 
-                    <li class="file"><a href="/Blog/Cloud/Seata/分布式事务/">分布式事务</a></li>
-                
                     <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
                 
                     <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
@@ -416,6 +416,8 @@
                     <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
                 
                     <li class="file active"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
                 
             </ul>
         
@@ -844,6 +846,27 @@
                         <a href="#" data-role="directory">
                             <i class="fa fa-folder"></i>
                             &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
                             杂记
                         </a>
                         
@@ -1202,7 +1225,11 @@
                     
             
             
-                <h4 id="秒杀业务特性"><a href="#秒杀业务特性" class="headerlink" title="秒杀业务特性"></a>秒杀业务特性</h4><p>价格低廉、大幅推广、瞬时售空、定时上架、瞬时并发量高、限时、限量、限价、预热、持续时间短</p>
+                <h4 id="秒杀业务特性"><a href="#秒杀业务特性" class="headerlink" title="秒杀业务特性"></a>秒杀业务特性</h4><p><strong>秒杀具有瞬时高并发的特点</strong>，秒杀请求在时间上高度集中于某一特定的时间点（秒杀开始那一秒），就会导致一个特别高的流量峰值，它对资源的消耗是瞬时的。</p>
+<p>但对秒杀场景来说，最终能够抢到商品的人数是固定的，也就是说100人和10000人发起请求的结果都是一样的，<strong>并发度越高，无效请求也越多</strong>。</p>
+<p>但是<strong>从业务上来说，秒杀活动是希望更多的人来参与</strong>，开始之前希望有更多的人来刷页面，但是真正开始下单时，秒杀请求并不是越多越好。</p>
+<h4 id="流量削峰"><a href="#流量削峰" class="headerlink" title="流量削峰"></a>流量削峰</h4><p><strong>服务器处理资源是恒定的</strong>，用或者不用它的处理能力都是一样的，出现峰值很容易导致忙到处理不过来，闲的时候却又没有什么要处理。</p>
+<p>流量削峰，一是可以<strong>让服务端处理变得更加平稳</strong>，二是可以<strong>节省服务器的资源成本</strong>。针对秒杀这一场景，削峰从本质上来说就是<strong>更多地延缓用户请求的发出</strong>，以便减少和过滤掉一些无效请求，它遵从<strong>请求数要尽量少</strong>的原则。流量削峰的比较常见的思路：<strong>排队</strong>、<strong>答题</strong>、<strong>分层过滤</strong>。</p>
 <h4 id="秒杀业务设计"><a href="#秒杀业务设计" class="headerlink" title="秒杀业务设计"></a>秒杀业务设计</h4><p><img src="../../../../images/Cloud/秒杀/秒杀业务设计一.png" alt></p>
 <p><strong>营销工具：</strong>系统整理的促销工具，可以对某些特定的工具详细解释</p>
 <p><strong>营销活动：</strong>从营销工具中提出创建一个活动</p>
@@ -1233,6 +1260,7 @@
 <li>生成下单商品信息</li>
 <li>库存处理</li>
 </ul>
+<hr>
 <h3 id="库存问题"><a href="#库存问题" class="headerlink" title="库存问题"></a>库存问题</h3><p>高并发下会出现<strong>超卖问题</strong>、<strong>何时扣减库存</strong></p>
 <h4 id="超卖问题"><a href="#超卖问题" class="headerlink" title="超卖问题"></a>超卖问题</h4><p>可通过<strong>数据库锁</strong>、<strong>redis特性</strong>、<strong>异步下单</strong>等解决方案来解决</p>
 <h4 id="数据库锁"><a href="#数据库锁" class="headerlink" title="数据库锁"></a>数据库锁</h4><p><strong>悲观锁</strong>，通过<strong><code>MySQL</code>提供的<code>select...for update</code></strong>实现的悲观锁方式，但<strong><code>select...for update</code>语句执行中所有扫描过的行都会被锁上</strong>，因此在MySQL中用悲观锁<strong>务必须确定走索引</strong>，而不是全表扫描，否则将会将整个数据表锁住。</p>
@@ -1245,12 +1273,12 @@
 <p><strong>数据库锁的问题</strong>：若数据库只有10个商品，1000个人来抢，意味着990个请求没有意义，但这种方案1000个请求都会到数据库尝试扣减库存，大量请求会导致数据库超载。</p>
 <h4 id="Redis版本"><a href="#Redis版本" class="headerlink" title="Redis版本"></a>Redis版本</h4><p>使用数据库锁方案数<strong>据库性能相对来说是有很大瓶颈</strong>，故可把库存放到redis中，秒杀下单时先从redis中获取库存数量，然后根据库存数量判断是否可进行下一步，若有库存就直接下单没有库存就不能下单。这样<strong>可拦截大部分流量进入到数据库中</strong>。需要将商品库存预先加载到Redis中。</p>
 <p><img src="../../../../images/Cloud/秒杀/redis扣减库存一.png" alt></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 从redis缓存当中取出当前要购买的商品库存</span></span><br><span class="line">Integer stock = redisOpsUtil.get(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, Integer<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line"><span class="keyword">if</span> (stock == <span class="keyword">null</span> || stock &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> CommonResult.failed(<span class="string">"商品已经售罄，请购买其它商品!"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 从redis缓存当中取出当前要购买的商品库存</span></span><br><span class="line">Integer stock = redisOpsUtil.get(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, Integer.class);</span><br><span class="line"><span class="keyword">if</span> (stock == <span class="keyword">null</span> || stock &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> CommonResult.failed(<span class="string">"商品已经售罄，请购买其它商品!"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>对于Redis来说还是有<strong>网络IO</strong>，当商品售罄时在<strong>本地缓存</strong>中设置该商品的售罄标志为true，从而减少Redis的网络IO。</p>
 <p><img src="../../../../images/Cloud/秒杀/redis扣减库存二.png" alt></p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Boolean localcache = cache.getCache(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId);</span><br><span class="line"><span class="keyword">if</span> (localcache != <span class="keyword">null</span> &amp;&amp; localcache) &#123;</span><br><span class="line">    <span class="keyword">return</span> CommonResult.failed(<span class="string">"商品已经售罄,请购买其它商品!"</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 从redis缓存当中取出当前要购买的商品库存</span></span><br><span class="line">Integer stock = redisOpsUtil.get(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, Integer<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line"><span class="keyword">if</span> (stock == <span class="keyword">null</span> || stock &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// 设置标记，如果售罄了在本地cache中设置为true</span></span><br><span class="line">    cache.setLocalCache(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, <span class="keyword">true</span>);</span><br><span class="line">    <span class="keyword">return</span> CommonResult.failed(<span class="string">"商品已经售罄,请购买其它商品!"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">Boolean localcache = cache.getCache(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId);</span><br><span class="line"><span class="keyword">if</span> (localcache != <span class="keyword">null</span> &amp;&amp; localcache) &#123;</span><br><span class="line">    <span class="keyword">return</span> CommonResult.failed(<span class="string">"商品已经售罄,请购买其它商品!"</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 从redis缓存当中取出当前要购买的商品库存</span></span><br><span class="line">Integer stock = redisOpsUtil.get(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, Integer.class);</span><br><span class="line"><span class="keyword">if</span> (stock == <span class="keyword">null</span> || stock &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// 设置标记，如果售罄了在本地cache中设置为true</span></span><br><span class="line">    cache.setLocalCache(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, <span class="keyword">true</span>);</span><br><span class="line">    <span class="keyword">return</span> CommonResult.failed(<span class="string">"商品已经售罄,请购买其它商品!"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>虽然可通过增加本地缓存减少Redis网络IO，但会存在<strong>产品售罄标志同步问题</strong>，可<strong>通过<code>Zookeeper</code>的watcher机制来实现同步</strong>，给每个JVM都监听Zookeeper的某个节点，一旦数据有改变之后通知到其他节点上。还可以利用<strong>Redis的<code>Channel</code>机制</strong>实现的<strong>发布订阅模式</strong>来实现<strong>产品售罄标志同步</strong>。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisOpsUtil</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">publish</span><span class="params">(String channel,Object message)</span></span>&#123;</span><br><span class="line">        redisTemplate.convertAndSend(channel,message);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">shouldPublishCleanMsg</span><span class="params">(Long productId)</span> </span>&#123;</span><br><span class="line">    Integer stock = redisOpsUtil.get(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, Integer<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">    <span class="keyword">return</span> (stock == <span class="keyword">null</span> || stock &lt;= <span class="number">0</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//通知服务群,清除本地售罄标记缓存</span></span><br><span class="line"><span class="keyword">if</span> (shouldPublishCleanMsg(productId)) &#123;</span><br><span class="line">    redisOpsUtil.publish(<span class="string">"cleanNoStockCache"</span>, productId);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisChannelListener</span> <span class="keyword">implements</span> <span class="title">MessageListener</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> LocalCache localCache;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onMessage</span><span class="params">(Message message, @Nullable <span class="keyword">byte</span>[] pattern)</span> </span>&#123;</span><br><span class="line">        log.info(<span class="string">"sub message :) channel[cleanNoStockCache] !"</span>);</span><br><span class="line">        String productId = <span class="keyword">new</span> String(message.getBody(), StandardCharsets.UTF_8);</span><br><span class="line">        localCache.remove(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisOpsUtil</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">publish</span><span class="params">(String channel,Object message)</span></span>&#123;</span><br><span class="line">        redisTemplate.convertAndSend(channel,message);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">shouldPublishCleanMsg</span><span class="params">(Long productId)</span> </span>&#123;</span><br><span class="line">    Integer stock = redisOpsUtil.get(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId, Integer.class);</span><br><span class="line">    <span class="keyword">return</span> (stock == <span class="keyword">null</span> || stock &lt;= <span class="number">0</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//通知服务群,清除本地售罄标记缓存</span></span><br><span class="line"><span class="keyword">if</span> (shouldPublishCleanMsg(productId)) &#123;</span><br><span class="line">    redisOpsUtil.publish(<span class="string">"cleanNoStockCache"</span>, productId);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RedisChannelListener</span> <span class="keyword">implements</span> <span class="title">MessageListener</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> LocalCache localCache;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onMessage</span><span class="params">(Message message, @Nullable <span class="keyword">byte</span>[] pattern)</span> </span>&#123;</span><br><span class="line">        log.info(<span class="string">"sub message :) channel[cleanNoStockCache] !"</span>);</span><br><span class="line">        String productId = <span class="keyword">new</span> String(message.getBody(), StandardCharsets.UTF_8);</span><br><span class="line">        localCache.remove(RedisKeyPrefixConst.MIAOSHA_STOCK_CACHE_PREFIX + productId);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p><strong><code>Zookeeper</code></strong>和<strong><code>Redis</code></strong>各有各的优缺点，Zookeeper是CP模式的可保证高可用，但<strong>吞吐量会比较低</strong>，<strong>Redis这种发布订阅模式没有<code>Ack</code></strong>，发出去后不管是否收到，因为<strong>减少了通讯吞吐量相对来说会比较高</strong>。</p>
 <h4 id="异步下单"><a href="#异步下单" class="headerlink" title="异步下单"></a>异步下单</h4><p>前面的方案，下单时会插入很多张表，</p>
 <ul>
@@ -1259,15 +1287,15 @@
 <li>天然排队处理能力</li>
 <li>消息中间件有很多特性可以利用，如订单取消</li>
 </ul>
-<p>若想进一步提升吞吐量，可以<strong>将库存拆分成很多段</strong>，分配到各个JVM实例上，通过<strong>本地锁</strong>来控制库存扣减，减少分布式锁的网络IO。</p>
 <h4 id="订单超时取消"><a href="#订单超时取消" class="headerlink" title="订单超时取消"></a>订单超时取消</h4><ul>
-<li><p><strong>定人任务</strong>：<strong>时间不准确</strong>，定时扫数据库的话消耗性能也很大，效率也会很低，对<strong>数据库压力太大</strong>，集群还需要保证处理的<strong>幂等性</strong>和<strong>分布式</strong>问题</p>
+<li><p><strong>定时任务</strong>：<strong>时间不准确</strong>，定时扫数据库的话消耗性能也很大，效率也会很低，对<strong>数据库压力太大</strong>，集群还需要保证处理的<strong>幂等性</strong>和<strong>分布式</strong>问题</p>
 </li>
 <li><p><strong>消息队列异步取消</strong>：通过<strong>延时消息</strong>实现</p>
 </li>
 </ul>
 <h4 id="何时扣减库存"><a href="#何时扣减库存" class="headerlink" title="何时扣减库存"></a>何时扣减库存</h4><p><strong>下单</strong>时扣减<strong><code>redis</code></strong>中的库存</p>
 <p><strong>支付</strong>时扣减<strong>数据库</strong>中的库存</p>
+<p>扣减<strong>库存系统</strong>中的库存</p>
 <hr>
 <h3 id="秒杀总结"><a href="#秒杀总结" class="headerlink" title="秒杀总结"></a>秒杀总结</h3><p><strong>尽量将请求拦截在系统上游</strong>，后续占据99%的请求，直接Nginx层面拦截掉</p>
 <p><strong>都多写少的场景多使用缓存</strong>，多级缓存保护好数据库</p>
@@ -1278,7 +1306,7 @@
 <ul>
 <li><strong>第一级缓存</strong>：请求秒杀商品详情页数据时，<strong>从就近<code>CND</code>上加载</strong>，不需要每次请求都到某个机房</li>
 <li><strong>Nginx基于Lua脚本实现本地缓存</strong>：提前把秒杀商品详情页的数据放到Nginx中缓存，不需要把请求转发到商品系统上</li>
-<li><strong>第二级缓存</strong>：Nginx上存在缓存数据过期子类的问题，导致没有找到需要的数据，此时由Nginx中的Lua脚本发送请求到本地缓存</li>
+<li><strong>第二级缓存</strong>：Nginx上存在缓存数据过期之类的问题，导致没有找到需要的数据，此时由Nginx中的Lua脚本发送请求到本地缓存</li>
 <li><strong>第三级缓存</strong>：若还没找到，把请求转发到Redis集群中加载提前放入的秒杀商品数据</li>
 </ul>
 <h4 id="秒杀下单TPS压力过大的解决方案"><a href="#秒杀下单TPS压力过大的解决方案" class="headerlink" title="秒杀下单TPS压力过大的解决方案"></a>秒杀下单TPS压力过大的解决方案</h4><ul>
@@ -1298,6 +1326,25 @@
 </li>
 <li><strong>瞬时高并发下单请求进入RocketMQ进行削峰，订单系统慢慢拉取消息完成下单操作</strong>：若判断发现通过Redis完成了库存扣减，此时直接发送消息到RocketMQ即可，让普通订单系统从RocketMQ中消费秒杀成功的消息进行常规的流程处理即可，后续订单系统以每秒几千的速率慢慢处理，延迟可能几十秒，这些订单就能被处理完毕</li>
 </ul>
+<h4 id="前端验证问题"><a href="#前端验证问题" class="headerlink" title="前端验证问题"></a>前端验证问题</h4><p><strong>针对前端验证问题</strong>，可通过<strong>提前发<code>Token</code></strong>，在秒杀前设置一个<strong>预约活动</strong>，如一个秒杀活动有<strong><code>20W</code></strong>个商品，可预先准备<strong><code>200W</code></strong>个Token，用户进行预约时，只发放200W个Token，其他人也能预约成功，但是其实没有获得token，后面秒杀直接通过该Token就可过滤掉一大部分人，相当于没有Token的人都只预约了个寂寞。</p>
+<h4 id="针对超卖问题"><a href="#针对超卖问题" class="headerlink" title="针对超卖问题"></a>针对超卖问题</h4><p><strong>针对超卖问题</strong>，可使用<strong><code>Redis</code>分布式锁防超卖</strong>，针对同一个商品ID，使用一把分布式锁，若同时有成千上万个商品要进行秒杀，那就意味着同一时间Redis上锁解锁的操作会要执行成千上万次，这对Redis的性能消耗是相当巨大的，Redis就有可能升级成为新的性能瓶颈。</p>
+<p>可把<strong>秒杀超卖的问题从分布式降级到本地JVM中</strong>，来获取极限性能。<strong>将秒杀服务接入配置中心</strong>，然后在秒杀服务开始前，<strong>由配置中心给每个应用服务实例下发一个库存数量</strong>。然后每次下单，每个服务器只管自己的库存数量，与其他应用服务器<strong>完全不进行库存同步</strong>，在各自的内存里扣减库存，这样就不会有超卖的情况发生。<strong>减少了网络消耗</strong>，性能也能够进一步提升。</p>
+<p>可能给<strong>某服务器上的库存很快消耗完</strong>了，而其他的服务器上仍有库存，整个服务就会表现为你抢不到商品，但是在你后面抢商品的人却能抢到商品，但是这在秒杀这种场景下，完全是可以接受的。</p>
+<p>若<strong>某一个应用服务器挂了</strong>，给他<strong>分配的库存就会丢失</strong>，这时只需要<strong>统计好订单的数量</strong>，可通过MQ来统计，也可通过Redis统计，等秒杀活动30分钟等待支付期过去后，再将没卖出去的库存重新丢回库存池，与没有付款而被取消的订单商品一起返场售卖即可。 </p>
+<hr>
+<h3 id="兜底方案之限流-amp-降级"><a href="#兜底方案之限流-amp-降级" class="headerlink" title="兜底方案之限流&amp;降级"></a>兜底方案之限流&amp;降级</h3><p>对于很多秒杀系统而言，在诸如双十一这样的大流量的迅猛冲击下，都曾经或多或少发生过宕机的情况。当一个系统面临持续的大流量时，它其实<strong>很难单靠自身调整来恢复状态</strong>，必须等待<strong>流量自然下降</strong>或<strong>人为地把流量切走</strong>才行，这无疑会严重影响用户的购物体验。</p>
+<p>在系统<strong>达到不可用状态之前</strong>就做好<strong>流量限制</strong>，防止最坏情况的发生。针对秒杀系统，在遇到大流量时，更多考虑的是<strong>运行阶段</strong>如何保障系统的稳定运行，常用的手段：<strong>限流</strong>，<strong>降级</strong>，<strong>拒绝服务</strong>。</p>
+<p>限流相对降级是一种更极端的保存措施，限流就是当<strong>系统容量达到瓶颈时</strong>，需要通过限制一部分流量来保护系统，并做到既可人工执行开关，也支持自动化保护的措施。</p>
+<p>限流既可在<strong>客户端限流</strong>，也可在<strong>服务端限流</strong>。限流的实现方式既要支持<strong><code>URL</code></strong>以及<strong>方法级别</strong>的限流，也要支持基于 <strong><code>QPS</code></strong>和<strong>线程</strong>的限流。限流必然会导致一部分用户请求失败，因此在系统处理这种异常时<strong>一定要设置超时时间</strong>，防止因被限流的请求不能fast fail（快速失败）而拖垮系统。</p>
+<h4 id="Nginx限流"><a href="#Nginx限流" class="headerlink" title="Nginx限流"></a>Nginx限流</h4><p>可使用<strong><code>ngx_http_limit_conn_module</code></strong>对于一些服务器<strong>流量异常</strong>、<strong>负载过大</strong>，甚至是<strong>大流量的恶意攻击访问</strong>等，进行<strong>并发数的限制</strong>；该模块可<strong>根据定义的键来限制每个键值的连接数</strong>，只有那些正在被处理的请求，这些请求的头信息已被完全读入，所在的连接才会被计数。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"># 限制连接数，客户端的IP地址作为键，</span><br><span class="line"># binary_remote_addr变量长度是固定4字节，在32位平台中占用32字节或64字节，在64位平台中占用64字节</span><br><span class="line"># 1M共享空间可以保存3.2万个32位的状态，1.6万个64位的状态</span><br><span class="line"># 若共享内存空间被耗尽，服务器将会对后续所有的请求返回503即Service Temporarily Unavailable错误</span><br><span class="line">limit_conn_zone $binary_remote_addr zone=addr:10m;</span><br><span class="line">server &#123;</span><br><span class="line">    location /download/ &#123;</span><br><span class="line">        # 指定每个给定键值的最大同时连接数，同一IP同一时间只允许有1个连接</span><br><span class="line">        limit_conn addr 1;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"># 缺点：前端做LVS或反向代理，会出现大量的503错误，需要设置白名单对某些ip不做限制</span><br></pre></td></tr></table></figure>
+<p>通过<strong><code>ngx_http_limit_req_module</code></strong>模块可<strong>通过定义的键值来限制请求处理的频率</strong>。特别的可限制来自单个IP地址的请求处理频率。限制的方法如同漏斗，每秒固定处理请求数，推迟过多请求。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">http &#123;</span><br><span class="line">    # 区域名称为one，大小为10m，平均处理的请求频率不能超过每秒一次。键值是客户端IP</span><br><span class="line">    limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;</span><br><span class="line">    ...</span><br><span class="line">    server &#123;</span><br><span class="line">        ...</span><br><span class="line">        location /search/ &#123;</span><br><span class="line">            # 允许超出频率限制的请求数为5，默认会被延迟处理，如果不希望延迟处理，可以使用nodelay参数</span><br><span class="line">            limit_req zone=one burst=5 nodelay;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><a href="https://github.com/openresty/lua-resty-limit-traffic" rel="external nofollow noopener noreferrer" target="_blank">OpenResty</a>利用Lua限流</p>
+<h4 id="网关接入Sentinel控制台"><a href="#网关接入Sentinel控制台" class="headerlink" title="网关接入Sentinel控制台"></a>网关接入Sentinel控制台</h4><h5 id="Route维度限流"><a href="#Route维度限流" class="headerlink" title="Route维度限流"></a>Route维度限流</h5><h5 id="API维度限流"><a href="#API维度限流" class="headerlink" title="API维度限流"></a>API维度限流</h5><h5 id="应用层限流"><a href="#应用层限流" class="headerlink" title="应用层限流"></a>应用层限流</h5><p>系统第一次上线启动，或系统在Redis故障情况下重新启动，这时在高并发的场景下就会出现所有的流量都打到数据库上，导致数据库崩溃。因此需要通过缓存预热的方案，提前给Redis灌入部分数据后再提供服务。</p>
+<p><img src="../../../../images/Cloud/秒杀/Sentinel流控关联规则配置.png" alt></p>
+<p>可在<strong>流控规则中配置关联模式</strong>，将数据库资源加入限流资源中，<strong>当对数据库访问达到阈值，可对商品详情请求限流</strong>。</p>
+<p><img src="../../../../images/Cloud/秒杀/服务降级总结.png" alt="服务降级总结"></p>
 
         </div>
         
@@ -1319,6 +1366,11 @@
                 </div>
             </a>
         
+        
+            <a href="/Blog/算法/基础算法/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">基础算法</div>
+            </a>
         
     </nav>
 

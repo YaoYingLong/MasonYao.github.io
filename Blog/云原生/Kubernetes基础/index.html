@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Kubernetes基础 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="k8s">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Kubernetes简称K8S，用于自动部署、扩展和管理容器化应用程序的开源系统。 核心特点;  服务发现与负载均衡：无需修改应用程序即可使用陌生的服务发现机制 存储编排：自动挂载所选存储系统，包括本地存储 Secret和配置管理：部署更新Secrets和应用程序的配置时不必重新构建容器镜像，且不必将软件堆栈配置中的秘密信息暴露出来 批量执行：除了服务外，Kubernetes还可管理批处理和CI工">
+<meta name="keywords" content="k8s">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes基础">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/云原生/Kubernetes基础/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Kubernetes简称K8S，用于自动部署、扩展和管理容器化应用程序的开源系统。 核心特点;  服务发现与负载均衡：无需修改应用程序即可使用陌生的服务发现机制 存储编排：自动挂载所选存储系统，包括本地存储 Secret和配置管理：部署更新Secrets和应用程序的配置时不必重新构建容器镜像，且不必将软件堆栈配置中的秘密信息暴露出来 批量执行：除了服务外，Kubernetes还可管理批处理和CI工">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/云原生/k8s/k8s核心架构图.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/云原生/k8s/Deployment.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/云原生/k8s/pod.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/云原生/k8s/service.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/云原生/k8s/Ingress与Service网络拓扑关系图.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/云原生/k8s/ingress.png">
+<meta property="og:updated_time" content="2022-02-17T13:43:40.603Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kubernetes基础">
+<meta name="twitter:description" content="Kubernetes简称K8S，用于自动部署、扩展和管理容器化应用程序的开源系统。 核心特点;  服务发现与负载均衡：无需修改应用程序即可使用陌生的服务发现机制 存储编排：自动挂载所选存储系统，包括本地存储 Secret和配置管理：部署更新Secrets和应用程序的配置时不必重新构建容器镜像，且不必将软件堆栈配置中的秘密信息暴露出来 批量执行：除了服务外，Kubernetes还可管理批处理和CI工">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/云原生/k8s/k8s核心架构图.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file active"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-云原生/Kubernetes基础" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/云原生/">云原生</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/k8s/">k8s</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/云原生/Kubernetes基础/">
+            <time datetime="2022-02-14T16:00:00.000Z" itemprop="datePublished">2022-02-15</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Kubernetes基础
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p><a href="https://kubernetes.io/zh/docs/home/" rel="external nofollow noopener noreferrer" target="_blank">Kubernetes</a>简称K8S，用于<strong>自动部署</strong>、<strong>扩展</strong>和<strong>管理容器化应用程序</strong>的开源系统。 核心特点;</p>
+<ul>
+<li><strong>服务发现与负载均衡</strong>：无需修改应用程序即可使用陌生的服务发现机制</li>
+<li><strong>存储编排</strong>：自动挂载所选存储系统，包括本地存储</li>
+<li><strong>Secret和配置管理</strong>：部署更新Secrets和应用程序的配置时不必重新构建容器镜像，且不必将软件堆栈配置中的秘密信息暴露出来</li>
+<li><strong>批量执行</strong>：除了服务外，Kubernetes还可管理批处理和CI工作负载，在期望时替换掉失效的容器</li>
+<li><strong>水平扩缩</strong>：使用一个简单的命令、一个UI或基于CPU使用情况自动对应用程序进行扩缩</li>
+<li><strong>自动化上线和回滚</strong>：Kubernetes会分步骤地将针对应用或其配置的更改上线，同时监视应用程序运行状况以确保不会同时终止所有实例</li>
+<li><strong>自动装箱</strong>：根据资源需求和其他约束自动放置容器，同时避免影响可用性</li>
+<li><strong>自我修复</strong>：重新启动失败的容器，在节点死亡时替换并重新调度容器，杀死不响应用户定义的健康检查的容器 </li>
+</ul>
+<h3 id="K8S核心架构原理"><a href="#K8S核心架构原理" class="headerlink" title="K8S核心架构原理"></a>K8S核心架构原理</h3><p><img src="../../../../images/云原生/k8s/k8s核心架构图.png" alt></p>
+<p>K8S属于<strong>主从设备模型</strong>即Master-Slave架构，<strong>Master节点</strong>负责<strong>核心调度</strong>、<strong>管理</strong>和<strong>运维</strong>，<strong>Slave节点</strong>则<strong>执行用户程序</strong>，<strong>主节点</strong>一般被称为<strong><code>Master Node</code></strong>或<strong><code>Head Node</code></strong>，<strong>从节点</strong>被称为<strong><code>Worker Node</code></strong>或Node。</p>
+<p><strong><code>Master Node</code></strong>和<strong><code>Worker Node</code></strong>是分别安装了K8S的Master和Woker组件的实体服务器，每个Node都对应了一台实体服务器，虽然Master Node可和其中一个Worker Node安装在同一台服务器，但<strong>建议<code>Master Node</code>单独部</strong>，所有Master Node和Worker Node组成了K8S集群，<strong>同一个集群可能存在多个<code>Master Node</code>和<code>Worker Node</code></strong>。</p>
+<h5 id="Master-Node包含的组件"><a href="#Master-Node包含的组件" class="headerlink" title="Master Node包含的组件"></a>Master Node包含的组件</h5><ul>
+<li><strong><code>API Server</code></strong>：<strong><code>K8S</code>请求入口服务</strong>，API Server负责接收K8S所有包括来自<strong><code>UI</code>界面</strong>或<strong><code>CLI</code>命令行工具</strong>的请求，然后根据用户具体请求，去通知其他组件干活</li>
+<li><strong><code>Scheduler</code></strong>：K8S所有Worker Node的<strong>调度器</strong>，当用户部署服务时，Scheduler会选择最合适的<strong><code>Worker Node</code></strong>服务器来部署服务</li>
+<li><strong><code>Controller Manager</code></strong>：K8S所有Worker Node的<strong>监控器</strong>，Controller Manager有<strong>很多具体的Controller</strong>， Node Controller、Service Controller、Volume Controller等。Controller负责<strong>监控</strong>和<strong>调整</strong>在<strong><code>Worker Node</code>上部署的服务的状态</strong>，如用户要求A服务部署2个副本，若当其中一个服务挂了时，Controller会马上调整，让 Scheduler再选择一个Worker Node重新部署服务</li>
+<li><strong><code>etcd</code></strong>：K8S的<strong>存储服务</strong>，存储了K8S的<strong>关键配置</strong>和<strong>用户配置</strong>，<strong>仅<code>API Server</code>具备读写权限</strong>，其他组件必须通过API Server接口才能读写数据</li>
+</ul>
+<h5 id="Worker-Node包含的组件"><a href="#Worker-Node包含的组件" class="headerlink" title="Worker Node包含的组件"></a>Worker Node包含的组件</h5><ul>
+<li><strong><code>Kubelet</code></strong>：<strong>Worker Node监视器</strong>，<strong>与<code>Master Node</code>的通讯器</strong>，Kubelet是Master Node安插在Worker Node上的眼线，它会<strong>定期向<code>Master Node</code>汇报自己<code>Node</code>上运行的服务的状态</strong>，并接受来自Master Node的指示采取调整措施，<strong>负责控制</strong>所有容器的<strong>启动停止</strong>，保证节点工作正常</li>
+<li><strong><code>Kube-Proxy</code></strong>：K8S的<strong>网络代理</strong>，<strong>负责Node在K8S的网络通讯</strong>、以及<strong>对外部网络流量的负载均衡</strong></li>
+<li><strong><code>Container Runtime</code></strong>：Worker Node的<strong>运行环境</strong>，即安装了容器化所需的软件环境确保容器化程序能够跑起来，如Docker Engine运行环境</li>
+</ul>
+<h5 id="协同工作流程"><a href="#协同工作流程" class="headerlink" title="协同工作流程"></a>协同工作流程</h5><p>用K8S部署Nginx的过程中，K8S内部各组件的协同工作流程，若在Master节点执行一条命令<strong><code>kubectl create deployment nginx --image=nginx</code></strong>要Master部署一个nginx应用</p>
+<ul>
+<li>该命令首先发到<strong>Master节点</strong>的网关<strong><code>API Server</code></strong></li>
+<li><strong><code>API Server</code></strong>将命令请求交给<strong><code>Controller Mannager</code></strong>进行控制</li>
+<li><strong><code>Controller Mannager</code></strong>进行<strong>应用部署解析</strong>，生成一次部署信息，并通过<strong><code>API Server</code></strong>将信息存入<strong><code>etcd</code></strong></li>
+<li><strong><code>Scheduler</code>调度器</strong>通过<strong><code>API Server</code></strong>从<strong><code>etcd</code></strong>存储中<strong>获取要部署的应用</strong>，开始调度看哪个节点有资源适合部署</li>
+<li>Scheduler把计算出来的调度信息通过<strong><code>API Server</code></strong>再存入<strong><code>etcd</code></strong>中</li>
+<li>每个Node节点的<strong>监控组件<code>kubelet</code></strong>，随时和Master保持联系，给<strong><code>API Server</code></strong>发送请求不断获取最新数据，拿到Master节点存储在<strong><code>etcd</code></strong>中的<strong>部署信息</strong></li>
+<li>若node2的<strong><code>kubelet</code></strong>拿到部署信息，显示其自己节点要部署该nginx应用</li>
+<li><strong><code>kubelet</code>监控组件</strong>就自己run一个应用在<strong>当前机器</strong>上，并随时给Master汇报当前应用的状态信息</li>
+<li>Node和Master也是通过Master的<strong><code>API Server</code></strong>组件联系的</li>
+<li>每个机器上的<strong><code>kube-proxy</code></strong>能知道<strong>集群的所有网络</strong>，只要Node访问别人或别人访问Node，Node上的kube-proxy网络代理<strong>自动计算进行流量转发</strong></li>
+</ul>
+<h3 id="K8S核心概念"><a href="#K8S核心概念" class="headerlink" title="K8S核心概念"></a>K8S核心概念</h3><h5 id="Deployment"><a href="#Deployment" class="headerlink" title="Deployment"></a>Deployment</h5><p>Deployment负责<strong>创建</strong>和<strong>更新应用程序的实例</strong>。创建Deployment后，Kubernetes Master将应用程序实例调度到集群中的各个节点上，<strong>若托管实例的节点关闭或被删除</strong>，Deployment控制器会<strong>将该实例替换为群集中另一个节点上的实例</strong>。这提供了一种自我修复机制来解决机器故障维护问题。</p>
+<p><img src="../../../../images/云原生/k8s/Deployment.png" alt></p>
+<h5 id="Pod"><a href="#Pod" class="headerlink" title="Pod"></a>Pod</h5><p>Pod相当于<strong>逻辑主机</strong>的概念，<strong>负责托管应用实例</strong>，包括<strong>一个</strong>或<strong>多个应用程序容器</strong>如Docker，以及<strong>这些容器的一些共享资源</strong>，共享<strong>存储</strong>、<strong>网络</strong>、<strong>运行信息</strong>等。 </p>
+<p><img src="../../../../images/云原生/k8s/pod.png" alt></p>
+<h5 id="Service"><a href="#Service" class="headerlink" title="Service"></a>Service</h5><p>Service是一个<strong>抽象层</strong>，它定义了<strong>一组Pod的逻辑集</strong>，并为这些Pod支持<strong>外部流量暴露</strong>、<strong>负载平衡</strong>和<strong>服务发现</strong>。尽管每个Pod都有一个唯一的IP地址，但若没有Service，这些IP不会暴露在群集外部，<strong>Service允许应用程序接收流量</strong>。Service也可用在<strong><code>ServiceSpec</code></strong>标记<strong><code>type</code></strong>的方式暴露，type类型如下：</p>
+<ul>
+<li><strong><code>ClusterIP</code></strong>：<strong>默认</strong>，在集群的内部IP上公开Service，这种类型使得Service<strong>只能从集群内访问</strong></li>
+<li><strong><code>NodePort</code></strong>：使用<strong><code>NAT</code></strong>在集群中每个选定Node的<strong>相同端口上公开<code>Service</code></strong>，使用<strong><code>&lt;NodeIP&gt;:&lt;NodePort&gt;</code></strong>从集群外部访问Service，是ClusterIP的超集</li>
+<li><strong><code>LoadBalancer</code></strong>：在当前云中创建一个<strong>外部负载均衡器</strong>若支持的话，并为Service分配一个固定的外部IP，是NodePort的超集</li>
+<li><strong><code>ExternalName</code></strong>：通过返回带有该名称的<strong><code>CNAME</code></strong>记录公开Service，不使用代理，使用任意名称，由spec中的<strong><code>externalName</code></strong>指定</li>
+</ul>
+<p><img src="../../../../images/云原生/k8s/service.png" alt></p>
+<p><strong>Service是<code>K8S</code>服务的核心屏蔽了服务细节</strong>，<strong>统一对外暴露服务接口</strong>，如一个服务A部署了3个备份，即3个Pod，对于用户来说，只需要关注一个Service的入即可，而不需要操心究竟应该请求哪一个Pod。外部用户<strong>不需要感知</strong>因为Pod上服务的<strong>意外崩溃</strong>、K8S重新拉起Pod而造成的<strong>IP变更</strong>，外部用户也不需要感知因<strong>升级</strong>、<strong>变更服务</strong>带来的Pod替换而造成的IP变化。</p>
+<p>Service还可以做<strong>流量负载均衡</strong>，<strong>主要负责K8S集群内部的网络拓扑</strong>，<strong>集群外部访问集群内部可通过Ingress来完成</strong>，Ingress是<strong>对集群中服务的外部访问进行管理的API对象</strong>，典型的访问方式是HTTP，Ingress可提供<strong>负载均衡</strong>、<strong>SSL终结</strong>和<strong>基于名称的虚拟托管</strong>，Ingress是整个K8S集群的<strong>接入层</strong>，负责<strong>集群内外通讯</strong>，Ingress和Service的网络拓扑关系图如下：</p>
+<p><img src="../../../../images/云原生/k8s/Ingress与Service网络拓扑关系图.png" alt></p>
+<h3 id="K8S安装"><a href="#K8S安装" class="headerlink" title="K8S安装"></a>K8S安装</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 关闭防火墙</span><br><span class="line">systemctl stop firewalld</span><br><span class="line">systemctl disable firewalld</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 关闭selinux</span><br><span class="line">sed -i 's/enforcing/disabled/' /etc/selinux/config # 永久关闭</span><br><span class="line">setenforce 0 # 临时关闭</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 关闭swap</span><br><span class="line">swapoff -a # 临时关闭</span><br><span class="line">vim /etc/fstab # 永久关闭，注释掉/etc/fstab文件下面这行代码</span><br><span class="line"><span class="meta">#</span> /dev/mapper/centos‐swap swap swap defaults 0 0</span><br><span class="line"></span><br><span class="line">systemctl reboot # 重启生效</span><br><span class="line">free -m # 查看下swap交换区是否都为0，如果都为0则swap关闭成功</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 给机器设置主机名</span><br><span class="line">hostnamectl set-hostname &lt;hostname&gt;</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 给机器名称配置hosts</span><br><span class="line">vim /etc/hosts</span><br><span class="line"><span class="meta">#</span> 添加如下行</span><br><span class="line">192.168.0.180 eleven</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 将桥接的IPv4流量传递到iptables</span><br><span class="line">vim /etc/sysctl.d/k8s.conf</span><br><span class="line"><span class="meta">#</span> 添加下面两行配置</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables = 1</span><br><span class="line">net.bridge.bridge-nf-call-iptables = 1</span><br><span class="line"></span><br><span class="line">sysctl --system # 生效</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 设置时间同步</span><br><span class="line">yum install ntpdate -y</span><br><span class="line">ntpdate time.windows.com</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 添加k8s yum源</span><br><span class="line">vim /etc/yum.repos.d/kubernetes.repo</span><br><span class="line"><span class="meta">#</span> 添加如下配置</span><br><span class="line">[kubernetes]</span><br><span class="line">name=Kubernetes</span><br><span class="line">baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64</span><br><span class="line">enabled=1</span><br><span class="line">gpgcheck=0</span><br><span class="line">repo_gpgcheck=0</span><br><span class="line">gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg</span><br><span class="line">https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 若之前安装过k8s，先卸载旧版本</span><br><span class="line">yum remove -y kubelet kubeadm kubectl</span><br><span class="line"><span class="meta">#</span> 查看可以安装的版本</span><br><span class="line">yum list kubelet --showduplicates | sort -r</span><br><span class="line"><span class="meta">#</span> 安装kubelet、kubeadm、kubectl指定版本，这里使用kubeadm方式安装k8s集群</span><br><span class="line">yum install -y kubelet-1.18.0 kubeadm-1.18.0 kubectl-1.18.0</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 开机启动kubelet</span><br><span class="line">systemctl enable kubelet</span><br><span class="line">systemctl start kubelet</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 在k8s的Master机器上执行初始化操作</span><br><span class="line">kubeadm init --apiserver-advertise-address=192.168.0.180 --image-repository registry.aliyuncs.com/google_containers --kubernetes-version v1.18.0 --service-cidr=10.96.0.0/12 --pod-network-cidr=10.244.0.0/16</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 配置使用kubectl命令工具(类似docker这个命令)</span><br><span class="line">mkdir -p $HOME/.kube</span><br><span class="line">chmod 666 /etc/kubernetes/admin.conf</span><br><span class="line">sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config</span><br><span class="line">sudo chown $(id -u):$(id -g) $HOME/.kube/config</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 查看kubectl是否能正常使用，此时节点状态为NotReady，安装Pod网络插件后才会变为Ready状态</span><br><span class="line">kubectl get nodes</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 安装Pod网络插件</span><br><span class="line">kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml</span><br><span class="line">kubectl apply -f https://docs.projectcalico.org/v3.3/getting-started/kubernetes/installation/hosted/canal/rbac.yaml</span><br><span class="line"><span class="meta">#</span> 若上面这个calico网络插件安装不成功可以试下下面这个</span><br><span class="line"><span class="meta">#</span> kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kubeflannel.yml</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 将node节点加入进Master节点的集群里，复制kubeadm init命令执行后的输出中的kubeadm join内容</span><br><span class="line">kubeadm join 192.168.65.160:6443 --token hbovty.6x82bkdlsk6dfy32 \ --discovery-token-ca-cert-hash sha256:659511b431f276b2a5f47397677b1dff74838ae5eb18e24135e6dae1b8c45840</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 将Master也当作Node使用，xxx-nodename表示节点名称，或主机IP，也可使用--all参数</span><br><span class="line">kubectl taint node xxx-nodename node-role.kubernetes.io/master-</span><br><span class="line">kubectl taint nodes --all node-role.kubernetes.io/master-</span><br><span class="line"><span class="meta">#</span> 将Master恢复成Master Only状态，xxx-nodename表示节点名称，或主机IP</span><br><span class="line">kubectl taint node xxx-nodename node-role.kubernetes.io/master="":NoSchedule</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 要删除k8s-node1节点，首先在master节点上依次执行以下两个命令</span><br><span class="line">kubectl drain k8s‐node1 --delete-local-data --force --ignore-daemonsets</span><br><span class="line">kubectl delete node k8s-node1</span><br><span class="line"><span class="meta">#</span> 在k8s-node1这个Node节点上执行如下命令，这样该节点即完全从k8s集群中脱离开来</span><br><span class="line">kubeadm reset</span><br></pre></td></tr></table></figure>
+<h5 id="命令补全"><a href="#命令补全" class="headerlink" title="命令补全"></a>命令补全</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">yum -y install bash-completion</span><br><span class="line">source /usr/share/bash-completion/bash_completion</span><br><span class="line">source &lt;(kubectl completion bash)</span><br><span class="line">echo "source &lt;(kubectl completion bash)" &gt;&gt; ~/.bashrc</span><br></pre></td></tr></table></figure>
+<h3 id="K8S部署应用"><a href="#K8S部署应用" class="headerlink" title="K8S部署应用"></a>K8S部署应用</h3><p><a href="https://kubernetes.io/zh/docs/reference/kubectl/overview/" rel="external nofollow noopener noreferrer" target="_blank">kubectl</a>是<strong><code>API Server</code></strong>的<strong>客户端工具</strong>，工作在命令行下，能够连接<strong><code>API Server</code></strong>实现各种<strong>增删改查</strong>等操作 </p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 创建一次deployment部署</span><br><span class="line">kubectl create deployment nginx --image=nginx</span><br><span class="line">kubectl expose deployment nginx --port=80 --type=NodePort</span><br><span class="line"><span class="meta">#</span> 查看Nginx的pod和service信息</span><br><span class="line">kubectl get pod,svc -o wide</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> my‐tomcat表示pod的名称 --image表示镜像的地址</span><br><span class="line">kubectl create deployment my-tomcat --image=tomcat:7.0.75-alpine</span><br><span class="line">kubectl get deployment</span><br><span class="line">kubectl get pod -o wide</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 查看Pod打印的日志</span><br><span class="line">kubectl logs my-tomcat-6d9cf656c4-45xk5</span><br><span class="line"><span class="meta">#</span> 使用exec可在Pod的容器中执行命令，使用env命令查看环境变量</span><br><span class="line">kubectl exec my-tomcat-6d9cf656c4-45xk5 -- env</span><br><span class="line"><span class="meta">#</span> 查看容器的根目录下面内容</span><br><span class="line">kubectl exec my-tomcat-6d9cf656c4-45xk5 -- ls /</span><br><span class="line"><span class="meta">#</span> 进入Pod容器内部并执行bash命令，若想退出容器可以使用exit命令</span><br><span class="line">kubectl exec -it my-tomcat-6d9cf656c4-45xk5 -- sh</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 在集群外是无法访问Pod的，需要创建一个service服务，才能让外部客户端可访问Pod</span><br><span class="line"><span class="meta">#</span> --name指定service名称，若端口暴露类型为NodePort，可通过集群内任意一台主机加暴露端口进行访问</span><br><span class="line">kubectl expose deployment my-tomcat --name=tomcat --port=8080 --type=NodePort</span><br><span class="line"><span class="meta">#</span>查看service信息，port信息里冒号后面的端口号就是对集群外暴露的访问接口</span><br><span class="line">kubectl get svc -o wide</span><br><span class="line"><span class="meta">#</span> 查看pod信息，‐w意思是一直等待观察pod信息的变动</span><br><span class="line">kubectl get pod -w</span><br><span class="line"><span class="meta">#</span> 查看pod、deployment、service等所有信息</span><br><span class="line">kubectl get all -o wide</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 删除刚刚创建的Pod，k8s会重新启动一个新的pod，这是k8s的服务自愈功能</span><br><span class="line">kubectl delete pod my-tomcat-6d9cf656c4-45xk5</span><br><span class="line"><span class="meta">#</span> 真正删除pod</span><br><span class="line">kubectl delete deployment my-tomcat</span><br><span class="line"><span class="meta">#</span> 删除service</span><br><span class="line">kubectl delete service tomcat</span><br></pre></td></tr></table></figure>
+<h5 id="扩容缩容"><a href="#扩容缩容" class="headerlink" title="扩容缩容"></a>扩容缩容</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 扩容到3个pod</span><br><span class="line">kubectl scale --replicas=3 deployment my-tomcat</span><br><span class="line"><span class="meta">#</span> 缩容到2个pod</span><br><span class="line">kubectl scale --replicas=2 deployment my-tomcat</span><br></pre></td></tr></table></figure>
+<h5 id="滚动升级与回滚"><a href="#滚动升级与回滚" class="headerlink" title="滚动升级与回滚"></a>滚动升级与回滚</h5><p>滚动升级并不是一次性将多个pod全部停掉升级，而是一个一个的滚动升级</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 滚动升级将tomcat版本由tomcat:7.0.75-alpine升级到tomcat:8.0.41-jre8-alpine</span><br><span class="line">kubectl set image deployment my-tomcat tomcat=tomcat:8.0.41-jre8-alpine</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 查看历史版本</span><br><span class="line">kubectl rollout history deploy my-tomcat</span><br><span class="line"><span class="meta">#</span> 回滚到上一个版本，也可通过--to-revision参数可指定回退的版本</span><br><span class="line">kubectl rollout undo deployment my-tomcat</span><br></pre></td></tr></table></figure>
+<h5 id="标签"><a href="#标签" class="headerlink" title="标签"></a>标签</h5><p>通过给资源添加Label，可方便地管理资源，如Deployment、Pod、Service等</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 查看Deployment中所包含的Label，该命令是查询deployment详细信息，该信息中包括Label信息</span><br><span class="line">kubectl describe deployment my-tomcat</span><br><span class="line"><span class="meta">#</span> 通过Label查询Pod</span><br><span class="line">kubectl get pods -l app=my-tomcat</span><br><span class="line"><span class="meta">#</span> 通过Label查询services</span><br><span class="line">kubectl get services -l app=my-tomcat</span><br><span class="line"><span class="meta">#</span> 给Pod添加Label</span><br><span class="line">kubectl label pod my-tomcat-6d9cf656c4-45xk5 version=v1</span><br><span class="line"><span class="meta">#</span> 查看Pod的详细信息，包括Label信息</span><br><span class="line">kubectl describe pods my-tomcat-6d9cf656c4-45xk5</span><br><span class="line"><span class="meta">#</span> 通过Label查询Pod</span><br><span class="line">kubectl get pods -l version=v1</span><br><span class="line"><span class="meta">#</span> 通过Label删除服务</span><br><span class="line">kubectl delete service -l app=test-service</span><br></pre></td></tr></table></figure>
+<h5 id="问题排查"><a href="#问题排查" class="headerlink" title="问题排查"></a>问题排查</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 查看Pod内部某个container打印的日志</span><br><span class="line">kubectl log $&#123;POD_NAME&#125; -c $&#123;CONTAINER_NAME&#125;</span><br><span class="line"><span class="meta">#</span> 查看Pod打印的日志</span><br><span class="line">kubectl logs my-tomcat-6d9cf656c4-45xk5</span><br><span class="line"><span class="meta">#</span> 使用exec可在Pod的容器中执行命令，使用env命令查看环境变量</span><br><span class="line">kubectl exec my-tomcat-6d9cf656c4-45xk5 -- env</span><br><span class="line"><span class="meta">#</span> 查看容器的根目录下面内容</span><br><span class="line">kubectl exec my-tomcat-6d9cf656c4-45xk5 -- ls /</span><br><span class="line"><span class="meta">#</span> 进入Pod容器内部并执行bash命令，若想退出容器可以使用exit命令</span><br><span class="line">kubectl exec -it my-tomcat-6d9cf656c4-45xk5 -- sh</span><br></pre></td></tr></table></figure>
+<h3 id="K8S中的资源"><a href="#K8S中的资源" class="headerlink" title="K8S中的资源"></a>K8S中的资源</h3><p><strong><code>K8S</code>中所有内容都抽象为资源</strong>， 资源实例化之后叫做对象，上面说的那些核心概念都是<br>K8S中的资源：</p>
+<ul>
+<li><strong><code>workload</code>工作负载型资源</strong>：<strong><code>Pod</code></strong>、<strong><code>ReplicaSet</code></strong>、<strong><code>Deployment</code></strong>、<strong><code>StatefulSet</code></strong>、<strong><code>DaemonSet</code></strong>等等</li>
+<li><strong><code>ServiceDiscovery LoadBalance</code>服务发现及负载均衡型资源</strong>：<strong><code>Service</code></strong>、<strong><code>Ingress</code></strong>等等</li>
+<li><strong>配置与存储型资源</strong>： <strong><code>Volume</code></strong>存储卷、<strong><code>CSI</code></strong>容器存储接口、可扩展各种各样的第三方存储卷</li>
+<li><strong>特殊类型的存储卷</strong>：<strong><code>ConfigMap</code></strong>当配置中心来使用的资源类型、<strong><code>Secret</code></strong>保存敏感数据、<strong><code>DownwardAPI</code></strong>把外部环境中的信息输出给容器</li>
+<li><strong>集群级资源</strong>：<strong><code>Namespace</code></strong>、<strong><code>Node</code></strong>、<strong><code>Role</code></strong>、<strong><code>ClusterRole</code></strong>、<strong><code>RoleBinding</code></strong>角色绑定、<strong><code>ClusterRoleBinding</code></strong>集群角色绑定</li>
+<li><strong>元数据型资源</strong>：<strong><code>HPA</code></strong>即Pod水平扩展、<strong><code>PodTemplate</code></strong>即Pod模板，用于让控制器创建Pod时使用的模板、<strong><code>LimitRange</code></strong>用来定义硬件资源限制</li>
+</ul>
+<h5 id="资源清单"><a href="#资源清单" class="headerlink" title="资源清单"></a>资源清单</h5><p>上面直接用<strong>命令</strong>创建<strong><code>deployment</code></strong>，<strong><code>pod</code></strong>，<strong><code>service</code></strong>这些资源，在k8s中一般都会使用<strong><code>yaml</code></strong>格式的文件来创建符合预期期望的资源，这样的yaml文件一般称为<strong>资源清单</strong>。 </p>
+<p>使用资源清单yaml来创建k8s的资源对象，用yaml创建deployment资源的对象，可用创建deployment的命令加上参数<strong><code>--dry-run -o yaml</code></strong>就可以输出这次部署的资源清单yaml</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl create deployment my-tomcat --image=tomcat:7.0.75‐alpine --dry-run -o yaml</span><br></pre></td></tr></table></figure>
+<p>对上面的yaml适当的修改下保存为文件<strong><code>tomcat-deployment-demo.yaml</code></strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">creationTimestamp:</span> <span class="literal">null</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">my-tomcat-yaml</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">my-tomcat-yaml</span>	<span class="comment">#修改deployment的名称</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">2</span> <span class="comment"># 修改pod副本为两个</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">my-tomcat-yaml</span></span><br><span class="line">  <span class="attr">strategy:</span> <span class="string">&#123;&#125;</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">creationTimestamp:</span> <span class="literal">null</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">my-tomcat-yaml</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">image:</span> <span class="string">tomcat:7.0.75-alpine</span></span><br><span class="line">          <span class="attr">name:</span> <span class="string">tomcat</span></span><br><span class="line">          <span class="attr">resources:</span> <span class="string">&#123;&#125;</span></span><br><span class="line"><span class="attr">status:</span> <span class="string">&#123;&#125;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 用yaml文件来创建这次部署</span><br><span class="line">kubectl apply -f tomcat-deployment-demo.yaml</span><br><span class="line"><span class="meta">#</span> 用yaml创建service资源的对象</span><br><span class="line">kubectl expose deployment my-tomcat-yaml --name=tomcat --port=8080 --type=NodePort --dry-run -o yaml</span><br></pre></td></tr></table></figure>
+<p><strong>用<code>yaml</code>创建<code>service</code>资源的对象</strong>，保存为文件<strong><code>tomcat-service-demo.yaml</code></strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">creationTimestamp:</span> <span class="literal">null</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">my-tomcat-yaml</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">tomcat-service-yaml</span> <span class="comment"># 修改Service名称</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">port:</span> <span class="number">8081</span>  <span class="comment"># service虚拟ip对应的端口，在集群内网机器可用service的虚拟ip加该端口号访问服务</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="number">8080</span> <span class="comment"># pod暴露的端口，一般与pod内部容器暴露的端口一致</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">my-tomcat-yaml</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">NodePort</span></span><br><span class="line"><span class="attr">status:</span></span><br><span class="line">  <span class="attr">loadBalancer:</span> <span class="string">&#123;&#125;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 用yaml文件来创建service</span><br><span class="line">kubectl apply -f tomcat-service-demo.yaml</span><br><span class="line"><span class="meta">#</span> 针对已有资源输出资源清单yaml，使用-o参数加yaml，可将资源的配置以yaml的格式输出出来，也可使用json，输出为json格式</span><br><span class="line">kubectl get pod nginx-deploy-7db697dfbd-2qh7v -o yaml</span><br><span class="line">kubectl get service nginx -o yaml</span><br><span class="line">kubectl get deployment nginx -o yaml</span><br></pre></td></tr></table></figure>
+<h3 id="K8S高级特性"><a href="#K8S高级特性" class="headerlink" title="K8S高级特性"></a>K8S高级特性</h3><p>K8S中还有一些高级特性如<strong>弹性扩缩应用</strong>、<strong>滚动更新</strong>、配置管理、存储卷、网关路由等。</p>
+<h4 id="ReplicaSet"><a href="#ReplicaSet" class="headerlink" title="ReplicaSet"></a>ReplicaSet</h4><p><strong><code>ReplicaSet</code></strong>确<strong>保任何时间都有指定数量的Pod副本在运行</strong>，通常用来保证给定数量的、完全相同的Pod的可用性。建议使用<strong><code>Deployment</code></strong>来管理<strong><code>ReplicaSet</code></strong>，而不是直接使用<strong><code>ReplicaSet</code></strong>。</p>
+<h4 id="ConfigMap"><a href="#ConfigMap" class="headerlink" title="ConfigMap"></a>ConfigMap</h4><p><strong><code>ConfigMap</code></strong>是一种<strong>API对象</strong>，用来将<strong>非机密性</strong>的数据保存到<strong>键值对</strong>中。使用时Pod可<strong>将其用作环境变量</strong>、<strong>命令行参数</strong>或<strong>存储卷中的配置文件</strong>。使用<strong><code>ConfigMap</code></strong>可<strong>将配置数据和应用程序代码分开</strong>。</p>
+<h4 id="Volume"><a href="#Volume" class="headerlink" title="Volume"></a>Volume</h4><p><strong><code>Volume</code></strong>指的是<strong>存储卷</strong>，<strong>包含可被Pod中容器访问的数据目录</strong>，容器中文件在磁盘上是<strong>临时存放</strong>，当容器崩溃时文件会丢失，同时<strong>无法在多个Pod中共享文件</strong>，通过使用存储卷可以解决这两个问题，常用存储卷：</p>
+<ul>
+<li><strong><code>configMap</code></strong>：<strong>提供向Pod注入配置数据的方法</strong>，ConfigMap对象中存储的数据可被configMap类型的卷引用，然后被Pod中运行的容器化应用使用</li>
+<li><strong><code>emptyDir</code></strong>：emptyDir卷可用于<strong>存储缓存数据</strong>，<strong>当Pod分派到某个Node上时<code>emptyDir</code>卷会被创建</strong>，且Pod在该节点上<strong>运行期间卷一直存在</strong>，<strong>当Pod被从节点上删除时<code>emptyDir</code>卷中的数据也会被永久删除</strong></li>
+<li><strong><code>hostPath</code></strong>：<strong>将主机节点文件系统上的文件或目录挂载到Pod中</strong>，在<strong><code>Minikube</code></strong>中的主机指的是<strong><code>Minikube</code>所在虚拟机</strong></li>
+<li><strong><code>local</code></strong>：代表<strong>某个被挂载的本地存储设备</strong>，如磁盘、分区或目录，local卷只能用作<strong>静态创建的持久卷</strong>，尚<strong>不支持动态配置</strong></li>
+<li><strong><code>nfs</code></strong>：<strong>将NFS网络文件系统挂载到Pod中</strong></li>
+<li><strong><code>persistentVolumeClaim</code></strong>：将持久卷<strong><code>PersistentVolume</code></strong>挂载到Pod中，持久卷是集群中的一块存储，可以由管理员事先供应，或使用存储类Storage Class来动态供应，持久卷是集群资源类似于节点</li>
+</ul>
+<h4 id="Ingress"><a href="#Ingress" class="headerlink" title="Ingress"></a>Ingress</h4><p><img src="../../../../images/云原生/k8s/ingress.png" alt></p>
+<p>通过<strong><code>Ingress</code></strong>资源可实现<strong>类似<code>Nginx</code>的基于域名访问</strong>，<strong>从而实现Pod的负载均衡访问</strong>，进入<a href="https://github.com/kubernetes/ingress-nginx/blob/nginx-0.20.0/deploy/mandatory.yaml" rel="external nofollow noopener noreferrer" target="_blank">ingress-nginx</a>将里面内容复制保存到k8s master机器上的ingress-controller.yaml文件中，修改镜像地址。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 安装ingress</span><br><span class="line">kubectl apply -f ingress-controller.yaml</span><br><span class="line"><span class="meta">#</span> 查看是否安装成功</span><br><span class="line">kubectl get pods -n ingress-nginx -o wide</span><br><span class="line"><span class="meta">#</span> 查看日志</span><br><span class="line">kubectl logs -f nginx-ingress-controller-2dvwn -n ingress-nginx</span><br></pre></td></tr></table></figure>
+<p><strong>配置<code>ingress</code>访问规则</strong>，类似配置nginx的代理转发配置，让ingress将域名<strong><code>tomcat.eleven.com</code></strong>转发给后端的<strong><code>tomcat-service-yaml</code></strong>服务，新建<strong><code>ingress-tomcat.yaml</code></strong>文件： </p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">networking.k8s.io/v1beta1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Ingress</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">web-ingress</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">rules:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">host:</span> <span class="string">tomcat.eleven.com</span>  <span class="comment"># 转发域名</span></span><br><span class="line">      <span class="attr">http:</span></span><br><span class="line">        <span class="attr">paths:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">path:</span> <span class="string">/</span></span><br><span class="line">            <span class="attr">backend:</span></span><br><span class="line">              <span class="attr">serviceName:</span> <span class="string">tomcat-service-yaml</span>  <span class="comment"># service名称</span></span><br><span class="line">              <span class="attr">servicePort:</span> <span class="number">8081</span>   <span class="comment"># service的端口</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 生效规则</span><br><span class="line">kubectl apply -f ingress-tomcat.yaml</span><br><span class="line"><span class="meta">#</span> 卸载资源</span><br><span class="line">kubectl delete -f ingress-tomcat.yaml</span><br><span class="line"><span class="meta">#</span> 查看生效的ingress规则</span><br><span class="line">kubectl get ing	</span><br><span class="line">kubectl describe ing  web-ingress</span><br><span class="line"><span class="meta">#</span> 在hosts中配置：192.168.0.180 tomcat.eleven.com</span><br><span class="line">echo "192.168.0.180 tomcat.eleven.com" &gt;&gt; /etc/hosts</span><br></pre></td></tr></table></figure>
+<h4 id="ConfigMap-1"><a href="#ConfigMap-1" class="headerlink" title="ConfigMap"></a>ConfigMap</h4><p>ConfigMap允许<strong>将配置文件</strong>与<strong>镜像文件分离</strong>，将ConfigMap属性注入到Pod的环境变量中去，使容器化的应用程序具有可移植性。添加<strong><code>nginx-config.yaml</code></strong>配置文件用于创建<strong><code>ConfigMap</code></strong>，ConfigMap名称为<strong><code>nginx-config</code></strong>，配置信息存放在data节点下：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ConfigMap</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-config</span></span><br><span class="line">  <span class="attr">namespace:</span> <span class="string">default</span></span><br><span class="line"><span class="attr">data:</span></span><br><span class="line">  <span class="attr">nginx-env:</span> <span class="string">test</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 应用nginx-config.yaml文件创建ConfigMap</span><br><span class="line">kubectl create -f nginx-config.yaml</span><br><span class="line"><span class="meta">#</span> 获取所有ConfigMap</span><br><span class="line">kubectl get configmap</span><br><span class="line"><span class="meta">#</span> 通过yaml格式查看ConfigMap中的内容</span><br><span class="line">kubectl get configmaps nginx-config -o yaml</span><br></pre></td></tr></table></figure>
+<p>添加配置文件<strong><code>nginx-deployment.yaml</code></strong>用于创建Deployment，部署一个Nginx服务，在Nginx的环境变量中引用<strong><code>ConfigMap</code></strong>中的属性：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-deployment</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:1.10</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">        <span class="attr">env:</span></span><br><span class="line">          <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">NGINX_ENV</span> <span class="comment"># 在Nginx中设置环境变量</span></span><br><span class="line">          <span class="attr">valueFrom:</span></span><br><span class="line">            <span class="attr">configMapKeyRef:</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">nginx-config</span> <span class="comment"># 设置ConfigMap的名称</span></span><br><span class="line">              <span class="attr">key:</span> <span class="string">nginx-env</span> <span class="comment"># 需要取值的键</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 应用配置文件文件创建Deployment</span><br><span class="line">kubectl apply -f nginx-deployment.yaml</span><br><span class="line"><span class="meta">#</span> 创建成功后查看Pod中的环境变量，发现NGINX_ENV变量已经被注入了</span><br><span class="line">kubectl exec nginx-deployment-7cf97748c4-tcq5v -- env</span><br></pre></td></tr></table></figure>
+<h4 id="存储卷的使用"><a href="#存储卷的使用" class="headerlink" title="存储卷的使用"></a>存储卷的使用</h4><p>通过存储卷可把<strong>外部数据挂载到容器中</strong>去，供容器中的应用访问，这样就算容器崩溃了，数据依然可以存在，使用Docker部署Nginx时，将Nginx的html、logs、conf目录从外部挂载到容器中：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">docker run -p 80:80 --name nginx \</span><br><span class="line">-v /data/nginx/html:/usr/share/nginx/html \</span><br><span class="line">-v /data/nginx/logs:/var/log/nginx \</span><br><span class="line">-v /data/nginx/conf:/etc/nginx \</span><br><span class="line">-d nginx:1.10</span><br></pre></td></tr></table></figure>
+<p>Minikube可认为是一台虚拟机，可用<strong><code>Minikube</code></strong>的<strong><code>ssh</code></strong>命令来访问它</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">minikube ssh</span><br><span class="line"><span class="meta">#</span> Minikube中默认有一个docker用户，我们先重置下它的密码</span><br><span class="line">sudo passwd docker</span><br><span class="line"><span class="meta">#</span> 在Minikube中创建data目录</span><br><span class="line">midir /home/docker/data</span><br><span class="line"><span class="meta">#</span> 把Nginx数据目录复制到Minikube中，才能实现目录的挂载，注意docker用户只能修改/home/docker目录中的文件，通过scp命令来复制文件</span><br><span class="line">scp -r /home/macro/data/nginx docker@192.168.0.180:/home/docker/data/nginx</span><br></pre></td></tr></table></figure>
+<p>添加<strong><code>nginx-volume-deployment.yaml</code></strong>配置文件用于创建Deployment</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-volume-deployment</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">          <span class="attr">image:</span> <span class="string">nginx:1.10</span></span><br><span class="line">          <span class="attr">ports:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br><span class="line">          <span class="attr">volumeMounts:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/usr/share/nginx/html</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">html-volume</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/var/log/nginx</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/etc/nginx</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">conf-volume</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">html-volume</span></span><br><span class="line">          <span class="attr">hostPath:</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">/home/docker/data/nginx/html</span></span><br><span class="line">            <span class="attr">type:</span> <span class="string">Directory</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">logs-volume</span></span><br><span class="line">          <span class="attr">hostPath:</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">/home/docker/data/nginx/logs</span></span><br><span class="line">            <span class="attr">type:</span> <span class="string">Directory</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">conf-volume</span></span><br><span class="line">          <span class="attr">hostPath:</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">/home/docker/data/nginx/conf</span></span><br><span class="line">            <span class="attr">type:</span> <span class="string">Directory</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 应用配置文件创建Deployment</span><br><span class="line">kubectl apply -f nginx-volume-deployment.yaml</span><br><span class="line"><span class="meta">#</span> 应用配置文件创建Service</span><br><span class="line">kubectl apply -f nginx-service.yaml</span><br></pre></td></tr></table></figure>
+<p>添加<strong><code>nginx-service.yaml</code></strong>配置文件用于创建Service </p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line">  <span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-service</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">NodePort</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">80</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="number">80</span></span><br><span class="line">      <span class="attr">nodePort:</span> <span class="number">30080</span></span><br></pre></td></tr></table></figure>
+<h3 id="K8S与Docker"><a href="#K8S与Docker" class="headerlink" title="K8S与Docker"></a>K8S与Docker</h3><p>Docker作为非常流行的容器技术，经常有文章说它被K8S弃用了，取而代之的是另一种容器技术containerd，containerd只是从Docker中分离出来的底层容器运行时，使用起来和Docker并没有什么区别，从Docker转型containerd非常简单，只要把之前Docker命令中的<strong><code>docker</code></strong>改为<strong><code>crictl</code></strong>基本就可以了用法一样。</p>
+<p>K8S发布CRI即<strong><code>Container Runtime Interface</code></strong>统一了容器运行时接口，凡是支持CRI的容器运行时，皆可作为K8S的<strong>底层容器运行时</strong>，若K8S使用Docker作为K8S容器运行时的话，kubelet需要先要通过<strong><code>dockershim</code></strong>去调用Docker，再通过Docker去调用<strong><code>containerd</code></strong>，若使用containerd作为K8S容器运行时的话，由于containerd内置了CRI插件，kubelet可直接调用containerd，使用containerd不仅调用链变短了性能提高了，且资源占用也会变小，毕竟Docker不是一个纯粹的容器运行时，具有大量其他功能，未来Docker可能自己直接实现K8S的CRI接口来兼容K8S的底层使用。</p>
+<h3 id="实战"><a href="#实战" class="headerlink" title="实战"></a>实战</h3><p>Docker部署过的eureka应用为例，<strong>首先将镜像发布到镜像仓库中</strong>，然后创建用于创建Deployment的配置文件<strong><code>eureka-app-deployment.yaml</code></strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">eureka-app-deployment</span></span><br><span class="line">  <span class="attr">labels:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">eureka-app</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">1</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">eureka-app</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">eureka-app</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">eureka-app</span></span><br><span class="line">          <span class="comment"># 指定Docker Hub中的镜像地址</span></span><br><span class="line">          <span class="attr">image:</span> <span class="number">3120130802229</span><span class="string">/eleven-eureka-server:0.0.1</span></span><br><span class="line">          <span class="comment"># Always总是拉取镜像，IfNotPresent(默认该值) 本地有则使用本地镜像，Never只使用本地镜像，从不拉取，即使本地没有镜像</span></span><br><span class="line">          <span class="attr">imagePullPolicy:</span> <span class="string">Always</span></span><br><span class="line">          <span class="attr">ports:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">8761</span></span><br><span class="line">          <span class="attr">env:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">TZ</span></span><br><span class="line">              <span class="attr">value:</span> <span class="string">Asia/Shanghai</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">LOG_FILE</span></span><br><span class="line">              <span class="attr">value:</span> <span class="string">/var/logs</span></span><br><span class="line">          <span class="attr">volumeMounts:</span></span><br><span class="line">            <span class="bullet">-</span> <span class="attr">mountPath:</span> <span class="string">/var/logs</span></span><br><span class="line">              <span class="attr">name:</span> <span class="string">log-volume</span></span><br><span class="line">      <span class="attr">volumes:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">log-volume</span></span><br><span class="line">          <span class="attr">hostPath:</span></span><br><span class="line">            <span class="attr">path:</span> <span class="string">/data/k8s-app/eureka/logs</span></span><br><span class="line">            <span class="attr">type:</span> <span class="string">DirectoryOrCreate</span></span><br><span class="line">      <span class="attr">dnsPolicy:</span> <span class="string">Default</span> <span class="comment"># 继承Pod所在宿主机的DNS设置，使pod能访问外网</span></span><br></pre></td></tr></table></figure>
+<p>创建用于创建Service的配置文件<strong><code>eureka-app-service.yaml</code></strong></p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Service</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">eureka-app-service</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">NodePort</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">app:</span> <span class="string">eureka-app</span></span><br><span class="line">  <span class="attr">ports:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">http</span></span><br><span class="line">      <span class="attr">protocol:</span> <span class="string">TCP</span></span><br><span class="line">      <span class="attr">port:</span> <span class="number">8761</span>	<span class="comment"># service的端口</span></span><br><span class="line">      <span class="attr">targetPort:</span> <span class="number">8761</span> <span class="comment"># pod的端口，一般与pod内部容器的服务端口一致</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 通过应用配置文件来创建Deployment</span><br><span class="line">kubectl apply -f eureka-app-deployment.yaml</span><br><span class="line"><span class="meta">#</span> 通过应用配置文件来创建Service</span><br><span class="line">kubectl apply -f eureka-app-service.yaml</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+        
+            <a href="/Blog/云原生/Docker搭建Prometheus&Grafana/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Docker搭建Prometheus&amp;Grafana</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

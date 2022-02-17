@@ -32,7 +32,7 @@
 <meta property="og:image" content="https://yaoyinglong.github.io/images/JVM/arthas-thread-b.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/JVM/arthas-jad.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/JVM/arthas-ognl.png">
-<meta property="og:updated_time" content="2021-08-21T13:25:48.233Z">
+<meta property="og:updated_time" content="2022-02-17T13:43:40.588Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="JVM调优工具">
 <meta name="twitter:description" content="JVM参数汇总查看命令java -XX:+PrintFlagsInitial：打印出所有参数选项的默认值java -XX:+PrintFlagsFinal：打印出所有参数选项在运行程序时生效的值   jpsjps的作用是显示当前系统的java进程情况及进程id 123jps25712 Jps25900 Launcher 123456# 输出传递给main方法的参数jps -m# 输出应用程序mai">
@@ -348,8 +348,6 @@
                         
             <ul class="unstyled" id="tree">
                 
-                    <li class="file"><a href="/Blog/Cloud/Seata/分布式事务/">分布式事务</a></li>
-                
                     <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
                 
                     <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
@@ -424,6 +422,8 @@
                     <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
                 
                     <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
                 
             </ul>
         
@@ -843,6 +843,27 @@
             </ul>
         
                     </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
                 
             </ul>
         
@@ -1272,6 +1293,7 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Arthas</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> HashSet hashSet = <span class="keyword">new</span> HashSet();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 模拟CPU过高</span></span><br><span class="line">        cpuHigh();</span><br><span class="line">        <span class="comment">// 模拟线程死锁</span></span><br><span class="line">        deadThread();</span><br><span class="line">        <span class="comment">// 不断向hashSet集合增加数据</span></span><br><span class="line">        addHashSetThread();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">addHashSetThread</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">                <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">                    hashSet.add(<span class="string">"count"</span> + count);</span><br><span class="line">                    Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">                    count++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).start();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">deadThread</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        Object lock1 = <span class="keyword">new</span> Object();</span><br><span class="line">        Object lock2 = <span class="keyword">new</span> Object();</span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (lock1) &#123;</span><br><span class="line">                System.out.println(Thread.currentThread().getName() + <span class="string">" begin"</span>);</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">5000</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">synchronized</span> (lock2) &#123;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName() + <span class="string">" end"</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, <span class="string">"thread1"</span>).start();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (lock2) &#123;</span><br><span class="line">                System.out.println(Thread.currentThread().getName() + <span class="string">" begin"</span>);</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">5000</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">synchronized</span> (lock1) &#123;</span><br><span class="line">                    System.out.println(Thread.currentThread().getName() + <span class="string">" end"</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, <span class="string">"thread2"</span>).start();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">cpuHigh</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>首先通过<strong><code>java -jar arthas-boot.jar</code></strong>启动arthas然后选择我们的对应的进程：</p>
 <p><img src="../../../../../images/JVM/arthas启动.png" alt="arthas启动"></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget https://arthas.gitee.io/arthas-boot.jar</span><br><span class="line">java -jar arthas-boot.jar</span><br></pre></td></tr></table></figure>
 <h4 id="dashboard"><a href="#dashboard" class="headerlink" title="dashboard"></a>dashboard</h4><p>dashboard可以查看整个进程的运行情况，线程、内存、GC、运行环境信息：</p>
 <p><img src="../../../../../images/JVM/arthas-dashboard.png" alt></p>
 <p>thread可以<strong>查看线程详情</strong>：</p>
@@ -1280,6 +1302,7 @@
 <p><img src="../../../../../images/JVM/arthas-thread-id.png" alt></p>
 <p><strong><code>thread -b</code></strong>可以查看线程死锁：</p>
 <p><img src="../../../../../images/JVM/arthas-thread-b.png" alt></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 最繁忙的3个线程，即占用cpu最多的前3个，输出栈信息</span><br><span class="line">thread -n 3</span><br><span class="line"><span class="meta">#</span> 列出1000ms内最忙的3个线程栈</span><br><span class="line">thread -n 3 -i 1000 </span><br><span class="line"><span class="meta">#</span> 查看指定状态的线程</span><br><span class="line">thread --state WAITING</span><br></pre></td></tr></table></figure>
 <p><strong><code>jad</code>加类的全名</strong>可以<strong>反编译</strong>，这样可以方便我们<strong>查看线上代码是否是正确的版本</strong>：</p>
 <p><img src="../../../../../images/JVM/arthas-jad.png"></p>
 <p><strong><code>ognl</code></strong>命令可以<strong>查看线上系统变量的值</strong>，甚至可以<strong>修改变量</strong>的值：</p>
