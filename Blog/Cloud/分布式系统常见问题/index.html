@@ -12,14 +12,15 @@
         <meta name="keywords" content="Cloud">
     
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <meta name="description" content="对于分布式高并发系统需要考虑的问题：容量规划、架构设计、数据库设计、缓存设计、框架选型、数据迁移方案、性能压测、监控报警、领域模型、回滚方案、高并发、分库分表。 不存在数据过滤使用布隆过滤器 接口幂等性解决方案需要判断哪些操作是需要回滚的，以及这次成功下次不需要再处理了，数据积累问题怎么解决  全局唯一ID 去重表：可以在redis中做去重表 状态机：将状态从0改成1  分布式Session解决方">
+    <meta name="description" content="对于分布式高并发系统需要考虑的问题：容量规划、架构设计、数据库设计、缓存设计、框架选型、数据迁移方案、性能压测、监控报警、领域模型、回滚方案、高并发、分库分表。 分布式IDUUID优点：生成简单、本地生成无网络成本； 缺点：无序的字符串，不具备趋势自增特性、没有具体的业务含义、长度过长16字节128位，36位长度的字符串，存储以及查询对MySQL的性能消耗较大，作为数据库主键UUID的无序性会导致">
 <meta name="keywords" content="Cloud">
 <meta property="og:type" content="article">
 <meta property="og:title" content="分布式系统常见问题">
 <meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/分布式系统常见问题/index.html">
 <meta property="og:site_name" content="YingLong">
-<meta property="og:description" content="对于分布式高并发系统需要考虑的问题：容量规划、架构设计、数据库设计、缓存设计、框架选型、数据迁移方案、性能压测、监控报警、领域模型、回滚方案、高并发、分库分表。 不存在数据过滤使用布隆过滤器 接口幂等性解决方案需要判断哪些操作是需要回滚的，以及这次成功下次不需要再处理了，数据积累问题怎么解决  全局唯一ID 去重表：可以在redis中做去重表 状态机：将状态从0改成1  分布式Session解决方">
+<meta property="og:description" content="对于分布式高并发系统需要考虑的问题：容量规划、架构设计、数据库设计、缓存设计、框架选型、数据迁移方案、性能压测、监控报警、领域模型、回滚方案、高并发、分库分表。 分布式IDUUID优点：生成简单、本地生成无网络成本； 缺点：无序的字符串，不具备趋势自增特性、没有具体的业务含义、长度过长16字节128位，36位长度的字符串，存储以及查询对MySQL的性能消耗较大，作为数据库主键UUID的无序性会导致">
 <meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/雪花算法.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/分布式问题/Session_Sticky_IP_Hash.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/分布式问题/Session_Relication.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/分布式问题/Session_Center.png">
@@ -29,11 +30,11 @@
 <meta property="og:image" content="https://yaoyinglong.github.io/images/分布式问题/亿级流量商品详情页缓存架构.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/分布式问题/高并发架构v1.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/分布式问题/高并发架构v2.png">
-<meta property="og:updated_time" content="2022-02-08T11:19:48.175Z">
+<meta property="og:updated_time" content="2022-02-23T11:58:47.749Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="分布式系统常见问题">
-<meta name="twitter:description" content="对于分布式高并发系统需要考虑的问题：容量规划、架构设计、数据库设计、缓存设计、框架选型、数据迁移方案、性能压测、监控报警、领域模型、回滚方案、高并发、分库分表。 不存在数据过滤使用布隆过滤器 接口幂等性解决方案需要判断哪些操作是需要回滚的，以及这次成功下次不需要再处理了，数据积累问题怎么解决  全局唯一ID 去重表：可以在redis中做去重表 状态机：将状态从0改成1  分布式Session解决方">
-<meta name="twitter:image" content="https://yaoyinglong.github.io/images/分布式问题/Session_Sticky_IP_Hash.png">
+<meta name="twitter:description" content="对于分布式高并发系统需要考虑的问题：容量规划、架构设计、数据库设计、缓存设计、框架选型、数据迁移方案、性能压测、监控报警、领域模型、回滚方案、高并发、分库分表。 分布式IDUUID优点：生成简单、本地生成无网络成本； 缺点：无序的字符串，不具备趋势自增特性、没有具体的业务含义、长度过长16字节128位，36位长度的字符串，存储以及查询对MySQL的性能消耗较大，作为数据库主键UUID的无序性会导致">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/DB/雪花算法.png">
     
 
     
@@ -489,15 +490,11 @@
                 
                     <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
                 
-                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
-                
                     <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
-                
-                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
                 
@@ -645,6 +642,10 @@
                     <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
                 
                     <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
                 
             </ul>
         
@@ -827,8 +828,6 @@
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
                 
-                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
-                
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
@@ -836,6 +835,8 @@
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
                 
             </ul>
         
@@ -1229,6 +1230,29 @@
             
             
                 <p>对于分布式高并发系统需要考虑的问题：<strong>容量规划</strong>、<strong>架构设计</strong>、<strong>数据库设计</strong>、<strong>缓存设计</strong>、<strong>框架选型</strong>、<strong>数据迁移方案</strong>、<strong>性能压测</strong>、<strong>监控报警</strong>、<strong>领域模型</strong>、<strong>回滚方案</strong>、<strong>高并发</strong>、<strong>分库分表</strong>。</p>
+<h3 id="分布式ID"><a href="#分布式ID" class="headerlink" title="分布式ID"></a>分布式ID</h3><h5 id="UUID"><a href="#UUID" class="headerlink" title="UUID"></a>UUID</h5><p><strong>优点</strong>：<strong>生成简单</strong>、<strong>本地生成无网络成本</strong>；</p>
+<p><strong>缺点</strong>：无序的字符串，<strong>不具备趋势自增特性</strong>、<strong>没有具体的业务含义</strong>、长度过长16字节128位，36位长度的字符串，<strong>存储以及查询对MySQL的性能消耗较大</strong>，作为数据库主键<code>UUID</code>的无序性会<strong>导致数据位置频繁变动</strong>，严重影响性能</p>
+<h5 id="数据库自增ID"><a href="#数据库自增ID" class="headerlink" title="数据库自增ID"></a>数据库自增ID</h5><p>需要一个单独的MySQL实例用来生成ID，要一个ID时，向表中插入一条记录返回<code>主键ID</code>，但该方式在访问量激增时MySQL本身就是系统的瓶颈，用它来实现分布式服务风险比较大。</p>
+<p>优点：实现简单，ID单调自增，数值类型查询速度快</p>
+<p>缺点：DB单点存在宕机风险，无法扛住高并发场景</p>
+<h5 id="数据库多主模式"><a href="#数据库多主模式" class="headerlink" title="数据库多主模式"></a>数据库多主模式</h5><p><strong>主从模式</strong>或<strong>多主模式</strong>集群，设置<strong>起始值</strong>和<strong>自增步长</strong></p>
+<p><strong>优点</strong>：解决DB单点问题</p>
+<p><strong>缺点</strong>：不利于后续扩容，且实际上单个数据库自身压力还是大，依旧无法满足高并发场景</p>
+<h5 id="号段模式"><a href="#号段模式" class="headerlink" title="号段模式"></a>号段模式</h5><p>一次获取一批号段，可以基于MySQL也可以局域Redis或Zookeeper等</p>
+<h5 id="Redis"><a href="#Redis" class="headerlink" title="Redis"></a>Redis</h5><p>RDB模式：若连续自增但<code>redis</code>没及时持久化，但Redis挂掉了，重启Redis后会出现ID重复的情况</p>
+<p><code>AOF</code>会对每条写命令进行持久化，即使<code>Redis</code>挂掉了也不会出现ID重复的情况，但由于incr命令的特殊性，会导致<code>Redis</code>重启恢复的数据时间过长</p>
+<h5 id="雪花算法SnowFlake"><a href="#雪花算法SnowFlake" class="headerlink" title="雪花算法SnowFlake"></a>雪花算法SnowFlake</h5><p>雪花算法能保证<strong>不同进程主键不重复相同进程主键有序</strong>，二进制形式包含4部分，从高位到低位分表为：<strong><code>1bit</code>符号位</strong>、<strong><code>41bit</code>时间戳位</strong>、<strong><code>10bit</code>工作进程位</strong>，<strong><code>12bit</code>序列号位</strong>。<strong>毫秒数在高位自增序列在低位</strong>，整个ID<strong>趋势递增</strong>；不依赖第三方组件<strong>稳定性高</strong>，生成ID<strong>性能也非常高</strong>；<strong>可根据自身业务特性分配<code>bit</code>位</strong>，<strong>非常灵活</strong>；但<strong>强依赖机器时钟，若机器上时钟回拨会导致发号重复</strong>。</p>
+<ul>
+<li><strong><code>1bit</code>符号位</strong>：预留的符号位<strong>恒为零</strong></li>
+<li><strong><code>41bit</code>时间戳位</strong>：41位时间戳可容纳毫秒数为2的41次幂，一年所使用的毫秒数为<strong><code>365 * 24 * 60 * 60 * 1000 Math.pow(2, 41) / (365 * 24 * 60 * 60 * 1000L) = 69.73</code></strong>年不重复</li>
+<li><strong><code>10bit</code>工作进程位</strong>：该标志<strong>Java进程内唯一</strong>，若分布式应用部署应保证每个工作进程的id不同，<strong>默认为<code>0</code></strong>，<strong>可通过属性设置</strong></li>
+<li><strong><code>12bit</code>序列号位</strong>：该序列用来在<strong>同一个毫秒内生成不同的ID</strong>，若在该毫秒内生成数量超过<strong><code>4096</code></strong>即2的12次幂，则生成器会等待到下个毫秒继续生成。</li>
+</ul>
+<p><img src="../../../../images/DB/雪花算法.png" alt></p>
+<h5 id="滴滴出品TinyID"><a href="#滴滴出品TinyID" class="headerlink" title="滴滴出品TinyID"></a>滴滴出品TinyID</h5><p><a href="https://github.com/didi/tinyid" rel="external nofollow noopener noreferrer" target="_blank"><code>Tinyid</code></a>是基于<strong>号段模式</strong>原理实现的</p>
+<h5 id="百度uid-generator"><a href="#百度uid-generator" class="headerlink" title="百度uid-generator"></a>百度uid-generator</h5><p><a href="https://github.com/baidu/uid-generator" rel="external nofollow noopener noreferrer" target="_blank">uid-generator</a>是基于<code>Snowflake</code>算法实现，与原始的<code>snowflake</code>算法不同在于，<code>uid-generator</code>支持<strong>自定义时间戳</strong>、<strong>工作机器ID</strong>和序列号等各部分的位数，而且<code>uid-generator</code>中采用用户自定义<code>workId</code>的生成策略。</p>
+<p><code>uid-generator</code>需要与数据库配合使用，需要新增一个<code>WORKER_NODE</code>表。当应用启动时会向数据库表中去插入一条数据，插入成功后返回的自增ID就是该机器的<code>workId</code>数据由host，port组成。</p>
+<h5 id="美团Leaf"><a href="#美团Leaf" class="headerlink" title="美团Leaf"></a>美团Leaf</h5><p><a href="https://github.com/Meituan-Dianping/Leaf" rel="external nofollow noopener noreferrer" target="_blank"><code>Leaf</code></a>同时支持<strong>号段模式</strong>和<code>snowflake</code>算法模式，可以切换使用；<code>Leaf</code>的snowflake模式依赖于<code>ZooKeeper</code>，不同于原始snowflake算法也主要是在<code>workId</code>的生成上，<code>Leaf</code>中<code>workId</code>是基于<code>ZooKeeper</code>的顺序Id来生成的，每个应用在使用<code>Leaf-snowflake</code>时，启动时都会都在<code>Zookeeper</code>中生成一个顺序Id，相当于一台机器对应一个顺序节点，也就是一个<code>workId</code>。</p>
 <h3 id="不存在数据过滤"><a href="#不存在数据过滤" class="headerlink" title="不存在数据过滤"></a>不存在数据过滤</h3><p>使用布隆过滤器</p>
 <h3 id="接口幂等性解决方案"><a href="#接口幂等性解决方案" class="headerlink" title="接口幂等性解决方案"></a>接口幂等性解决方案</h3><p>需要判断哪些操作是需要回滚的，以及这次成功下次不需要再处理了，数据积累问题怎么解决</p>
 <ul>

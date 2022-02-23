@@ -21,7 +21,7 @@
 <meta property="og:description" content="所有的并发模式在解决线程安全问题时，采用的方案都是序列化访问临界资源。即同一时刻只能有一个线程访问临界资源，也称作同步互斥访问。 Java提供synchronized和Lock两种方式来实现同步互斥访问。 synchronized内置锁是一种对象锁，锁的是对象而非引用，作用粒度是对象，可用来实现对临界资源的同步互斥访问，是可重入的，是Java中解决并发问题的一种最常用最简单的方法，它可以确保线程互">
 <meta property="og:locale" content="en">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Java/并发/Monitor监视器锁.png">
-<meta property="og:updated_time" content="2022-01-19T14:24:54.613Z">
+<meta property="og:updated_time" content="2022-02-22T13:23:31.286Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Synchronized总结">
 <meta name="twitter:description" content="所有的并发模式在解决线程安全问题时，采用的方案都是序列化访问临界资源。即同一时刻只能有一个线程访问临界资源，也称作同步互斥访问。 Java提供synchronized和Lock两种方式来实现同步互斥访问。 synchronized内置锁是一种对象锁，锁的是对象而非引用，作用粒度是对象，可用来实现对临界资源的同步互斥访问，是可重入的，是Java中解决并发问题的一种最常用最简单的方法，它可以确保线程互">
@@ -481,15 +481,11 @@
                 
                     <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
                 
-                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
-                
                     <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
-                
-                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
                 
@@ -637,6 +633,10 @@
                     <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
                 
                     <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
                 
             </ul>
         
@@ -819,8 +819,6 @@
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
                 
-                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
-                
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
@@ -828,6 +826,8 @@
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
                 
             </ul>
         
@@ -1221,9 +1221,9 @@
             
             
                 <p>所有的并发模式在解决线程安全问题时，采用的方案都是<strong>序列化访问临界资源</strong>。即同一时刻只能有一个线程访问临界资源，也称作<strong>同步互斥访问</strong>。 Java提供<strong><code>synchronized</code></strong>和<strong><code>Lock</code></strong>两种方式来实现同步互斥访问。</p>
-<p>synchronized内置锁是<strong>一种对象锁</strong>，锁的是对象而非引用，作用粒度是对象，可用来实现对临界资源的同步互斥访问，是<strong>可重入</strong>的，是<code>Java</code>中解决并发问题的一种最常用最简单的方法，它可以确保线程<strong>互斥</strong>的访问同步代码，保证方法或者代码块在运行时，<strong>同一时刻只有一个方法</strong>可以进入到<strong>临界区</strong>，同时它还可以保证<strong>共享变量</strong>的内存<strong>可见性</strong>。</p>
+<p>synchronized内置锁是<strong>一种对象锁</strong>，<strong>锁的是对象而非引用</strong>，<strong>作用粒度</strong>是<strong>对象</strong>，可用来实现对临界资源的同步互斥访问，是<strong>可重入</strong>的，是<code>Java</code>中解决并发问题的一种最常用最简单的方法，它可以确保线程<strong>互斥</strong>的访问同步代码，保证方法或者代码块在运行时，<strong>同一时刻只有一个方法</strong>可以进入到<strong>临界区</strong>，同时它还可以保证<strong>共享变量</strong>的内存<strong>可见性</strong>。</p>
 <h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>虚拟机支持<strong>方法级的同步</strong>和<strong>方法内部一段指令序列的同步</strong>，两种同步都使用<strong>管程<code>Monitor</code>来支持</strong>的。</p>
-<p><strong>方法级的同步是隐式的，无须通过字节码指令来控制</strong>，它<strong>实现在方法调用</strong>和<strong>返回操作</strong>之中。虚拟机可以从<strong>方法常量池</strong>的<strong>方法结构中</strong>的<strong><code>ACC_SYNCHRONIZED</code>访问标志</strong>得知方法<strong>是否声明为同步方法</strong>。当方法调用时，调用的指令将会<strong>检查方法的<code>ACC_SYNCHRONIZED</code>访问标志</strong>是否被设置，若被设置，执行线程就要求<strong>先成功持有管程<code>Monitor</code></strong>，然后才能执行方法，最后当方法执行完成，<strong>无论是否正常完成都释放管程Monitor</strong>，方法执行期间，执行线程持有了<strong>管程<code>Monitor</code></strong>，其他任何线程都无法再获得同一个<strong>管程<code>Monitor</code></strong>。若同步方法<strong>执行期间抛出异常</strong>，且方法<strong>内部无法处理异常</strong>，同步方法所持有的<strong>管程<code>Monitor</code></strong>将在<strong>异常抛到同步方法外时自动释放</strong>。</p>
+<p><strong>方法级的同步是隐式的，无须通过字节码指令来控制</strong>，它<strong>实现在方法调用</strong>和<strong>返回操作</strong>之中。虚拟机可以从<strong>方法常量池</strong>的<strong>方法结构中</strong>的<strong><code>ACC_SYNCHRONIZED</code>访问标志</strong>得知方法<strong>是否声明为同步方法</strong>。当方法调用时，调用的指令将会<strong>检查方法的<code>ACC_SYNCHRONIZED</code>访问标志</strong>是否被设置，若被设置，执行线程就要求<strong>先成功持有管程<code>Monitor</code></strong>，然后才能执行方法，最后当方法执行完成，<strong>无论是否正常完成释放管程<code>Monitor</code></strong>，方法执行期间，执行线程持有了<strong>管程<code>Monitor</code></strong>，其他任何线程都无法再获得同一个<strong>管程<code>Monitor</code></strong>。若同步方法<strong>执行期间抛出异常</strong>，且方法<strong>内部无法处理异常</strong>，同步方法所持有的<strong>管程<code>Monitor</code></strong>将在<strong>异常抛到同步方法外时自动释放</strong>。</p>
 <p><img src="../../../../../images/Java/并发/Monitor监视器锁.png" alt="Monitor监视器锁"></p>
 <p><code>Monitor</code>监视器锁的实现依赖底层操作系统的<strong><code>Mutex lock</code></strong>互斥锁实现，是一个<strong>重量级锁性能较低</strong>。<code>Java1.5</code>之后版本做了重大的优化，如<strong><a href="../锁优化#锁粗化">锁粗化</a></strong>、<strong><a href="../锁优化#锁消除">锁消除</a></strong>、<strong><a href="../锁优化#轻量级锁">轻量级锁</a></strong>、<strong><a href="../锁优化#偏向锁">偏向锁</a></strong>、<strong><a href="../锁优化#自旋锁与自适应自旋">适应性自旋</a></strong>等技术来减少锁操作的开销。</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    System.out.println(<span class="string">"Synchronized"</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 编译后的具体信息</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">method</span><span class="params">()</span></span>;</span><br><span class="line">    descriptor: ()V</span><br><span class="line">    flags: ACC_PUBLIC, ACC_SYNCHRONIZED</span><br><span class="line">    Code:</span><br><span class="line">      stack=<span class="number">2</span>, locals=<span class="number">1</span>, args_size=<span class="number">1</span></span><br><span class="line">         0: getstatic     #2	// Field java/lang/System.out:Ljava/io/PrintStream;</span><br><span class="line">         3: ldc           #3	// String Synchronized</span><br><span class="line">         5: invokevirtual #4	// Method java/io/PrintStream.println:(Ljava/lang/String;)V</span><br><span class="line">         <span class="number">8</span>: <span class="keyword">return</span></span><br></pre></td></tr></table></figure>

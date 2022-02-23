@@ -32,7 +32,7 @@
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/index_opt_count_valid_29.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/index_opt_count_valid_30.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/index_opt_count_valid_31.png">
-<meta property="og:updated_time" content="2022-01-20T04:07:23.777Z">
+<meta property="og:updated_time" content="2022-02-21T10:54:21.387Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="索引优化三">
 <meta name="twitter:description" content="分页查询优化业务系统分页功能可能会用如下sql实现，表示取出从10001行开始的10行记录，看似只查询10条，实际SQL是先读取10010条记录，然后抛弃前10000条记录，然后读到后面10条目标数据。因此要查询一张大表比较靠后的数据，执行效率是非常低的： 1explain select * from employees limit 10000,10;  根据自增且连续的主键排序的分页查询改写后的">
@@ -492,15 +492,11 @@
                 
                     <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
                 
-                    <li class="file"><a href="/Blog/Java/VM/JVM调优思路/">JVM调优思路</a></li>
-                
                     <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
-                
-                    <li class="file"><a href="/Blog/Java/VM/JVM调优工具/">JVM调优工具</a></li>
                 
                     <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
                 
@@ -648,6 +644,10 @@
                     <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
                 
                     <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
                 
             </ul>
         
@@ -830,8 +830,6 @@
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
                 
-                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat中BIO和NIO底层原理实现对比/">Tomcat中BIO和NIO底层原理实现对比</a></li>
-                
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
@@ -839,6 +837,8 @@
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
                 
                     <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
                 
             </ul>
         
@@ -1244,14 +1244,14 @@
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">explain</span> <span class="keyword">select</span> * <span class="keyword">from</span> employees e <span class="keyword">inner</span> <span class="keyword">join</span> (<span class="keyword">select</span> <span class="keyword">id</span> <span class="keyword">from</span> employees <span class="keyword">order</span> <span class="keyword">by</span> <span class="keyword">name</span> <span class="keyword">limit</span> <span class="number">90000</span>,<span class="number">5</span>) ed <span class="keyword">on</span> e.id = ed.id;</span><br></pre></td></tr></table></figure>
 <p><img src="../../../../images/DB/index_opt_page_valid_23.png" alt></p>
 <h3 id="Join关联查询优化"><a href="#Join关联查询优化" class="headerlink" title="Join关联查询优化"></a>Join关联查询优化</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`t1`</span>(</span><br><span class="line"> <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</span><br><span class="line"> <span class="string">`a`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</span><br><span class="line"> <span class="string">`b`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</span><br><span class="line"> PRIMARY <span class="keyword">KEY</span> (<span class="string">`id`</span>),</span><br><span class="line"> <span class="keyword">KEY</span> <span class="string">`idx_a`</span> (<span class="string">`a`</span>)</span><br><span class="line">) <span class="keyword">ENGINE</span> = <span class="keyword">InnoDB</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span> = utf8;</span><br><span class="line"></span><br><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> t2 <span class="keyword">like</span> t1;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 插入一些示例数据，往t1表插入1万行记录</span></span><br><span class="line"><span class="keyword">drop</span> <span class="keyword">procedure</span> <span class="keyword">if</span> <span class="keyword">exists</span> insert_t1;</span><br><span class="line">delimiter ;;</span><br><span class="line"><span class="keyword">create</span> <span class="keyword">procedure</span> insert_t1()</span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">declare</span> i <span class="built_in">int</span>;</span><br><span class="line">    <span class="keyword">set</span> i = <span class="number">1</span>;</span><br><span class="line">    while(i &lt;= 10000)</span><br><span class="line">        <span class="keyword">do</span></span><br><span class="line">            <span class="keyword">insert</span> <span class="keyword">into</span> t1(a, b) <span class="keyword">values</span> (i, i);</span><br><span class="line">            <span class="keyword">set</span> i = i + <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">while</span>;</span><br><span class="line"><span class="keyword">end</span>;;</span><br><span class="line">delimiter ;</span><br><span class="line"><span class="keyword">call</span> insert_t1();</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 往t2表插入100行记录</span></span><br><span class="line"><span class="keyword">drop</span> <span class="keyword">procedure</span> <span class="keyword">if</span> <span class="keyword">exists</span> insert_t2;</span><br><span class="line">delimiter ;;</span><br><span class="line"><span class="keyword">create</span> <span class="keyword">procedure</span> insert_t2()</span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">declare</span> i <span class="built_in">int</span>;</span><br><span class="line">    <span class="keyword">set</span> i = <span class="number">1</span>;</span><br><span class="line">    while(i &lt;= 100)</span><br><span class="line">        <span class="keyword">do</span></span><br><span class="line">            <span class="keyword">insert</span> <span class="keyword">into</span> t2(a, b) <span class="keyword">values</span> (i, i);</span><br><span class="line">            <span class="keyword">set</span> i = i + <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">while</span>;</span><br><span class="line"><span class="keyword">end</span>;;</span><br><span class="line">delimiter ;</span><br><span class="line"><span class="keyword">call</span> insert_t2();</span><br></pre></td></tr></table></figure>
-<p>mysql的表关联常见有<strong><code>Nested-Loop Join</code>嵌套循环连接算法</strong>和<strong><code>Block Nested-Loop Join</code>基于块的嵌套循环连接算法</strong>两种算法</p>
+<p>MySQL的<strong>表关联</strong>常见有<strong><code>Nested-Loop Join</code>嵌套循环连接算法</strong>和<strong><code>Block Nested-Loop Join</code>基于块的嵌套循环连接算法</strong>两种算法</p>
 <h4 id="嵌套循环连接算法"><a href="#嵌套循环连接算法" class="headerlink" title="嵌套循环连接算法"></a>嵌套循环连接算法</h4><p><strong>一次一行循环</strong>地从第一张表即<strong>驱动表</strong>中读取行，在这行数据中<strong>取到关联字段</strong>，根据关联字段在另一张表即<strong>被驱动表</strong>里取出满足条件的行，然后取出两张表的结果合集。</p>
 <p> 执行计划结果的id如果一样则按从上到下顺序执行sql，先执行的就是驱动表，从执行计划中可知，<strong>t2是驱动表，t1是被驱动表</strong>， 优化器一般会优先选择<strong>小表做驱动表</strong>，使用<strong><code>inner join</code></strong>时，<strong>排在前面的表并不一定是驱动表</strong>。 </p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">EXPLAIN</span> <span class="keyword">select</span> * <span class="keyword">from</span> t1 <span class="keyword">inner</span> <span class="keyword">join</span> t2 <span class="keyword">on</span> t1.a= t2.a;</span><br></pre></td></tr></table></figure>
 <p><img src="../../../../images/DB/index_opt_join_valid_24.png" alt></p>
 <p>从t2表中读取一行数据，若t2表有查询过滤条件，会从过滤结果里取出一行数据，取出关联字段a，到t1表中查找；取出t1表中满足条件的行，跟t2中获取到的结果合并，作为结果返回给客户端；然后继续下一条数据。</p>
 <p>整个过程会读取t2表的所有数据，即<strong>扫描t2表100行</strong>，然后遍历每行数据中字段a的值，根据t2表中a的值索引扫描 t1表中的对应行，1次扫描可认为读取t1表一行完整数据，<strong>由于t1表的a字段有索引，故扫描100次</strong>。因此整个过程扫描了200行。若<strong>被驱动表的关联字段没索引</strong>，使用<strong><code>NLJ</code>嵌套循环连接算法</strong>性能会比较低；</p>
-<p><strong>left join左表是驱动表，right join右表时驱动表，join优化器会选择数据量比较小的表作为驱动表</strong>。 </p>
+<p><strong>left join左表是驱动表，right join右表是驱动表，join优化器会选择数据量比较小的表作为驱动表</strong>。 </p>
 <p>一般join语句中，若执行计划Extra中<strong>未出现<code>Using join buffer</code></strong>则表示使用的是<strong><code>NLJ</code>嵌套循环连接算法</strong></p>
 <h4 id="基于块的嵌套循环连接算法"><a href="#基于块的嵌套循环连接算法" class="headerlink" title="基于块的嵌套循环连接算法"></a>基于块的嵌套循环连接算法</h4><p><strong>把驱动表的数据读入到<code>join_buffer</code>中</strong>，然后<strong>扫描被驱动表</strong>，把<strong>被驱动表每一行</strong>取出来<strong>跟<code>join_buffer</code>中的数据做对比</strong>。 </p>
 <p>Extra中的<strong><code>Using join buffer (Block Nested Loop)</code></strong>说明该关联查询使用的是<strong>基于块的嵌套循环连接算法</strong>。 </p>
