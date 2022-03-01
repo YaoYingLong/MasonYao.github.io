@@ -21,7 +21,7 @@
 <meta property="og:description" content="用jstat -gc PID命令可以计算出一些关键数据，有了这些数据就可以采用一些优化思路，先给系统设置一些初始性的JVM参数，比如堆内存大小，年轻代大小，Eden和Survivor比例，老年代大小，大对象的阈值，大龄对象进入老年代的阈值等。 优化思路其实简单来说就是尽量让每次Young GC后存活的对象小于Survivor区域的50%，都留存在年轻代里，尽量别让对象进入老年代。尽量减少Full">
 <meta property="og:locale" content="en">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/JVM/老年代空间分匹配担保机制.png">
-<meta property="og:updated_time" content="2022-02-20T03:46:32.849Z">
+<meta property="og:updated_time" content="2022-03-01T12:57:44.544Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="JVM调优思路">
 <meta name="twitter:description" content="用jstat -gc PID命令可以计算出一些关键数据，有了这些数据就可以采用一些优化思路，先给系统设置一些初始性的JVM参数，比如堆内存大小，年轻代大小，Eden和Survivor比例，老年代大小，大对象的阈值，大龄对象进入老年代的阈值等。 优化思路其实简单来说就是尽量让每次Young GC后存活的对象小于Survivor区域的50%，都留存在年轻代里，尽量别让对象进入老年代。尽量减少Full">
@@ -1000,6 +1000,8 @@
                 
                     <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
                 
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
             </ul>
         
                     </li>
@@ -1249,7 +1251,7 @@
 <p>同时<strong>分析下占用<code>cpu</code>较高的线程</strong>，一般有<strong>大量对象不断产生，对应的方法代码肯定会被频繁调用，占用的cpu必然较高</strong>可以用<code>jstack</code>或<code>jvisualvm</code>来定位<code>cpu</code>使用较高的代码。</p>
 <h3 id="内存泄露"><a href="#内存泄露" class="headerlink" title="内存泄露"></a>内存泄露</h3><p>一般电商架构可能会使用多级缓存架构，就是redis加上JVM级缓存，不断往JVM级缓存里面放缓存数据，可能漏考虑了容量问题，结果导致缓存越来越大，一直占用着老年代的很多空间，时间长了就会导致full gc非常频繁，这就是一种内存泄漏，对于一些老旧数据没有及时清理导致一直占用着宝贵的内存资源，时间长了除了导致full gc，还有可能导致OOM。</p>
 <p>这种情况完全可以考虑采用一些成熟的JVM级缓存框架来解决，比如<code>ehcache</code>等<strong>自带一些<code>LRU</code>数据淘汰算法</strong>的框架来作为<strong><code>JVM</code>级的缓存</strong>。</p>
-<h3 id="实际项目调优"><a href="#实际项目调优" class="headerlink" title="实际项目调优"></a>实际项目调优</h3><p>对于系统调优可使用<strong><code>Skywalking</code></strong>链路最终工具，查看请求处理在哪些地方比较慢，从而找到需要优化的点；对于网关<strong><code>Gateway</code></strong>底层是使用的<strong><code>Netty</code></strong>故<strong>对CPU性能要求较高</strong>，若CPU性能不够可能导致由于网关的原因将系统的TPS拖下一大节，一般网关损耗在<strong><code>10%</code>以内</strong>才是正常的；<strong><code>Gateway</code></strong>可调节Netty线程池的大小，可通过<strong><code>-Dreactor.netty.ioWorkerCount=16</code></strong>JVM参数设置工作线程数，默认为逻辑核心数，一般调大意义不是很大。</p>
+<h3 id="实际项目调优"><a href="#实际项目调优" class="headerlink" title="实际项目调优"></a>实际项目调优</h3><p>对于系统调优可使用<strong><code>Skywalking</code></strong>链路追踪工具，查看请求处理在哪些地方比较慢，从而找到需要优化的点；对于网关<strong><code>Gateway</code></strong>底层是使用的<strong><code>Netty</code></strong>故<strong>对CPU性能要求较高</strong>，若CPU性能不够可能导致由于网关的原因将系统的TPS拖下一大节，一般网关损耗在<strong><code>10%</code>以内</strong>才是正常的；<strong><code>Gateway</code></strong>可调节Netty线程池的大小，可通过<strong><code>-Dreactor.netty.ioWorkerCount=16</code></strong>JVM参数设置工作线程数，默认为逻辑核心数，一般调大意义不是很大。</p>
 <p>对于<strong><code>MySQL</code></strong>数据库也是比较吃CPU资源的，可通过<strong><code>Skywalking</code></strong>或通过<strong><code>Prometheus</code></strong>&amp;<strong><code>Grafana</code></strong>中监控的MySQL指标确定是否存在慢查询或<strong><code>MySQL</code></strong>中开启慢查询查找<strong>慢查询<code>SQL</code></strong>，对具体的SQL通过<strong><code>explain</code></strong>来分析是否走索引等情况具体进行优化。</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">-- 查看是否开启慢查询</span><br><span class="line">show variables like &apos;%slow_query_log%&apos;;</span><br><span class="line">-- 开启慢查询</span><br><span class="line">set global slow_query_log = 1;</span><br><span class="line">-- 查看慢查询阈值</span><br><span class="line">show variables like &apos;%long_query_time%&apos;;</span><br><span class="line">-- 设置慢查询阈值，默认为1，单位s，设置完成需要重启session才生效</span><br><span class="line">set global long_query_time = 0.5;</span><br><span class="line">-- 查看慢查询是写文件还是写数据表，默认写文件</span><br><span class="line">show variables like &apos;%log_output%&apos;;</span><br><span class="line">-- 设置慢查询写数据表</span><br><span class="line">set global log_output = &apos;TABLE&apos;;</span><br><span class="line">-- 默认OFF关闭，表是是否记录没有使用索引的查询</span><br><span class="line">set global log_queries_not_using_indexes = ON;</span><br><span class="line"></span><br><span class="line">-- 模拟慢查询</span><br><span class="line">select sleep(12);</span><br><span class="line">-- 查询慢查询数据表</span><br><span class="line">select * from mysql.slow_log;</span><br><span class="line"># 修改mysql重启后会恢复之前值，要彻底修改需要修改mysql的配置文件并重启</span><br><span class="line">set global max_connections=500;  # 默认151</span><br></pre></td></tr></table></figure>
 <p>需要特别说明的是对于一些<strong>离散度小的字段</strong>一般不建议建立索引，但若某个字段离散度小但是我们一般只使用其中一个两个值，且可以过滤掉百分之八九十的数据时，也可以建立索引，如delete_status字段，若0表示未删除，1表示删除，若存在大量删除数据，且删除数据基本不用的情况可给delete_status建立索引。</p>
