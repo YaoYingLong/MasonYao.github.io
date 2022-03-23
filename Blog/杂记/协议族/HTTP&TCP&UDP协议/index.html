@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        HTTP&amp;TCP&amp;UDP协议 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="网络">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="HTTP协议 TCP协议TCP是面向连接的、可靠的、基于字节流的传输层通信协议，且TCP连接是全双工的。TCP会将数据临时存储到连接的发送缓存send buffer中，该send buffer是三次握手之间设置的缓存之⼀，然后TCP在合适的时间将发送缓存中的数据发送到目标主机的接收缓存中。  面向连接：一定是一对一才能连接，不能像UDP协议一对多即可一个主机同时向多个主机发送消息 可靠的：无论网络">
+<meta name="keywords" content="网络">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HTTP&amp;TCP&amp;UDP协议">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/杂记/协议族/HTTP&TCP&UDP协议/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="HTTP协议 TCP协议TCP是面向连接的、可靠的、基于字节流的传输层通信协议，且TCP连接是全双工的。TCP会将数据临时存储到连接的发送缓存send buffer中，该send buffer是三次握手之间设置的缓存之⼀，然后TCP在合适的时间将发送缓存中的数据发送到目标主机的接收缓存中。  面向连接：一定是一对一才能连接，不能像UDP协议一对多即可一个主机同时向多个主机发送消息 可靠的：无论网络">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/协议.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/TCP通信发送缓冲.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/TCP头格式.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/TCP连接建立-三次握手过程.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/三次握手第一个报文SYN报文.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/三次握手第二个报文SYN+ACK报文.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/三次握手第三个报文ACK报文.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/三次握手避免历史连接.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/三次握手vs四次握手.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/两次握手.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/TCP连接断开-四次挥手.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/TIME-WAIT防止旧连接数据包被收到.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/TIME-WAIT保证连接正确关闭.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/TCP流量控制.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/慢启动.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/确认应答.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/超时重传.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/快速重传.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/快速重传-sack.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/D-SACK-ACK丢包.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/D-SACK-网络延迟.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/网络/UDP头部格式.png">
+<meta property="og:updated_time" content="2022-03-09T07:13:33.948Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="HTTP&amp;TCP&amp;UDP协议">
+<meta name="twitter:description" content="HTTP协议 TCP协议TCP是面向连接的、可靠的、基于字节流的传输层通信协议，且TCP连接是全双工的。TCP会将数据临时存储到连接的发送缓存send buffer中，该send buffer是三次握手之间设置的缓存之⼀，然后TCP在合适的时间将发送缓存中的数据发送到目标主机的接收缓存中。  面向连接：一定是一对一才能连接，不能像UDP协议一对多即可一个主机同时向多个主机发送消息 可靠的：无论网络">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/网络/协议.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file active"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-杂记/协议族/HTTP&amp;TCP&amp;UDP协议" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/杂记/">杂记</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/杂记/协议族/">协议族</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/网络/">网络</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">
+            <time datetime="2022-02-10T16:00:00.000Z" itemprop="datePublished">2022-02-11</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            HTTP&amp;TCP&amp;UDP协议
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <h3 id="HTTP协议"><a href="#HTTP协议" class="headerlink" title="HTTP协议"></a>HTTP协议</h3><p><img src="../../../../../images/网络/协议.png" alt></p>
+<h3 id="TCP协议"><a href="#TCP协议" class="headerlink" title="TCP协议"></a>TCP协议</h3><p>TCP是<strong>面向连接的、可靠的、基于字节流</strong>的<strong>传输层</strong>通信协议，且TCP连接是<strong>全双工</strong>的。TCP会将数据临时存储到连接的<strong>发送缓存<code>send buffer</code></strong>中，该send buffer是三次握手之间设置的缓存之⼀，然后TCP在合适的时间将发送缓存中的数据发送到目标主机的接收缓存中。</p>
+<ul>
+<li><strong>面向连接</strong>：一定是<strong>一对一</strong>才能连接，不能像UDP协议一对多即可一个主机同时向多个主机发送消息</li>
+<li><p><strong>可靠的</strong>：无论网络链路中出现怎样的链路变化，TCP都可保证一个报文一定能够到达接收端</p>
+</li>
+<li><p><strong>字节流</strong>：<strong>消息没有边界</strong>，无论消息有多大都可进行传输，且消息是<strong>有序的</strong>，当前一个消息没有收到时，即使它先收到后面的字节，也不能扔给应用层去处理，同时<strong>对重复的报文会自动丢弃</strong></p>
+</li>
+</ul>
+<p><img src="../../../../../images/网络/TCP通信发送缓冲.png" alt></p>
+<p>主机之间的发送是以<strong>报⽂段Segment</strong>进⾏的，TCP会将要<strong>传输的数据流</strong>分为多个<strong>Chunk块</strong>，然后向每个Chunk块中添加<strong><code>TCP</code>标头</strong>，这样就形成了⼀个TCP段即<strong>报⽂段</strong>。</p>
+<p>每⼀个报⽂段可传输的长度是有限的，不能超过<strong>最大数据长度<code>Maximum Segment Size</code>即<code>MSS</code></strong>，在报文段向下传输过程中<strong>会经过链路层</strong>，<strong>数据链路层上所能通过最大数据包大小<code>Maximum Transmission Unit</code>最大传输单元<code>MTU</code></strong>，最大传输单元<strong>通常与通信接口有关</strong>。</p>
+<h5 id="MSS和MTU区别"><a href="#MSS和MTU区别" class="headerlink" title="MSS和MTU区别"></a>MSS和MTU区别</h5><p>计算机网络是分层的，不同层的称呼不⼀样，对于<strong>传输层</strong>来说称为<strong>报文段</strong>，而对<strong>网络层</strong>来说叫做<strong><code>IP</code>数据包</strong>，故<strong><code>MTU</code></strong>可认为是<strong>网络层能够传输的最大<code>IP</code>数据包</strong>，而<strong><code>MSS</code></strong>可认为是<strong>传输层</strong>的概念，即<strong>TCP数据包每次能够传输的最大量</strong>。</p>
+<h5 id="TCP头格式"><a href="#TCP头格式" class="headerlink" title="TCP头格式"></a>TCP头格式</h5><p><img src="../../../../../images/网络/TCP头格式.png" alt="TCP头格式"></p>
+<p>TCP各种功能和特点都是通过TCP报⽂结构来体现的</p>
+<ul>
+<li><strong>序列号</strong>：用来<strong>解决网络包乱序问题</strong>，在建立连接时由计算机生成的<strong>随机数</strong>作为其<strong>初始值</strong>，通过<strong><code>SYN</code>包</strong>传给接收端主机，<strong>每发送一次数据就累加一次该数据字节数大小</strong></li>
+<li><strong>确认应答号</strong>：<strong>用于解决不丢包问题，下一次期望收到的数据的序列号</strong>，发送端收到该确认应答以后可认为<strong>在该序号以前的数据都已经被正常接收</strong></li>
+<li><strong>控制位：</strong><ul>
+<li><strong><code>ACK</code></strong>：该位为 <strong><code>1</code></strong> 时<strong>确认应答字段变为有效</strong>，TCP规定<strong>除了最初建立连接时的<code>SYN</code>包之外</strong>该位必须设置为<code>1</code> </li>
+<li><strong><code>RST</code></strong>：该位为<strong><code>1</code></strong>时，表示<strong>TCP连接中出现异常必须强制断开连接</strong></li>
+<li><strong><code>SYC</code></strong>：该位为<strong><code>1</code></strong>时，表示<strong>希望建立连</strong>并在其<strong>序列号字段</strong>进行<strong>序列号初始值的设定</strong></li>
+<li><strong><code>FIN</code></strong>：该位为<strong><code>1</code></strong>时，表示<strong>之后不会再有数据发送</strong>，<strong>希望断开连接</strong>。<strong>当通信结束希望断开连接时</strong>，通信双方的主机之间就可<strong>相互交换<code>FIN</code>位置为<code>1</code>的TCP段</strong></li>
+</ul>
+</li>
+</ul>
+<h4 id="TCP连接建立"><a href="#TCP连接建立" class="headerlink" title="TCP连接建立"></a>TCP连接建立</h4><p>TCP是面向连接的协议，故使用TCP前必须先建立连接，而<strong>建立连接是通过三次握手而进行的</strong>。</p>
+<p><img src="../../../../../images/网络/TCP连接建立-三次握手过程.png" alt="三次握手过程状态变更"></p>
+<p>一开始<strong>客户端</strong>和<strong>服务端</strong>都处于<strong><code>CLOSED</code></strong>状态，先是<strong>服务端主动监听某个端口</strong>处于<strong><code>LISTEN</code></strong>状态，<strong>客户端</strong>会<strong>随机初始化序号<code>client_isn</code></strong>，将此序号置于TCP首部的序号字段中，同时把<strong><code>SYN</code></strong>标志位置为 <code>1</code>表示<code>SYN</code>报文，接着<strong>把第一个SYN报文发送给服务端</strong>，表示<strong>向服务端发起连接</strong>，<strong>该报文不包含应用层数据</strong>，之后客户端处于<strong><code>SYN-SENT</code></strong>状态。</p>
+<p><img src="../../../../../images/网络/三次握手第一个报文SYN报文.png" alt="三次握手第一个报文-SYN报文"></p>
+<p><strong>服务端</strong>收到客户端的<strong><code>SYN</code>报文</strong>后，首先<strong>服务端也随机初始化自己的序号<code>server_isn</code></strong>，将此序号<strong>填入TCP首部的序号字段</strong>中，其次把TCP首部的<strong>确认应答号</strong>字段填入<strong><code>client_isn + 1</code></strong>，接着把<strong><code>SYN</code></strong>和<strong><code>ACK</code></strong>标志位置为<code>1</code>，最后把该报文发给客户端，<strong>该报文也不包含应用层数据</strong>，之后<strong>服务端处于<code>SYN-RCVD</code>状态</strong>。</p>
+<p><img src="../../../../../images/网络/三次握手第二个报文SYN+ACK报文.png" alt="三次握手第二个报文-SYN+ACK报文"></p>
+<p>客户端收到服务端报文后还要<strong>向服务端回应最后一个应答报文</strong>，首先该应答报文TCP首部<code>ACK</code>标志位置为<code>1</code> ，其次<strong>确认应答号</strong>字段填入<strong><code>server_isn + 1</code></strong>，最后<strong>把报文发送给服务端</strong>，该报文<strong>可携带客户到服务器的数据</strong>，之后<strong>客户端处于<code>ESTABLISHED</code>状态</strong>。服务器收到客户端的应答报文后，<strong>服务端也进入<code>ESTABLISHED</code>状态</strong>。</p>
+<p><img src="../../../../../images/网络/三次握手第三个报文ACK报文.png" alt="三次握手第三个报文-ACK报文"></p>
+<p>从上面的过程可发现<strong>第三次握手可携带数据，前两次握手不可携带数据</strong>，一旦完成三次握手，双方都处于<strong><code>ESTABLISHED</code>状态</strong>，至此连接已建立完成，客户端和服务端就可相互发送数据了。</p>
+<p>使用三次握手建立连接的目的：<strong>阻止历史重复连接的初始化</strong>、<strong>同步双方的初始序列号</strong>、<strong>避免资源浪费</strong></p>
+<h5 id="避免历史连接"><a href="#避免历史连接" class="headerlink" title="避免历史连接"></a>避免历史连接</h5><p><strong>防止旧的重复连接初始化造成混乱</strong>，网络环境是错综复杂的，往往并不是如期望的一样，先发送的数据包，就先到达目标主机，可能会由于网络拥堵等原因，会使得旧的数据包，先到达目标主机</p>
+<p><img src="../../../../../images/网络/三次握手避免历史连接.png" alt="三次握手避免历史连接"></p>
+<p><strong>客户端连续发送多次SYN建立连接的报文</strong>，在<strong>网络拥堵</strong>等情况下，一个<strong>旧SYN报文</strong>比<strong>最新的SYN报文早到达服务端</strong>，此时服务端回一个<code>SYN + ACK</code>报文给客户端，客户端收到后可根据自身的上下文，判断这是一个<strong>历史连接</strong>即<strong>序列号过期或超时</strong>，客户端就会发送<code>RST</code>报文给服务端，表示<strong>中止这一次连接</strong></p>
+<p>若是<strong>两次握手连接</strong>，就不能判断当前连接是否是历史连接，三次握手则可在<strong>客户端</strong>即<strong>发送方</strong>准备发送第三次报文时，客户端因有足够的上下文来判断当前连接是否是历史连接：</p>
+<ul>
+<li>若是<strong>历史连接</strong>即<strong>序列号过期或超时</strong>，则<strong>第三次握手</strong>发送的报文是<code>RST</code>报文，以此<strong>中止历史连接</strong></li>
+<li>若<strong>不是历史连接</strong>，则第三次发送的报文是<code>ACK</code>报文，通信双方就会成功建立连接</li>
+</ul>
+<h5 id="同步双方初始序列号"><a href="#同步双方初始序列号" class="headerlink" title="同步双方初始序列号"></a>同步双方初始序列号</h5><p>TCP协议的通信双方，都必须维护一个<strong>序列号</strong>，<strong>序列号是可靠传输的一个关键因素</strong>，序列号作用：<strong>接收方可去除重复数据</strong>；<strong>接收方可根据数据包的序列号按序接收</strong>；可<strong>标识发送出去的数据包中哪些是已经被对方收到的</strong>；</p>
+<p><strong>序列号</strong>在TCP连接中占据着非常重要的作用，当客户端发送携带<strong>初始序列号</strong>的<code>SYN</code>报文时，需要服务端回一个<code>ACK</code>应答报文，表示客户端SYN报文已被服务端成功接收，当服务端发送初始序列号给客户端时，也要得到客户端的应答回应，<strong>这样一来一回才能确保双方的初始序列号能被可靠的同步</strong>。</p>
+<p><img src="../../../../../images/网络/三次握手vs四次握手.png" alt></p>
+<p>四次握手其实也能够可靠的同步双方的初始化序号，但由于<strong>第二步和第三步可以优化成一步</strong>，所以就成了三次握手，而<strong>两次握手只保证了一方的初始序列号能被对方成功接收</strong>，<strong>无法保证双方的初始序列号都能被确认接收</strong>。</p>
+<h5 id="避免资源浪费"><a href="#避免资源浪费" class="headerlink" title="避免资源浪费"></a>避免资源浪费</h5><p><strong>若只有两次握手</strong>，当客户端<code>SYN</code>请求连接在网络中阻塞，客户端没有接收到<code>ACK</code>报文，就会<strong>重新发送<code>SYN</code></strong>，由于没有第三次握手，服务器不清楚客户端是否收到了自己发送的建立连接的<code>ACK</code>确认信号，故每收到一个<code>SYN</code>就只能先主动建立一个连接，若客户端<code>SYN</code>阻塞了，重复发送多次<code>SYN</code>报文，服务器在收到请求后就会<strong>建立多个冗余的无效链接</strong>，造成不必要的资源浪费。即两次握手会造成消息滞留情况下，服务器重复接收无用的连接请求<code>SYN</code>报文，而造成重复分配资源。</p>
+<p><img src="../../../../../images/网络/两次握手.png" alt="两次握手"></p>
+<h4 id="TCP连接断开"><a href="#TCP连接断开" class="headerlink" title="TCP连接断开"></a>TCP连接断开</h4><p><img src="../../../../../images/网络/TCP连接断开-四次挥手.png" alt="TCP连接断开-四次挥手"></p>
+<p>TCP断开连接是通过<strong>四次挥手</strong>方式，<strong>双方都可主动断开连接</strong>，断开连接后主机中的资源将被释放，<strong>四次挥手过程</strong>，每个方向都需要<strong>一个<code>FIN</code>和一个<code>ACK</code></strong>，因此通常被称为<strong>四次挥手</strong>，且<strong>主动关闭连接才有<code>TIME_WAIT</code>状态</strong>：</p>
+<ul>
+<li><strong>客户端准备关闭连接</strong>时发送一个TCP首部<strong><code>FIN</code></strong>标志位被置为<code>1</code>的报文后，<strong>客户端</strong>进入<strong><code>FIN_WAIT_1</code>状态</strong></li>
+<li><strong>服务端收到FIN报文后</strong>向客户端发送<strong><code>ACK</code></strong>应答报文后，<strong>服务端</strong>进入<strong><code>CLOSED_WAIT</code>状态</strong></li>
+<li><strong>客户端收到服务端<code>ACK</code>应答报文</strong>后，<strong>客户端</strong>进入<strong><code>FIN_WAIT_2</code>状态</strong></li>
+<li>等待<strong>服务端处理完数据后</strong>，也向客户端发送<strong><code>FIN</code>报文</strong>，之后<strong>服务端</strong>进入<strong><code>LAST_ACK</code>状态</strong></li>
+<li><strong>客户端</strong>收到<strong>服务端<code>FIN</code>报文</strong>后，回一个<code>ACK</code>应答报文后，<strong>客户端</strong>进入<strong><code>TIME_WAIT</code>状态</strong></li>
+<li><strong>服务端</strong>收到<code>ACK</code>应答报文后，进入<strong><code>CLOSE</code>状态</strong>，至此服务端已经完成连接的关闭</li>
+<li>客户端在经过<strong><code>2MSL</code></strong>一段时间后，自动进入<code>CLOSE</code>状态，至此客户端也完成连接的关闭</li>
+</ul>
+<p>关闭连接时<strong>客户端向服务端发送<code>FIN</code>时</strong>，仅<strong>表示客户端不再发送数据但还能接收数据</strong>，服务器收到客户端的<code>FIN</code>报文时，先回一个<code>ACK</code>应答报文，而<strong>服务端可能还有数据需要处理和发送</strong>，等服务端不再发送数据时，才发送<code>FIN</code>报文给客户端来表示同意现在关闭连接。<strong>服务端通常需要等待完成数据的发送和处理</strong>，故<strong>服务端<code>ACK</code>和<code>FIN</code>一般会分开发送</strong>，<strong>从而比三次握手导致多了一次</strong>。</p>
+<h5 id="TIME-WAIT等待的2MSL时间"><a href="#TIME-WAIT等待的2MSL时间" class="headerlink" title="TIME_WAIT等待的2MSL时间"></a>TIME_WAIT等待的2MSL时间</h5><p><strong><code>MSL</code></strong>即<strong><code>Maximum Segment Lifetime</code>报文最大生存时间</strong>，它是<strong>任何报文在网络上存在的最长时间</strong>，<strong>超过该时间报文将被丢弃</strong>。因为TCP报文基于是IP协议的，而<strong>IP头</strong>中有一个<strong><code>TTL</code></strong>字段，是<strong><code>IP</code>数据报文可经过的最大路由数</strong>，每经过一个处理他的路由器<strong><code>TTL</code></strong>值减<strong><code>1</code></strong>，当<strong><code>TTL</code></strong>值为<strong><code>0</code></strong>则<strong>数据报将被丢弃</strong>，同时<strong>发送<code>ICMP</code>报文通知源主机</strong>。</p>
+<p><strong>MSL单位是时间</strong>，而<strong>TTL单位是经过路由条数</strong>。故<strong><code>MSL</code>应该要大于等于<code>TTL</code>消耗为<code>0</code>的时间</strong>，以<strong>确保报文已被自然消亡</strong>。</p>
+<p><strong><code>TIME_WAIT</code></strong>等待<strong>2倍<code>MSL</code></strong>，因为网络中可能存在<strong>来自发送方的数据包</strong>，当这些<strong>发送方的数据包被接收方处理后又会向对方发送响应</strong>，故<strong>一来一回需要等待2倍的时间</strong>。若<strong>被动关闭方</strong>没有收到断开连接的<strong>最后的<code>ACK</code>报文</strong>，就会触发超时<strong>重发<code>FIN</code>报文</strong>，另一方接收到FIN后，会重发ACK给被动关闭方， 一来一去正好2个MSL。</p>
+<p><strong><code>2MSL</code></strong>时间是从<strong>客户端接收到<code>FIN</code>后发送<code>ACK</code>开始计时的</strong>，若在<strong><code>TIME-WAIT</code></strong>时间内，因为客户端的ACK没有传输到服务端，<strong>客户端又接收到了服务端重发的<code>FIN</code>报文</strong>，则<strong><code>2MSL</code>时间将重新计时</strong>。在Linux系统里<strong><code>2MSL</code></strong>默认是<code>60</code>秒，则一个<code>MSL</code>即<code>30</code> 秒。<strong>Linux系统停留在<code>TIME_WAIT</code>的时间为固定的60 秒</strong>。</p>
+<h5 id="TIME-WAIT状态的作用"><a href="#TIME-WAIT状态的作用" class="headerlink" title="TIME_WAIT状态的作用"></a>TIME_WAIT状态的作用</h5><p><strong>主动发起关闭连接的一方</strong>才会有<strong><code>TIME-WAIT</code>状态</strong>，需要TIME-WAIT状态主要是两个原因：<strong>防止具有相同四元组的旧数据包被收到</strong>；<strong>保证被动关闭连接的一方能被正确的关闭</strong>，即保证最后的ACK能让被动关闭方接收，从而帮助其正常关闭；</p>
+<p><strong>防止旧连接的数据包</strong>，假设<strong><code>TIME-WAIT</code></strong>没有等待时间或时间过短，被延迟的数据包抵达，服务端在关闭连接之前发送的<code>SEQ = 301</code>报文被网络延迟，此时有相同端口的TCP连接被复用后，被延迟的<code>SEQ = 301</code>抵达客户端，客户端有可能正常接收该过期报文，则会<strong>产生数据错乱等严重的问题</strong>。故TCP设计出了经过<strong><code>2MSL</code></strong>时间机制，<strong>让两个方向上的数据包都被丢弃，使得原来连接的数据包在网络中都自然消失，再出现的数据包一定都是新建立连接所产生的</strong>。</p>
+<p><img src="../../../../../images/网络/TIME-WAIT防止旧连接数据包被收到.png" alt="TIME-WAIT防止旧连接数据包被收到"></p>
+<p><strong><code>TIME-WAIT</code></strong>作用是<strong>等待足够的时间以确保最后的<code>ACK</code>能让被动关闭方接收</strong>，从而帮助其正常关闭。客户端四次挥手的最后一个<code>ACK</code>报文若在网络中被丢失，此时若客户端<code>TIME-WAIT</code>过短或没有，则直接进入了<code>CLOSE</code>状态，<strong>服务端会一直处在<code>LASE-ACK</code>状态</strong>。当客户端发起建立连接的<code>SYN</code>请求报文后，服务端会发送<code>RST</code>报文给客户端，连接建立的过程就会被终止。</p>
+<p>若<strong><code>TIME-WAIT</code></strong>等待足够长的情况就会遇到两种情况：服务端正常收到四次挥手的最后一个<code>ACK</code>报文，则服务端正常关闭连接。服务端没有收到四次挥手的最后一个<code>ACK</code>报文时，则会重发<code>FIN</code>关闭连接报文并等待新的<code>ACK</code>报文。故客户端在<code>TIME-WAIT</code>状态等待<code>2MSL</code>时间后，就能<strong>保证双方连接都可正常关闭</strong>。</p>
+<p><img src="../../../../../images/网络/TIME-WAIT保证连接正确关闭.png" alt="TIME-WAIT保证连接正确关闭"></p>
+<h4 id="TCP可靠性传输"><a href="#TCP可靠性传输" class="headerlink" title="TCP可靠性传输"></a>TCP可靠性传输</h4><p>为了实现可靠性传输，需要考虑很多事情，如<strong>数据破坏</strong>、<strong>丢包</strong>、<strong>重复</strong>以及<strong>分片顺序混乱</strong>等问题。TCP是<strong>通过序列号</strong>、<strong>确认应答</strong>、<strong>重发控制</strong>、<strong>连接管理</strong>以及<strong>窗口控制</strong>等机制<strong>实现可靠性传输</strong>的。</p>
+<h5 id="流量控制"><a href="#流量控制" class="headerlink" title="流量控制"></a>流量控制</h5><p><strong>发送方不能无脑的发数据给接收方</strong>，要考虑接收方处理能力，若一直无脑的发数据给对方，但对方<strong>处理不过来</strong>，会<strong>导致触发重发机制</strong>，从而<strong>导致网络流量的无端的浪费</strong>。</p>
+<p>为了解决这种现象发生，TCP提供一种机制可<strong>让发送方根据接收方的实际接收能力控制发送的数据量</strong>，即所谓的<strong>流量控制</strong>。TCP通过⼀个<strong>接收窗口<code>receive window</code></strong>的变量来<strong>提供流量控制</strong>。<strong>接收窗口</strong>会给发送方⼀个指示到底还<strong>有多少可用的缓存空间</strong>，发送端会根据接收端的实际接受能力来控制发送的数据量。</p>
+<p><strong>接收端主机向发送端主机通知自己可接收数据的大小</strong>，发送端会<strong>发送不超过该限度的数据</strong>，该大小限度就是窗⼝大小，TCP首部有⼀个接收窗口，该字段用于流量控制，<strong>用于指示接收方能够够或愿意接收的字节数量</strong>。</p>
+<p>发送端主机会<strong>定期发送⼀个窗口探测包</strong> ，该包用于探测接收端主机是否还能够接受数据，<strong>当接收端的缓冲区⼀旦面临数据溢出的风险时</strong>，窗口大小值也随之被设置为⼀个更小的值通知发送端，从而控制数据发送量。</p>
+<p><img src="../../../../../images/网络/TCP流量控制.png" alt="TCP流量控制"></p>
+<p>当主机B收到报文段2000-2999之后缓冲区已满，不得不暂时停止接收数据，然后主机A发送窗口探测包，<strong>窗口探测包非常小仅仅⼀个字节</strong>。然后主机B更新缓冲区接收窗口大小并发送窗口更新通知给主机A，然后主机A再继续发送报⽂段。<strong>窗口更新通知可能会丢失</strong>，⼀旦丢失发送端就不会发送数据，故窗口探测包会<strong>随机发送</strong>，以避免这种情况发⽣。</p>
+<h5 id="拥塞控制"><a href="#拥塞控制" class="headerlink" title="拥塞控制"></a>拥塞控制</h5><p>流量控制是避免发送方的数据填满接收方的缓存，但是并不知道网络的中发生了什么，一般来说计算机网络都处在一个共享的环境。因此<strong>可能会因为其他主机之间的通信使得网络拥堵</strong>。</p>
+<p>在<strong>网络出现拥堵时</strong>，若<strong>继续发送大量数据包</strong>，可能会<strong>导致数据包时延</strong>、<strong>丢失</strong>等，此时TCP就<strong>会重传数据</strong>，<strong>但重传会导致网络负担更重</strong>，于是会导致更大的延迟以及更多的丢包，该情况会进入恶性循环被不断地放大。</p>
+<p>TCP被设计成一个<strong>无私的协议</strong>，当网络发送拥塞时，TCP会<strong>自我牺牲降低发送的数据量</strong>，于是就有了<strong>拥塞控制</strong>，控制目的是<strong>避免发送方的数据填满整个网络</strong>，为了在发送方调节所要发送数据的量，定义了一个叫做<strong>拥塞窗口</strong>。</p>
+<p><strong>拥塞窗口<code>cwnd</code></strong>是<strong>发送方维护的一个的状态变量</strong>，它会根据<strong>网络拥塞程度动态变化</strong>，发送窗口<code>swnd</code>和接收窗口 <code>rwnd</code>是约等于的关系，由于入了拥塞窗口，此时<strong>发送窗口的值是<code>swnd = min(cwnd, rwnd)</code></strong>，即<strong>拥塞窗口和接收窗口中的最小值</strong>。</p>
+<p>拥塞窗口<code>cwnd</code>变化的规则：只要网络中没有出现拥塞，<code>cwnd</code>就会增大；若网络中出现拥塞，<code>cwnd</code>就减少；只要<strong>发送方没有在规定时间内接收到ACK应答报文</strong>，即<strong>发生了超时重传就认为网络出现了用拥塞</strong>。TCP<strong>拥塞控制算法</strong>主要包含<strong>慢启动</strong>、<strong>拥塞避免</strong>、<strong>快速恢复</strong>三部分。</p>
+<h5 id="慢启动"><a href="#慢启动" class="headerlink" title="慢启动"></a>慢启动</h5><p>当⼀条TCP开始建立连接时，<strong>拥塞窗口</strong>的值就会<strong>初始化为⼀个<code>MSS</code>的较小值</strong>，这使得初始发送速率大概是<strong><code>MSS/RTT</code>字节/秒</strong> ，若要传输1000字节的数据RTT为200ms ，则得到的初始发送速率大概是40kb/s。实际情况下可用带宽要比该<strong><code>MSS/RTT</code></strong>大得多，因此<strong>TCP想要找到最佳的发送速率可通过慢启动的方式</strong>，在慢启动方式中<strong>拥塞窗口</strong>的值会<strong>初始化为1个MSS</strong>，且每次传输报问确认后会增加⼀个MSS，<strong>拥塞窗口</strong>的值会变为2个MSS，这两个报文段都传输成功后每个报文段<strong><code>+1</code></strong>，会变为4个MSS，依此类推每成功⼀次<strong>拥塞窗口</strong>的值就会翻倍。</p>
+<p><img src="../../../../../images/网络/慢启动.png" alt="慢启动"></p>
+<p>发送速率不可能会⼀直增⻓，增长总有结束的时候，慢启动通常会使用下面这几种方式结束发送速率的增⻓：</p>
+<ul>
+<li>若在<strong>慢启动的发送过程出现丢包</strong>情况，TCP会将发送方的<strong>拥塞窗口</strong>设置为<strong><code>1</code></strong>并<strong>重新开始慢启动过程</strong>，<strong>慢启动阈值</strong>初始值就是<strong>产生丢包</strong>的<strong>拥塞窗口</strong>的值<strong>除2</strong>，即当检测到拥塞时，<strong>慢启动阈值</strong>就变成窗⼝值的⼀半</li>
+<li>因为当检测到拥塞时，<strong>慢启动阈值</strong>就是窗口值的⼀半，则当<strong>拥塞窗口</strong>大于<strong>慢启动阈值</strong>时，<strong>每次翻番都可能会出现丢包</strong>，故最好的方式使<strong>拥塞窗口</strong>值等于<strong>慢启动阈值</strong>，这样TCP就会转为<strong>拥塞控制模式</strong>，结束慢启动</li>
+<li>若<strong>检测到3个冗余<code>ACK</code></strong>，TCP就会执行⼀种<strong>快速重传并进入恢复状态</strong></li>
+</ul>
+<h5 id="拥塞避免"><a href="#拥塞避免" class="headerlink" title="拥塞避免"></a>拥塞避免</h5><p><strong>当TCP进入拥塞控制状态后</strong>，<strong>拥塞窗口</strong>值就等于<strong>拥塞时值的⼀半</strong>即<strong>慢启动阈值</strong>。故无法每次报文段到达后都将<strong>拥塞窗口</strong>值再翻倍。而是采⽤了⼀种相对保守的方式，每次传输完成后只将<strong>拥塞窗口</strong>的值增加⼀个<strong><code>MSS</code></strong>，如收到10个报问段的确认，但<strong>拥塞窗口</strong>值只增加⼀个MSS。这是⼀种线性增长模式，它也会有增长阈值，它的增长阈值和慢启动⼀样，若出现丢包，则<strong>拥塞窗口</strong>值就是⼀个MSS，<strong>慢启动阈值</strong>就等于<strong>拥塞窗口</strong>的⼀半；或是收到3个冗余ACK响应也能停止MSS增⻓。若TCP将<strong>拥塞窗口</strong>值减半后，仍会收到3个冗余ACK，则将<strong>慢启动阈值</strong>记录为<strong>拥塞窗口</strong>值的⼀半，进入快速恢复状态。</p>
+<h5 id="快速恢复"><a href="#快速恢复" class="headerlink" title="快速恢复"></a>快速恢复</h5><p>在快速恢复中，对于使TCP进入快速恢复状态缺失的报⽂段，对于<strong>每个收到的冗余ACK</strong>，<strong>拥塞窗口</strong>值都会增加⼀个MSS。当对丢失报文段的⼀个ACK到达时，TCP在降低<strong>拥塞窗口</strong>后进入拥塞避免状态。若在拥塞控制状态后出现超时，则会<strong>迁移到慢启动状态</strong>，<strong>拥塞窗口</strong>的值被设置为1个MSS，<strong>慢启动阈值</strong>设置为<strong>拥塞窗口</strong>的⼀半。</p>
+<h4 id="重传机制"><a href="#重传机制" class="headerlink" title="重传机制"></a>重传机制</h4><p>TCP实现可靠传输的方式之一，是<strong>通过序列号</strong>与<strong>确认应答</strong>，当发送端的数据到达接收主机时，接收端主机会返回一个确认应答消息，表示已收到消息。但在错综复杂的网络，并不一定能顺利正常的数据传输，TCP针对数据包丢失情况用<strong>重传机制</strong>解决：<strong>超时重传</strong>、<strong>快速重传</strong>、<strong><code>SACK</code></strong>、<strong><code>D-SACK</code></strong></p>
+<p><img src="../../../../../images/网络/确认应答.png" alt></p>
+<h5 id="超时重传"><a href="#超时重传" class="headerlink" title="超时重传"></a>超时重传</h5><p>在<strong>发送数据时设定一个定时器</strong>，当超过指定的时间后，没有收到对方的<code>ACK</code>确认应答报文，就会重发该数据，TCP 会在<strong>数据包丢失</strong>、<strong>确认应答丢失</strong>两种情况发生超时重传。</p>
+<p><img src="../../../../../images/网络/超时重传.png" alt></p>
+<p>若<strong>超时重发数据再次超时时</strong>，又需要重传时，TCP的策略是<strong>超时间隔加倍</strong>，即<strong>每当遇到一次超时重传时，都会将下一次超时时间间隔设为先前值的两倍。两次超时说明网络环境差，不宜频繁反复发送</strong>。超时触发重传<strong>超时周期可能相对较长</strong>，可使用<strong>快速重传</strong>机制来解决<strong>超时重发的时间等待</strong>。</p>
+<h5 id="快速重传"><a href="#快速重传" class="headerlink" title="快速重传"></a>快速重传</h5><p><strong>快速重传不以时间为驱动，而是以数据驱动重传</strong>，发送方发出了1，2，3，4，5份数据，第一份Seq1先送到了，于是就Ack回2；结果Seq2因为某些原因没收到，Seq3到达了，于是还是Ack回2；后面的Seq4和Seq5都到了，但还是Ack回2，因为Seq2还是没有收到；</p>
+<p>发送端收到了三个Ack = 2的确认，知道了Seq2还没有收到，就会在定时器过期之前，重传丢失的Seq2，最后接收到收到了Seq2，此时因为Seq3，Seq4，Seq5都收到了，于是Ack回6。</p>
+<p><img src="../../../../../images/网络/快速重传.png" alt></p>
+<p>快速重传的工作方式是<strong>当收到三个相同的ACK报文时</strong>，会<strong>在定时器过期之前</strong>，<strong>重传丢失的报文段</strong>，快速重传机制只解决了一个问题，即超时时间的问题，但它不能解决在<strong>重传时是重传之前的一个，还是重传所有的</strong>。</p>
+<p>上面的例子是重传Seq2还是重传Seq2、Seq3、Seq4、Seq5，发送端并不清楚这连续的三个Ack2是谁传回来的，根据TCP不同的实现，以上两种情况都是有可能的。为了解决不知道该重传哪些TCP报文，于是就有<code>SACK</code>方法。</p>
+<h5 id="SACK"><a href="#SACK" class="headerlink" title="SACK"></a>SACK</h5><p><code>SACK</code>即Selective Acknowledgment选择性确认，该方式需要<strong>在TCP头部选项字段里加一个<code>SACK</code></strong>，它<strong>可将缓存的地图发送给发送方</strong>，这样发送方就能知道哪些数据收到了，哪些数据没收到，就可<strong>只重传丢失的数据</strong>。</p>
+<p><img src="../../../../../images/网络/快速重传-sack.png" alt></p>
+<p>发送方收到了三次同样的ACK确认报文，于是就会触发<strong>快速重发机制</strong>，通过<code>SACK</code>信息发现只有<code>200~299</code>这段数据丢失，则重发时只选择该TCP段进行重复。若要支持<code>SACK</code>，必须双方都要支持，在Linux下可通过 <code>net.ipv4.tcp_sack</code>参数打开该功能，Linux 2.4后默认打开。</p>
+<h5 id="D-SACK"><a href="#D-SACK" class="headerlink" title="D-SACK"></a>D-SACK</h5><p><code>D-SACK</code>即Duplicate SACK，其主要<strong>使用了SACK来告诉发送方有哪些数据被重复接收了</strong>，<strong>接收方</strong>发给<strong>发送方</strong>的两个ACK确认应答都丢失了，发送方超时后，重传第一个数据包3000 ~ 3499，<strong>于是接收方发现数据是重复收到的，于是回了一个SACK = 3000~3500</strong>，告诉发送方3000~3500的数据早已被接收了，因为ACK都是4000，意味着4000之前的所有数据都已收到，故该SACK就代表<code>D-SACK</code>，发送方则知道数据没有丢，是接收方ACK确认报文丢失。</p>
+<p><img src="../../../../../images/网络/D-SACK-ACK丢包.png" alt="D-SACK ACK丢包"></p>
+<p>数据包1000~1499被网络延迟了，导致发送方没有收到Ack 1500的确认报文，而后面报文到达的三个相同的ACK 确认报文，就触发了快速重传机制，但在重传后被延迟的数据包1000~1499又到了接收方；故接收方回了一个 SACK=1000~1500，因为ACK已经到了3000，故该SACK是D-SACK，表示收到了重复的包。这样发送方就知道<strong>快速重传触发的原因</strong>是因为网络延迟。</p>
+<p><img src="../../../../../images/网络/D-SACK-网络延迟.png" alt="D-SACK 网络延迟"></p>
+<p><code>D-SACK</code>可<strong>让发送方知道是发出去的包丢了，还是接收方回应的ACK包丢了</strong>；可知道<strong>是不是发送方的数据包被网络延迟了</strong>；可知道网络中是不是把发送方的数据包给复制了；</p>
+<h3 id="UDP协议"><a href="#UDP协议" class="headerlink" title="UDP协议"></a>UDP协议</h3><p><img src="../../../../../images/网络/UDP头部格式.png" alt="UDP头部格式"></p>
+<p><strong><code>UDP</code></strong>不提供复杂的控制机制，<strong>利用IP提供面向无连接</strong>的通信服务，全称<strong><code>User Datagram Protocol</code>用户数据报协议</strong>，UDP为应用程序提供了⼀种<strong>无需建立连接就可发送封装的<code>IP</code>数据包</strong>的方法，若应用程序开发人员选择的是 UDP，则该应用程序<strong>相当于和<code>IP</code>直接打交道</strong>。</p>
+<ul>
+<li><strong>目标端口和源端口</strong>：主要是<strong>告诉<code>UDP</code>协议应该把报文发给哪个进程</strong></li>
+<li><strong>包长度</strong>：该字段保存了<strong><code>UDP</code>首部长度和数据长度之和</strong></li>
+<li><strong>校验和</strong>：为了提供<strong>可靠的<code>UDP</code>首部</strong>和<strong>数据</strong>而设计</li>
+</ul>
+<h3 id="TCP与UDP的区别"><a href="#TCP与UDP的区别" class="headerlink" title="TCP与UDP的区别"></a>TCP与UDP的区别</h3><p>TCP与UDP的区别主要体现在<strong>连接</strong>、<strong>服务对象</strong>、<strong>可靠性</strong>、<strong>拥塞</strong>和<strong>流量控制</strong>、<strong>首部开销</strong>等几个方面</p>
+<p>TCP是<strong>面向连接</strong>的<strong>传输层协议</strong>，<strong>传输数据前先要建立连接</strong>；TCP是<strong>一对一</strong>的两点服务，即一条连接只有两个端点；TCP是<strong>可靠交付数据</strong>的，数据可<strong>无差错</strong>、<strong>不丢失</strong>、<strong>不重复</strong>、<strong>按需到达</strong>；TCP有<strong>拥塞控制</strong>和<strong>流量控制机制</strong>，保证数据传输的<strong>安全性</strong>；TCP<strong>首部长度较长</strong>，会有一定的开销，首部没有使用<strong>选项字段</strong>时是<strong><code>20</code></strong>个字节，若使用了选项字段会更长；</p>
+<p>UDP是<strong>不需要建立连接</strong>即可传输数据，UDP支持<strong>一对一</strong>、<strong>一对多</strong>、<strong>多对多</strong>的交互通信；UDP是<strong>尽最大努力交付</strong>，<strong>不保证可靠交付数据</strong>；UDP没有<strong>拥塞控制</strong>和<strong>流量控制机制</strong>，即使网络非常拥堵也不会影响UDP发送速率；UDP首部只有8个字节，且是固定不变的开销较小；</p>
+<h5 id="TCP和UDP应用场景"><a href="#TCP和UDP应用场景" class="headerlink" title="TCP和UDP应用场景"></a>TCP和UDP应用场景</h5><p>由于TCP是<strong>面向连接</strong>，能保证数据的<strong>可靠性交付</strong>，因此经常用于：<strong><code>FTP</code>文件传输</strong>、<strong><code>HTTP</code> / <code>HTTPS</code></strong></p>
+<p>由于UDP面向<strong>无连接</strong>，可随时发送数据，UDP本身处理既简单又高效，因此经常用于：<strong>包总量较少的通信</strong>如<code>DNS</code> 、<code>SNMP</code>等、视频、音频等多媒体通信、广播通信</p>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+        
+            <a href="/Blog/Cloud/分布式事务解决方案/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">分布式事务解决方案</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

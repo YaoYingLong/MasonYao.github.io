@@ -26,7 +26,7 @@
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/MylSAM存储引擎索引实现.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/InnoDB存储引擎索引实现.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/InnoDB二级索引结构.png">
-<meta property="og:updated_time" content="2021-09-01T11:16:18.561Z">
+<meta property="og:updated_time" content="2022-03-13T09:19:09.074Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="索引的原理与使用">
 <meta name="twitter:description" content="索引是帮助MySQL高效获取数据的排好序的数据结构。索引的数据结构：二叉树、红黑树、Hash表、B-Tree； MySQL的索引使用的是B+树而不是使用的B树，因为B树不管叶子节点还是非叶子节点，都会保存数据，这样导致在非叶子节点中能保存的指针数量变少，指针少的情况下要保存大量数据，只能增加树的高度，而在查找数据时一次页的查找代表一次IO，导致IO操作变多，查询性能变低； Hash对索引的key进">
@@ -955,6 +955,8 @@
                 
                     <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
                 
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
             </ul>
         
                     </li>
@@ -1236,19 +1238,28 @@
 <p><img src="../../../../images/DB/B+Tree数据结构.png" alt="B+Tree数据结构"></p>
 <p>MySQL文件页大小为<code>16K</code>，假设一行数据大小为1K，一页就能存16条数据，也就是一个叶子节点能存16条数据；再看非叶子节点，假设主键ID为<code>bigint</code>类型，那么长度为<code>8B</code>，<strong>指针大小</strong>在<code>Innodb</code>源码中为<code>6B</code>，<strong>一共就是<code>14B</code></strong>，一页里就可以存储<strong><code>16K/14=1170</code></strong>个(主键+指针)，一颗<strong>高度为2的B+树</strong>能存储的数据为：<strong><code>1170*16=18720</code></strong>条，一颗<strong>高度为3的B+树</strong>能存储的数据为：<code>1170 * 1170 * 16 = 21902400</code>（千万级条）</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SHOW</span> <span class="keyword">GLOBAL</span> <span class="keyword">STATUS</span> <span class="keyword">like</span> <span class="string">'Innodb_page_size’;</span></span><br></pre></td></tr></table></figure>
+<p>B+Tree是一颗有序的树，对于联合索引<strong><code>A、B、C</code></strong>，在A相等的情况B是有序的，在A、B相等的情况C是有序的</p>
 <h3 id="聚集索引"><a href="#聚集索引" class="headerlink" title="聚集索引"></a>聚集索引</h3><p><strong>聚集索引</strong>即<strong>叶节点包含了完整的数据记录</strong>，每个InnoDB表<strong>有且仅有一个主键索引即聚集索引</strong>，<strong>二级索引等都是非聚集索引</strong>，需要回表，再去查询聚集索引从而找到具体的数据。</p>
-<p>单从索引查询效率来说，<strong>聚集索引</strong>比<strong>非聚集索引</strong>要快。</p>
-<h3 id="非聚集索引"><a href="#非聚集索引" class="headerlink" title="非聚集索引"></a>非聚集索引</h3><h3 id="联合索引"><a href="#联合索引" class="headerlink" title="联合索引"></a>联合索引</h3><p><img src="../../../../images/DB/联合索引最左前缀原理.png" alt="联合主键数据结构"></p>
+<p>单从索引查询效率来说，<strong>聚集索引</strong>比<strong>非聚集索引</strong>要快，<strong>非聚集索引</strong>叶节点上的数据是存储的<strong>主键索引</strong>的<strong><code>ID</code></strong>。当表<strong>未建立主键索引时</strong>，MySQL会使用<strong>唯一性索引</strong>来作为主键索引，当表没有主键索引和唯一性索引时，将使用隐藏字段<strong><code>rowId</code></strong>作为主键索引。</p>
+<p><strong>非聚集索引</strong>查询时需要<strong>回表</strong>到<strong>主键索引</strong>中查询具体的数据，但一般查询到的主键ID可能是乱序的，回表效率很低下，故引入了<strong><code>MRR</code>即<code>Multi Range Read</code></strong>针对于<strong>辅助索引</strong>上的<strong>范围查询进行优化</strong>，收集辅助索引对应<strong>主键<code>rowid</code></strong>，进行<strong>排序后回表查询</strong>，将<strong>随机<code>IO</code>转顺序<code>IO</code></strong>。</p>
+<h3 id="非聚集索引"><a href="#非聚集索引" class="headerlink" title="非聚集索引"></a>非聚集索引</h3><h3 id="自适应哈希索引"><a href="#自适应哈希索引" class="headerlink" title="自适应哈希索引"></a>自适应哈希索引</h3><p><strong><code>InnoDB</code></strong>存储引擎内部<strong>监控索引热数据</strong>，然后<strong>内部创建一个<code>Hash</code>索引</strong>，称之为<strong>自适应哈希索引<code>Adaptive Hash Index, AHI</code></strong>，控制参数<strong><code>Innodb_adaptive_hash_index</code></strong>和<strong><code>innodb_adaptive_hash_index_parts</code></strong>，可通过<strong><code>show engine innodb status</code></strong>命令查看hash索引使用情况。</p>
+<h3 id="联合索引"><a href="#联合索引" class="headerlink" title="联合索引"></a>联合索引</h3><p><img src="../../../../images/DB/联合索引最左前缀原理.png" alt="联合主键数据结构"></p>
 <p>例：<strong><code>where age = 30 and position = &#39;dev&#39;</code></strong>该语句是不能用到索引的，因为虽然在某一个页里面age和position是排好序的，但跳过name在不同的页相比较age和position是乱序的。</p>
 <h3 id="MylSAM存储引擎"><a href="#MylSAM存储引擎" class="headerlink" title="MylSAM存储引擎"></a>MylSAM存储引擎</h3><p>MylSAM索引文件和数据文件是分离的，即索引是非聚集索引（非聚蔟索引）</p>
 <p><img src="../../../../images/DB/MylSAM存储引擎索引实现.png" alt="MylSAM存储引擎索引实现"></p>
-<h3 id="InnoDB存储引擎"><a href="#InnoDB存储引擎" class="headerlink" title="InnoDB存储引擎"></a>InnoDB存储引擎</h3><p>文件系统的<strong>最小单元是块</strong>，一个块的大小是<strong><code>4K</code></strong>，在文件系统中即使一个文件只有<strong>一个字节</strong>，但也不得不占<strong><code>4KB</code></strong>的磁盘空间。</p>
+<h3 id="InnoDB存储引擎"><a href="#InnoDB存储引擎" class="headerlink" title="InnoDB存储引擎"></a>InnoDB存储引擎</h3><p><strong><code>InnoDB</code></strong>三大特性：<strong>自适应哈希索引</strong>、<strong>双写缓存区</strong>、<strong><code>BufferPool</code></strong></p>
+<p>文件系统的<strong>最小单元是块</strong>，一个块的大小是<strong><code>4K</code></strong>，在文件系统中即使一个文件只有<strong>一个字节</strong>，但也不得不占<strong><code>4KB</code></strong>的磁盘空间。</p>
 <p><code>InnoDB</code>存储引擎的<strong>最小存储单元是<code>Page</code>页</strong>，页可用于存<strong>放数据</strong>也可用于存放<strong>键值<code>+</code>指针</strong>，指针大小在<code>InnoDB</code>源码中设置为<strong><code>6</code>字节</strong>，在<code>B+</code>树中<strong>叶子节点存放数据</strong>，<strong>非叶子节点存放键值<code>+</code>指针</strong>，默认一个页的大小是<strong><code>16382</code></strong>即<strong><code>16K</code></strong>。<code>InnoDB</code>的所有数据文件后缀为<strong><code>ibd</code></strong>，其大小始终都是<strong><code>16K</code>的整倍数</strong>。数据表中的数据都是存储在页中，若一行数据大小为<code>1K</code>，则一页可存放16行这样的数据。InnoDB索引文件和数据文件是一个文件，表数据文件本身就是按B+Tree组织的一个索引结构文件。</p>
 <p><img src="../../../../images/DB/InnoDB存储引擎索引实现.png" alt="InnoDB存储引擎索引实现"></p>
 <p>一个页中不可能所有空间都用于存放数据，它还会存放一些少量的其他字段比如<code>page level</code>，<code>index number</code>等等。</p>
 <h5 id="为什么建议InnoDB表必须建主键，并且推荐使用整型的自增主键？"><a href="#为什么建议InnoDB表必须建主键，并且推荐使用整型的自增主键？" class="headerlink" title="为什么建议InnoDB表必须建主键，并且推荐使用整型的自增主键？"></a>为什么建议<code>InnoDB</code>表必须建主键，并且推荐使用整型的<strong>自增</strong>主键？</h5><p>若<code>InnoDB</code>表没有设置主键，<code>MySQL</code>会从数据表中<strong>选择一列数据都不相等的列作为主键索引</strong>，若找不到这样的列，<code>MySQL</code>会创建一个<strong>隐藏列来作为主键索引</strong>。使用整型作为主键在做比较时效率高很多。之所以用自增主键，<strong>若插入数据的主键是无序的，插入时需要对数据索引做平衡之类的操作，插入效率变低</strong>。</p>
 <h5 id="为什么非主键索引结构叶子节点存储的是主键的索引值？"><a href="#为什么非主键索引结构叶子节点存储的是主键的索引值？" class="headerlink" title="为什么非主键索引结构叶子节点存储的是主键的索引值？"></a>为什么非主键索引结构叶子节点存储的是主键的索引值？</h5><p><strong>一致性和节省存储空间</strong></p>
 <h5 id="InnoDB二级索引结构"><a href="#InnoDB二级索引结构" class="headerlink" title="InnoDB二级索引结构"></a>InnoDB二级索引结构</h5><p><img src="../../../../images/DB/InnoDB二级索引结构.png" alt="InnoDB二级索引结构"></p>
+<h5 id="全文索引"><a href="#全文索引" class="headerlink" title="全文索引"></a>全文索引</h5><p>InnoDB也支持<strong>全文索引即倒排索引</strong>，只对数据类型<strong><code>char</code></strong>、<strong><code>vachar</code></strong>、<strong><code>text</code></strong>支持创建全文索引，<strong><code>MySQL5.6.X</code></strong>版本开始支持全文索引。但不推荐使用MySQL全文索引，<strong>一张表只能有一个全文索引</strong>，对<strong>中文</strong>或<strong>非拉丁文分词</strong>非常差。</p>
+<h3 id="MySQL索引类型"><a href="#MySQL索引类型" class="headerlink" title="MySQL索引类型"></a>MySQL索引类型</h3><p>从数据结构角度可分为<strong>B+Tree树索引</strong>、<strong>哈希索引</strong>、<strong>FULLTEXT索引</strong>、用于GIS数据类型创建的SPATIAL索引即<strong>R-Tree索引</strong></p>
+<p>从物理角度分为<strong>聚集索引</strong>、<strong>非聚集索引</strong></p>
+<p>从逻辑角度分为<strong>主键索引</strong>、<strong>普通索引</strong>或<strong>单列索引</strong>、<strong>联合索引或多列索引</strong>、<strong>唯一索引</strong>、<strong>非唯一索引</strong></p>
+<p><strong>密集索引</strong>即索引中不仅存储了索引的key还包括数据，MySQL中<strong>主键索引</strong>即聚集索引才是密集索引。与之相对的是<strong>稀疏索引</strong>，<strong>非聚集索引</strong>都是稀疏索引，所有<strong>二级索引</strong>都是稀疏索引。</p>
 
         </div>
         
