@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Zookeeper客户端之ZAB |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Zookeeper">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="整个Zookeeper就是一个多节点分布式一致性算法的实现，底层采用的实现协议是ZAB，即Zookeeper Atomic Broadcast原子广播协议。ZAB协议是为分布式协调服务Zookeeper专门设计的一种支持崩溃恢复和原子广播的协议。 ZAB协议消息广播过程使用的是一个原子广播协议，类似一个两阶段提交过程。对于客户端发送的写请求，全部由 Leader接收，Leader将请求封装成一个事">
+<meta name="keywords" content="Zookeeper">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Zookeeper客户端之ZAB">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="整个Zookeeper就是一个多节点分布式一致性算法的实现，底层采用的实现协议是ZAB，即Zookeeper Atomic Broadcast原子广播协议。ZAB协议是为分布式协调服务Zookeeper专门设计的一种支持崩溃恢复和原子广播的协议。 ZAB协议消息广播过程使用的是一个原子广播协议，类似一个两阶段提交过程。对于客户端发送的写请求，全部由 Leader接收，Leader将请求封装成一个事">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Zookeeper/ZAB广播流程.png">
+<meta property="og:updated_time" content="2021-12-21T14:41:08.209Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Zookeeper客户端之ZAB">
+<meta name="twitter:description" content="整个Zookeeper就是一个多节点分布式一致性算法的实现，底层采用的实现协议是ZAB，即Zookeeper Atomic Broadcast原子广播协议。ZAB协议是为分布式协调服务Zookeeper专门设计的一种支持崩溃恢复和原子广播的协议。 ZAB协议消息广播过程使用的是一个原子广播协议，类似一个两阶段提交过程。对于客户端发送的写请求，全部由 Leader接收，Leader将请求封装成一个事">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Zookeeper/ZAB广播流程.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/Zookeeper/Zookeeper客户端之ZAB" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/Zookeeper/">Zookeeper</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Zookeeper/">Zookeeper</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">
+            <time datetime="2021-12-20T16:00:00.000Z" itemprop="datePublished">2021-12-21</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Zookeeper客户端之ZAB
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>整个Zookeeper就是一个<strong>多节点分布式一致性算法</strong>的实现，底层采用的实现协议是<strong><code>ZAB</code></strong>，即<strong><code>Zookeeper Atomic Broadcast</code>原子广播协议</strong>。ZAB协议是为分布式协调服务Zookeeper专门设计的一种<strong>支持崩溃恢复</strong>和<strong>原子广播</strong>的协议。</p>
+<p>ZAB协议消息广播过程使用的是一个原子广播协议，类似一个<strong>两阶段提交过程</strong>。对于客户端发送的写请求，全部由 Leader接收，Leader将请求封装成一个事务Proposal，将其发送给所有Follower，然后根据所有Follwer的反馈，若<strong>含<code>Leader</code>自己超过半数成功响应</strong>，则执行commit操作。</p>
+<p><img src="../../../../../images/Zookeeper/ZAB广播流程.png" alt></p>
+<ul>
+<li>Leader在收到客户端请求之后，会将该请求封装成一个事务，并给该事务分配一个全局递增的唯一ID，称为事务ZXID，ZAB协议需要保证事务的顺序，因此必须将每一个事务按照ZXID进行先后排序然后处理，主要通过消息队列实现</li>
+<li>在Leader和Follwer之间还有一个消息队列，用来解耦他们之间的耦合，解除同步阻塞</li>
+<li>Zookeeper集群中为保证任何所有进程能够有序的顺序执行，只能是Leader服务器接受写请求，即使是 Follower服务器接受到客户端的写请求，也会转发到Leader服务器进行处理，Follower只处理读请求</li>
+<li>ZAB协议规定了若一个事务在一台机器上被处理Commit成功，则应该在所有机器上都被处理成功，哪怕机器出现故障崩溃</li>
+</ul>
+<p>当崩溃恢复之后，需要在正式接收客户端请求之前，Leader服务器首先确认事务是否都已经被过半的Follwer提交了，即是否完成了数据同步。目的是为了保持数据一致。</p>
+<p>当Follwer服务器成功同步之后，Leader会将这些服务器加入到可用服务器列表中，Leader服务器处理或丢弃事务都是依赖着ZXID。</p>
+<p>实际上，Leader 服务器处理或丢弃事务都是依赖着 ZXID 的，那么这个 ZXID 如何生成呢？</p>
+<p>在ZAB协议的事务编号ZXID设计中，<strong><code>ZXID</code></strong>是一个<strong><code>64</code>位的数字</strong>，其中<strong>低<code>32</code>位可看作是一个简单的递增的计数器</strong>，针对客户端的每一个事务请求，Leader都会产生一个新的事务Proposal并对该计数器进行<strong><code>+1</code></strong>操作。<strong>高<code>32</code>位</strong>则代表Leader服务器上取出<strong>本地日志中最大事务<code>Proposal</code>的<code>ZXID</code></strong>，并从该ZXID中解析出对应<strong><code>Leader</code>选举周期<code>epoch</code>值</strong>，当一轮新的选举结束后，会对该值加一且<strong>事务<code>id</code>又从<code>0</code>开始自增</strong>。</p>
+<p>高32位代表了每代Leader的唯一性，低32代表了每代Leader中事务的唯一性。同时也能让Follwer通过高32位识别不同的Leader，简化数据恢复流程。基于这样的策略，当Follower连接上Leader后，<strong>Leader服务器会根据自己服务器上最后被提交的<code>ZXID</code>和<code>Follower</code>上的<code>ZXID</code>进行比对</strong>，比对结果要么回滚，要么和Leader同步。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ZkServiceProviderV</span> <span class="keyword">implements</span> <span class="title">Watcher</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> CountDownLatch countDownLatch = <span class="keyword">new</span> CountDownLatch(<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> ZooKeeper zk = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> String rootPath = <span class="string">"/GroupMembers"</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException, InterruptedException, KeeperException </span>&#123;</span><br><span class="line">        zk = <span class="keyword">new</span> ZooKeeper(<span class="string">"localhost:2181"</span>, <span class="number">5000</span>, <span class="keyword">new</span> ZkServiceProviderV());</span><br><span class="line">        countDownLatch.await();</span><br><span class="line">        zk.create(rootPath + <span class="string">"/test"</span>, <span class="string">"test carete"</span>.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);</span><br><span class="line">        System.out.println(<span class="string">"创建集群节点test："</span> + rootPath + <span class="string">"test"</span>);</span><br><span class="line">        Thread.sleep(Integer.MAX_VALUE);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(WatchedEvent event)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (Event.KeeperState.SyncConnected == event.getState()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (Event.EventType.None == event.getType() &amp;&amp; event.getPath() == <span class="keyword">null</span>) &#123;</span><br><span class="line">                countDownLatch.countDown();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过ZooKeeper的构造方法创建ZooKeeper时，首先通过<strong><code>defaultWatchManager</code></strong>创建一个<strong><code>ZKWatchManager</code></strong>对象，且将传入的<strong><code>Watcher</code></strong>赋值给其<strong><code>defaultWatcher</code></strong>属性。然后通过<strong><code>ClientCnxn</code></strong>构造方法创建连接，且在<strong><code>ClientCnxn</code></strong>构造方法中创建了<strong><code>SendThread</code></strong>和<strong><code>EventThread</code></strong>两个重要的线程。且在<strong><code>ZooKeeper</code></strong>构造方法中调用<strong><code>ClientCnxn</code></strong>的<strong><code>start</code></strong>方法启动了这两个线程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ZooKeeper</span> <span class="keyword">implements</span> <span class="title">AutoCloseable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ZooKeeper</span><span class="params">(String connectString, <span class="keyword">int</span> sessionTimeout, Watcher watcher)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(connectString, sessionTimeout, watcher, <span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ZooKeeper</span><span class="params">(String connectString, <span class="keyword">int</span> sessionTimeout, Watcher watcher, <span class="keyword">boolean</span> canBeReadOnly)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(connectString, sessionTimeout, watcher, canBeReadOnly, createDefaultHostProvider(connectString));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ZooKeeper</span><span class="params">(String connectString, <span class="keyword">int</span> sessionTimeout, Watcher watcher, <span class="keyword">boolean</span> canBeReadOnly, HostProvider aHostProvider)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(connectString, sessionTimeout, watcher, canBeReadOnly, aHostProvider, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ZooKeeper</span><span class="params">(String connectString, <span class="keyword">int</span> sessionTimeout, Watcher watcher, <span class="keyword">boolean</span> canBeReadOnly, HostProvider aHostProvider, ZKClientConfig clientConfig)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (clientConfig == <span class="keyword">null</span>) &#123;</span><br><span class="line">            clientConfig = <span class="keyword">new</span> ZKClientConfig();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.clientConfig = clientConfig;</span><br><span class="line">        watchManager = defaultWatchManager();</span><br><span class="line">        watchManager.defaultWatcher = watcher;</span><br><span class="line">        ConnectStringParser connectStringParser = <span class="keyword">new</span> ConnectStringParser(connectString);</span><br><span class="line">        hostProvider = aHostProvider;</span><br><span class="line">        cnxn = createConnection(connectStringParser.getChrootPath(), hostProvider, sessionTimeout, <span class="keyword">this</span>, watchManager, getClientCnxnSocket(), canBeReadOnly);</span><br><span class="line">        cnxn.start();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> ClientCnxn <span class="title">createConnection</span><span class="params">(String chrootPath, HostProvider hostProvider, <span class="keyword">int</span> sessionTimeout, ZooKeeper zooKeeper, ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, <span class="keyword">boolean</span> canBeReadOnly)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ClientCnxn(chrootPath, hostProvider, sessionTimeout, <span class="keyword">this</span>, watchManager, clientCnxnSocket, canBeReadOnly);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">ZKWatchManager</span> <span class="keyword">implements</span> <span class="title">ClientWatchManager</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, Set&lt;Watcher&gt;&gt; dataWatches = <span class="keyword">new</span> HashMap&lt;String, Set&lt;Watcher&gt;&gt;();</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, Set&lt;Watcher&gt;&gt; existWatches = <span class="keyword">new</span> HashMap&lt;String, Set&lt;Watcher&gt;&gt;();</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, Set&lt;Watcher&gt;&gt; childWatches = <span class="keyword">new</span> HashMap&lt;String, Set&lt;Watcher&gt;&gt;();</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">boolean</span> disableAutoWatchReset;</span><br><span class="line">        <span class="keyword">protected</span> <span class="keyword">volatile</span> Watcher defaultWatcher;</span><br><span class="line">        ZKWatchManager(<span class="keyword">boolean</span> disableAutoWatchReset) &#123;</span><br><span class="line">            <span class="keyword">this</span>.disableAutoWatchReset = disableAutoWatchReset;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientCnxn</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClientCnxn</span><span class="params">(String chrootPath, HostProvider hostProvider, <span class="keyword">int</span> sessionTimeout, ZooKeeper zooKeeper, ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, <span class="keyword">boolean</span> canBeReadOnly)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher, clientCnxnSocket, <span class="number">0</span>, <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">16</span>], canBeReadOnly);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClientCnxn</span><span class="params">(String chrootPath, HostProvider hostProvider, <span class="keyword">int</span> sessionTimeout, ZooKeeper zooKeeper, ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, <span class="keyword">long</span> sessionId, <span class="keyword">byte</span>[] sessionPasswd, <span class="keyword">boolean</span> canBeReadOnly)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.zooKeeper = zooKeeper;</span><br><span class="line">        <span class="keyword">this</span>.watcher = watcher;</span><br><span class="line">        <span class="keyword">this</span>.sessionId = sessionId;</span><br><span class="line">        <span class="keyword">this</span>.sessionPasswd = sessionPasswd;</span><br><span class="line">        <span class="keyword">this</span>.sessionTimeout = sessionTimeout;</span><br><span class="line">        <span class="keyword">this</span>.hostProvider = hostProvider;</span><br><span class="line">        <span class="keyword">this</span>.chrootPath = chrootPath;</span><br><span class="line">        connectTimeout = sessionTimeout / hostProvider.size();</span><br><span class="line">        readTimeout = sessionTimeout * <span class="number">2</span> / <span class="number">3</span>;</span><br><span class="line">        readOnly = canBeReadOnly;</span><br><span class="line">        sendThread = <span class="keyword">new</span> SendThread(clientCnxnSocket);</span><br><span class="line">        eventThread = <span class="keyword">new</span> EventThread();</span><br><span class="line">        <span class="keyword">this</span>.clientConfig = zooKeeper.getClientConfig();</span><br><span class="line">        initRequestTimeout();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        sendThread.start();</span><br><span class="line">        eventThread.start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="SendThread"><a href="#SendThread" class="headerlink" title="SendThread"></a>SendThread</h4><p><strong><code>SendThread</code></strong>主要<strong>跟服务端建立连接</strong>，且<strong>监听读写事件</strong>并处理。首先在<strong><code>ClientCnxn</code></strong>的<strong><code>startConnect</code></strong>方法中调用<strong><code>ClientCnxnSocketNIO</code></strong>的<strong><code>connect</code></strong>方法，创建<strong><code>SocketChannel</code></strong>并注册到<strong><code>Selector</code></strong>中。在<strong><code>ClientCnxnSocketNIO</code></strong>的<strong><code>doTransport</code></strong>方法中<strong>监听读写事件</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">SendThread</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        clientCnxnSocket.introduce(<span class="keyword">this</span>, sessionId, outgoingQueue);</span><br><span class="line">        clientCnxnSocket.updateNow();</span><br><span class="line">        clientCnxnSocket.updateLastSendAndHeard();</span><br><span class="line">        <span class="keyword">int</span> to;</span><br><span class="line">        <span class="keyword">long</span> lastPingRwServer = Time.currentElapsedTime();</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">int</span> MAX_SEND_PING_INTERVAL = <span class="number">10000</span>; <span class="comment">//10 seconds</span></span><br><span class="line">        InetSocketAddress serverAddress = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">while</span> (state.isAlive()) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (!clientCnxnSocket.isConnected()) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (closing) &#123;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (rwServerAddress != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        serverAddress = rwServerAddress;</span><br><span class="line">                        rwServerAddress = <span class="keyword">null</span>;</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        serverAddress = hostProvider.next(<span class="number">1000</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                    startConnect(serverAddress);</span><br><span class="line">                    clientCnxnSocket.updateLastSendAndHeard();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (state.isConnected()) &#123;<span class="comment">// determine whether we need to send an AuthFailed event.</span></span><br><span class="line">                    <span class="keyword">if</span> (zooKeeperSaslClient != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">boolean</span> sendAuthEvent = <span class="keyword">false</span>;</span><br><span class="line">                        <span class="keyword">if</span> (zooKeeperSaslClient.getSaslState() == ZooKeeperSaslClient.SaslState.INITIAL) &#123;</span><br><span class="line">                            <span class="keyword">try</span> &#123;</span><br><span class="line">                                zooKeeperSaslClient.initialize(ClientCnxn.<span class="keyword">this</span>);</span><br><span class="line">                            &#125; <span class="keyword">catch</span> (SaslException e) &#123;</span><br><span class="line">                                state = States.AUTH_FAILED;</span><br><span class="line">                                sendAuthEvent = <span class="keyword">true</span>;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                        KeeperState authState = zooKeeperSaslClient.getKeeperState();</span><br><span class="line">                        <span class="keyword">if</span> (authState != <span class="keyword">null</span>) &#123;</span><br><span class="line">                            <span class="keyword">if</span> (authState == KeeperState.AuthFailed) &#123;</span><br><span class="line">                                state = States.AUTH_FAILED;</span><br><span class="line">                                sendAuthEvent = <span class="keyword">true</span>;</span><br><span class="line">                            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                                <span class="keyword">if</span> (authState == KeeperState.SaslAuthenticated) &#123;</span><br><span class="line">                                    sendAuthEvent = <span class="keyword">true</span>;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line">                        <span class="keyword">if</span> (sendAuthEvent) &#123;</span><br><span class="line">                            eventThread.queueEvent(<span class="keyword">new</span> WatchedEvent(Watcher.Event.EventType.None, authState, <span class="keyword">null</span>));</span><br><span class="line">                            <span class="keyword">if</span> (state == States.AUTH_FAILED) &#123;</span><br><span class="line">                                eventThread.queueEventOfDeath();</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    to = readTimeout - clientCnxnSocket.getIdleRecv();</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    to = connectTimeout - clientCnxnSocket.getIdleRecv();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (to &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> SessionTimeoutException(warnInfo);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (state.isConnected()) &#123;</span><br><span class="line">                    <span class="keyword">int</span> timeToNextPing = readTimeout / <span class="number">2</span> - clientCnxnSocket.getIdleSend() - ((clientCnxnSocket.getIdleSend() &gt; <span class="number">1000</span>) ? <span class="number">1000</span> : <span class="number">0</span>);</span><br><span class="line">                    <span class="keyword">if</span> (timeToNextPing &lt;= <span class="number">0</span> || clientCnxnSocket.getIdleSend() &gt; MAX_SEND_PING_INTERVAL) &#123;</span><br><span class="line">                        sendPing();</span><br><span class="line">                        clientCnxnSocket.updateLastSend();</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        <span class="keyword">if</span> (timeToNextPing &lt; to) &#123;</span><br><span class="line">                            to = timeToNextPing;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (state == States.CONNECTEDREADONLY) &#123; <span class="comment">// 只读模式处理</span></span><br><span class="line">                    <span class="keyword">long</span> now = Time.currentElapsedTime();</span><br><span class="line">                    <span class="keyword">int</span> idlePingRwServer = (<span class="keyword">int</span>) (now - lastPingRwServer);</span><br><span class="line">                    <span class="keyword">if</span> (idlePingRwServer &gt;= pingRwTimeout) &#123;</span><br><span class="line">                        lastPingRwServer = now;</span><br><span class="line">                        idlePingRwServer = <span class="number">0</span>;</span><br><span class="line">                        pingRwTimeout = Math.min(<span class="number">2</span> * pingRwTimeout, maxPingRwTimeout);</span><br><span class="line">                        pingRwServer();</span><br><span class="line">                    &#125;</span><br><span class="line">                    to = Math.min(to, pingRwTimeout - idlePingRwServer);</span><br><span class="line">                &#125;</span><br><span class="line">                clientCnxnSocket.doTransport(to, pendingQueue, ClientCnxn.<span class="keyword">this</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                <span class="keyword">if</span> (closing) &#123;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;<span class="comment">// this is ugly, you have a better way speak up</span></span><br><span class="line">                    cleanAndNotifyState();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">synchronized</span> (state) &#123;<span class="comment">// When it comes to this point, it guarantees that later queued packet to outgoingQueue will be notified of death.</span></span><br><span class="line">            cleanup();</span><br><span class="line">        &#125;</span><br><span class="line">        clientCnxnSocket.close();</span><br><span class="line">        <span class="keyword">if</span> (state.isAlive()) &#123;</span><br><span class="line">            eventThread.queueEvent(<span class="keyword">new</span> WatchedEvent(Event.EventType.None, Event.KeeperState.Disconnected, <span class="keyword">null</span>));</span><br><span class="line">        &#125;</span><br><span class="line">        eventThread.queueEvent(<span class="keyword">new</span> WatchedEvent(Event.EventType.None, Event.KeeperState.Closed, <span class="keyword">null</span>));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientCnxn</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startConnect</span><span class="params">(InetSocketAddress addr)</span> <span class="keyword">throws</span> IOException </span>&#123;<span class="comment">// initializing it for new connection</span></span><br><span class="line">        saslLoginFailed = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">if</span> (!isFirstConnect) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Thread.sleep(r.nextInt(<span class="number">1000</span>));</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        state = States.CONNECTING;</span><br><span class="line">        String hostPort = addr.getHostString() + <span class="string">":"</span> + addr.getPort();</span><br><span class="line">        MDC.put(<span class="string">"myid"</span>, hostPort);</span><br><span class="line">        setName(getName().replaceAll(<span class="string">"\\(.*\\)"</span>, <span class="string">"("</span> + hostPort + <span class="string">")"</span>));</span><br><span class="line">        <span class="keyword">if</span> (clientConfig.isSaslClientEnabled()) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (zooKeeperSaslClient != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    zooKeeperSaslClient.shutdown();</span><br><span class="line">                &#125;</span><br><span class="line">                zooKeeperSaslClient = <span class="keyword">new</span> ZooKeeperSaslClient(SaslServerPrincipal.getServerPrincipal(addr, clientConfig), clientConfig);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (LoginException e) &#123;</span><br><span class="line">                eventThread.queueEvent(<span class="keyword">new</span> WatchedEvent(Watcher.Event.EventType.None, Watcher.Event.KeeperState.AuthFailed, <span class="keyword">null</span>));</span><br><span class="line">                saslLoginFailed = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        clientCnxnSocket.connect(addr);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientCnxnSocketNIO</span> <span class="keyword">extends</span> <span class="title">ClientCnxnSocket</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">connect</span><span class="params">(InetSocketAddress addr)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        SocketChannel sock = createSock();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            registerAndConnect(sock, addr);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            sock.close();</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125;</span><br><span class="line">        initialized = <span class="keyword">false</span>;</span><br><span class="line">        lenBuffer.clear();</span><br><span class="line">        incomingBuffer = lenBuffer;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function">SocketChannel <span class="title">createSock</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        SocketChannel sock;</span><br><span class="line">        sock = SocketChannel.open();</span><br><span class="line">        sock.configureBlocking(<span class="keyword">false</span>);</span><br><span class="line">        sock.socket().setSoLinger(<span class="keyword">false</span>, -<span class="number">1</span>);</span><br><span class="line">        sock.socket().setTcpNoDelay(<span class="keyword">true</span>);</span><br><span class="line">        <span class="keyword">return</span> sock;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerAndConnect</span><span class="params">(SocketChannel sock, InetSocketAddress addr)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        sockKey = sock.register(selector, SelectionKey.OP_CONNECT);</span><br><span class="line">        <span class="keyword">boolean</span> immediateConnect = sock.connect(addr);</span><br><span class="line">        <span class="keyword">if</span> (immediateConnect) &#123;</span><br><span class="line">            sendThread.primeConnection();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>SendThread</code></strong>中通过<strong><code>startConnect</code></strong>方法与服务端建立好连接后，调用<strong><code>ClientCnxnSocketNIO</code></strong>的<strong><code>doTransport</code></strong>监听读写事件，当接收到读写事件后调用<strong><code>doIO</code></strong>方法对读写逻辑分别处理。对于写事件通过从<strong><code>outgoingQueue</code>队列</strong>中取出<strong>命令包</strong>，最终调用<strong><code>ClientCnxn</code></strong>的<strong><code>createBB</code></strong>方法将数据发送给服务端，服务端最终通过<strong><code>CnxnChannelHandler</code></strong>的<strong><code>channelRead</code></strong>方法处理。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientCnxnSocketNIO</span> <span class="keyword">extends</span> <span class="title">ClientCnxnSocket</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">doTransport</span><span class="params">(<span class="keyword">int</span> waitTimeOut, List&lt;Packet&gt; pendingQueue, ClientCnxn cnxn)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        selector.select(waitTimeOut);</span><br><span class="line">        Set&lt;SelectionKey&gt; selected;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">            selected = selector.selectedKeys();</span><br><span class="line">        &#125;</span><br><span class="line">        updateNow();</span><br><span class="line">        <span class="keyword">for</span> (SelectionKey k : selected) &#123;</span><br><span class="line">            SocketChannel sc = ((SocketChannel) k.channel());</span><br><span class="line">            <span class="keyword">if</span> ((k.readyOps() &amp; SelectionKey.OP_CONNECT) != <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">if</span> (sc.finishConnect()) &#123;</span><br><span class="line">                    updateLastSendAndHeard(); <span class="comment">// 更新最后发送以及心跳时间</span></span><br><span class="line">                    updateSocketAddresses();</span><br><span class="line">                    sendThread.primeConnection(); <span class="comment">// 处理会话、之前的监听器、身份验证</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> ((k.readyOps() &amp; (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != <span class="number">0</span>) &#123;</span><br><span class="line">                doIO(pendingQueue, cnxn); <span class="comment">// 有NIO读写事件发生</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (sendThread.getZkState().isConnected()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                enableWrite();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        selected.clear();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">doIO</span><span class="params">(List&lt;Packet&gt; pendingQueue, ClientCnxn cnxn)</span> <span class="keyword">throws</span> InterruptedException, IOException </span>&#123;</span><br><span class="line">        SocketChannel sock = (SocketChannel) sockKey.channel();</span><br><span class="line">        <span class="keyword">if</span> (sock == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Socket is null!"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (sockKey.isReadable()) &#123; <span class="comment">// 处理服务端响应信息</span></span><br><span class="line">            <span class="keyword">int</span> rc = sock.read(incomingBuffer);</span><br><span class="line">            <span class="keyword">if</span> (rc &lt; <span class="number">0</span>) &#123; <span class="comment">// 未读取到数据抛出异常</span></span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> EndOfStreamException(<span class="string">"Unable to read additional data from server sessionid 0x"</span> + Long.toHexString(sessionId) + <span class="string">", likely server has closed socket"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!incomingBuffer.hasRemaining()) &#123;</span><br><span class="line">                incomingBuffer.flip();</span><br><span class="line">                <span class="keyword">if</span> (incomingBuffer == lenBuffer) &#123;</span><br><span class="line">                    recvCount.getAndIncrement();</span><br><span class="line">                    readLength();</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!initialized) &#123;</span><br><span class="line">                    readConnectResult();</span><br><span class="line">                    enableRead();</span><br><span class="line">                    <span class="keyword">if</span> (findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        enableWrite();</span><br><span class="line">                    &#125;</span><br><span class="line">                    lenBuffer.clear();</span><br><span class="line">                    incomingBuffer = lenBuffer;</span><br><span class="line">                    updateLastHeard();</span><br><span class="line">                    initialized = <span class="keyword">true</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    sendThread.readResponse(incomingBuffer);</span><br><span class="line">                    lenBuffer.clear();</span><br><span class="line">                    incomingBuffer = lenBuffer;</span><br><span class="line">                    updateLastHeard();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (sockKey.isWritable()) &#123; <span class="comment">// 向服务端发送消息</span></span><br><span class="line">            Packet p = findSendablePacket(outgoingQueue, sendThread.tunnelAuthInProgress()); <span class="comment">// 从outgoingQueue队列中取出命令包</span></span><br><span class="line">            <span class="keyword">if</span> (p != <span class="keyword">null</span>) &#123;</span><br><span class="line">                updateLastSend();</span><br><span class="line">                <span class="keyword">if</span> (p.bb == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">if</span> ((p.requestHeader != <span class="keyword">null</span>) &amp;&amp; (p.requestHeader.getType() != OpCode.ping) &amp;&amp; (p.requestHeader.getType() != OpCode.auth)) &#123;</span><br><span class="line">                        p.requestHeader.setXid(cnxn.getXid());</span><br><span class="line">                    &#125;</span><br><span class="line">                    p.createBB(); <span class="comment">// 将待发送数据通过jute序列化后封装到ByteBuffer中去</span></span><br><span class="line">                &#125;</span><br><span class="line">                sock.write(p.bb); <span class="comment">// 将数据发送给服务端，服务端通过SocketChannel接收客户端请求命令</span></span><br><span class="line">                <span class="keyword">if</span> (!p.bb.hasRemaining()) &#123;</span><br><span class="line">                    sentCount.getAndIncrement();</span><br><span class="line">                    outgoingQueue.removeFirstOccurrence(p);</span><br><span class="line">                    <span class="keyword">if</span> (p.requestHeader != <span class="keyword">null</span> &amp;&amp; p.requestHeader.getType() != OpCode.ping &amp;&amp; p.requestHeader.getType() != OpCode.auth) &#123;</span><br><span class="line">                        <span class="keyword">synchronized</span> (pendingQueue) &#123;</span><br><span class="line">                            pendingQueue.add(p);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (outgoingQueue.isEmpty()) &#123;</span><br><span class="line">                disableWrite();</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!initialized &amp;&amp; p != <span class="keyword">null</span> &amp;&amp; !p.bb.hasRemaining()) &#123;</span><br><span class="line">                disableWrite();</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">// Just in case</span></span><br><span class="line">                enableWrite();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientCnxn</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">createBB</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ByteArrayOutputStream baos = <span class="keyword">new</span> ByteArrayOutputStream();</span><br><span class="line">            BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);</span><br><span class="line">            boa.writeInt(-<span class="number">1</span>, <span class="string">"len"</span>); <span class="comment">// We'll fill this in later</span></span><br><span class="line">            <span class="keyword">if</span> (requestHeader != <span class="keyword">null</span>) &#123;</span><br><span class="line">                requestHeader.serialize(boa, <span class="string">"header"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (request <span class="keyword">instanceof</span> ConnectRequest) &#123;</span><br><span class="line">                request.serialize(boa, <span class="string">"connect"</span>);</span><br><span class="line">                boa.writeBool(readOnly, <span class="string">"readOnly"</span>);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (request != <span class="keyword">null</span>) &#123;</span><br><span class="line">                request.serialize(boa, <span class="string">"request"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            baos.close();</span><br><span class="line">            <span class="keyword">this</span>.bb = ByteBuffer.wrap(baos.toByteArray());</span><br><span class="line">            <span class="keyword">this</span>.bb.putInt(<span class="keyword">this</span>.bb.capacity() - <span class="number">4</span>);</span><br><span class="line">            <span class="keyword">this</span>.bb.rewind();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于读事件若收到<strong>服务端数据变动返回事件</strong>，首先反序列化服务端响应数据为<strong><code>WatcherEvent</code></strong>，然后从服务端路径转换为客户端路径，最后将监听事件添加到<strong><code>EventThread</code></strong>的<strong><code>waitingEvents</code>阻塞队列</strong>中异步处理，在<strong><code>finally</code></strong>中调用<strong><code>finishPacket</code></strong>中判断若getData方法watch若为true，则将Watcher加入到path对应的Watcher集合中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">SendThread</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">readResponse</span><span class="params">(ByteBuffer incomingBuffer)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        ByteBufferInputStream bbis = <span class="keyword">new</span> ByteBufferInputStream(incomingBuffer);</span><br><span class="line">        BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);</span><br><span class="line">        ReplyHeader replyHdr = <span class="keyword">new</span> ReplyHeader();</span><br><span class="line">        replyHdr.deserialize(bbia, <span class="string">"header"</span>);</span><br><span class="line">        <span class="keyword">if</span> (replyHdr.getXid() == -<span class="number">2</span>) &#123; <span class="comment">// -2 is the xid for pings 处理Ping</span></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (replyHdr.getXid() == -<span class="number">4</span>) &#123; <span class="comment">// -4 is the xid for AuthPacket               </span></span><br><span class="line">            <span class="keyword">if</span> (replyHdr.getErr() == KeeperException.Code.AUTHFAILED.intValue()) &#123;</span><br><span class="line">                state = States.AUTH_FAILED;</span><br><span class="line">                eventThread.queueEvent(<span class="keyword">new</span> WatchedEvent(Watcher.Event.EventType.None, Watcher.Event.KeeperState.AuthFailed, <span class="keyword">null</span>));</span><br><span class="line">                eventThread.queueEventOfDeath();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (replyHdr.getXid() == -<span class="number">1</span>) &#123; <span class="comment">// 收到服务端数据变动返回事件</span></span><br><span class="line">            WatcherEvent event = <span class="keyword">new</span> WatcherEvent();</span><br><span class="line">            event.deserialize(bbia, <span class="string">"response"</span>);</span><br><span class="line">            <span class="keyword">if</span> (chrootPath != <span class="keyword">null</span>) &#123; <span class="comment">// 从服务端路径转换为客户端路径</span></span><br><span class="line">                String serverPath = event.getPath();</span><br><span class="line">                <span class="keyword">if</span> (serverPath.compareTo(chrootPath) == <span class="number">0</span>)</span><br><span class="line">                    event.setPath(<span class="string">"/"</span>);</span><br><span class="line">                <span class="keyword">else</span> <span class="keyword">if</span> (serverPath.length() &gt; chrootPath.length())</span><br><span class="line">                    event.setPath(serverPath.substring(chrootPath.length()));</span><br><span class="line">            &#125;</span><br><span class="line">            WatchedEvent we = <span class="keyword">new</span> WatchedEvent(event);</span><br><span class="line">            eventThread.queueEvent(we);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (tunnelAuthInProgress()) &#123;</span><br><span class="line">            GetSASLRequest request = <span class="keyword">new</span> GetSASLRequest();</span><br><span class="line">            request.deserialize(bbia, <span class="string">"token"</span>);</span><br><span class="line">            zooKeeperSaslClient.respondToServer(request.getToken(), ClientCnxn.<span class="keyword">this</span>);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        Packet packet;</span><br><span class="line">        <span class="keyword">synchronized</span> (pendingQueue) &#123;</span><br><span class="line">            <span class="keyword">if</span> (pendingQueue.size() == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Nothing in the queue, but got "</span> + replyHdr.getXid());</span><br><span class="line">            &#125;</span><br><span class="line">            packet = pendingQueue.remove();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (packet.requestHeader.getXid() != replyHdr.getXid()) &#123;</span><br><span class="line">                packet.replyHeader.setErr(KeeperException.Code.CONNECTIONLOSS.intValue());</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Xid out of order. Got Xid "</span> + replyHdr.getXid() + <span class="string">" with err "</span> + +replyHdr.getErr() + <span class="string">" expected Xid "</span> + packet.requestHeader.getXid() + <span class="string">" for a packet with details: "</span> + packet);</span><br><span class="line">            &#125;</span><br><span class="line">            packet.replyHeader.setXid(replyHdr.getXid());</span><br><span class="line">            packet.replyHeader.setErr(replyHdr.getErr());</span><br><span class="line">            packet.replyHeader.setZxid(replyHdr.getZxid());</span><br><span class="line">            <span class="keyword">if</span> (replyHdr.getZxid() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                lastZxid = replyHdr.getZxid();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (packet.response != <span class="keyword">null</span> &amp;&amp; replyHdr.getErr() == <span class="number">0</span>) &#123;</span><br><span class="line">                packet.response.deserialize(bbia, <span class="string">"response"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            finishPacket(packet); <span class="comment">// 收到服务端命令执行完毕返回事件</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientCnxn</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">finishPacket</span><span class="params">(Packet p)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> err = p.replyHeader.getErr();</span><br><span class="line">        <span class="keyword">if</span> (p.watchRegistration != <span class="keyword">null</span>) &#123; <span class="comment">// getData方法watch若为true则执行该逻辑</span></span><br><span class="line">            p.watchRegistration.register(err); <span class="comment">// 初始化watchRegistration，将watcher加入到path对应的watcher集合中取</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (p.watchDeregistration != <span class="keyword">null</span>) &#123;</span><br><span class="line">            Map&lt;EventType, Set&lt;Watcher&gt;&gt; materializedWatchers = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                materializedWatchers = p.watchDeregistration.unregister(err);</span><br><span class="line">                <span class="keyword">for</span> (Entry&lt;EventType, Set&lt;Watcher&gt;&gt; entry : materializedWatchers.entrySet()) &#123;</span><br><span class="line">                    Set&lt;Watcher&gt; watchers = entry.getValue();</span><br><span class="line">                    <span class="keyword">if</span> (watchers.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">                        queueEvent(p.watchDeregistration.getClientPath(), err, watchers, entry.getKey());</span><br><span class="line">                        p.replyHeader.setErr(Code.OK.intValue());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (KeeperException.NoWatcherException nwe) &#123;</span><br><span class="line">                p.replyHeader.setErr(nwe.code().intValue());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (KeeperException ke) &#123;</span><br><span class="line">                p.replyHeader.setErr(ke.code().intValue());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (p.cb == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (p) &#123;</span><br><span class="line">                p.finished = <span class="keyword">true</span>;</span><br><span class="line">                p.notifyAll(); <span class="comment">// 唤醒客户端等待</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            p.finished = <span class="keyword">true</span>;</span><br><span class="line">            eventThread.queuePacket(p);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="EventThread"><a href="#EventThread" class="headerlink" title="EventThread"></a>EventThread</h4><p>EventThread只要完成<strong>监听事件的异步执行</strong>，通过queueEvent方法将监听事件添加到<strong><code>waitingEvents</code>阻塞队列</strong>中，通过<strong><code>processEvent</code></strong>方法执行具体的监听器的回调方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">EventThread</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> LinkedBlockingQueue&lt;Object&gt; waitingEvents = <span class="keyword">new</span> LinkedBlockingQueue&lt;Object&gt;();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">queueEvent</span><span class="params">(WatchedEvent event)</span> </span>&#123;</span><br><span class="line">        queueEvent(event, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">queueEvent</span><span class="params">(WatchedEvent event, Set&lt;Watcher&gt; materializedWatchers)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (event.getType() == EventType.None &amp;&amp; sessionState == event.getState()) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        sessionState = event.getState();</span><br><span class="line">        <span class="keyword">final</span> Set&lt;Watcher&gt; watchers;</span><br><span class="line">        <span class="keyword">if</span> (materializedWatchers == <span class="keyword">null</span>) &#123;<span class="comment">// materialize the watchers based on the event</span></span><br><span class="line">            watchers = watcher.materialize(event.getState(), event.getType(), event.getPath());</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            watchers = <span class="keyword">new</span> HashSet&lt;Watcher&gt;();</span><br><span class="line">            watchers.addAll(materializedWatchers);</span><br><span class="line">        &#125;</span><br><span class="line">        WatcherSetEventPair pair = <span class="keyword">new</span> WatcherSetEventPair(watchers, event);</span><br><span class="line">        waitingEvents.add(pair);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            isRunning = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">                Object event = waitingEvents.take();</span><br><span class="line">                <span class="keyword">if</span> (event == eventOfDeath) &#123;</span><br><span class="line">                    wasKilled = <span class="keyword">true</span>;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    processEvent(event);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (wasKilled)</span><br><span class="line">                    <span class="keyword">synchronized</span> (waitingEvents) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (waitingEvents.isEmpty()) &#123;</span><br><span class="line">                        isRunning = <span class="keyword">false</span>;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">processEvent</span><span class="params">(Object event)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (event <span class="keyword">instanceof</span> WatcherSetEventPair) &#123;<span class="comment">// each watcher will process the event</span></span><br><span class="line">                WatcherSetEventPair pair = (WatcherSetEventPair) event;</span><br><span class="line">                <span class="keyword">for</span> (Watcher watcher : pair.watchers) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        watcher.process(pair.event); <span class="comment">// 执行具体Watcher的process方法</span></span><br><span class="line">                    &#125; <span class="keyword">catch</span> (Throwable t) &#123;&#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (event <span class="keyword">instanceof</span> LocalCallback) &#123;</span><br><span class="line">                LocalCallback lcb = (LocalCallback) event;</span><br><span class="line">                <span class="keyword">if</span> (lcb.cb <span class="keyword">instanceof</span> StatCallback) &#123;</span><br><span class="line">                    ((StatCallback) lcb.cb).processResult(lcb.rc, lcb.path, lcb.ctx, <span class="keyword">null</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (lcb.cb <span class="keyword">instanceof</span> DataCallback) &#123;</span><br><span class="line">                    ((DataCallback) lcb.cb).processResult(lcb.rc, lcb.path, lcb.ctx, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (lcb.cb <span class="keyword">instanceof</span> ACLCallback) &#123;</span><br><span class="line">                    ((ACLCallback) lcb.cb).processResult(lcb.rc, lcb.path, lcb.ctx, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (lcb.cb <span class="keyword">instanceof</span> ChildrenCallback) &#123;</span><br><span class="line">                    ((ChildrenCallback) lcb.cb).processResult(lcb.rc, lcb.path, lcb.ctx, <span class="keyword">null</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (lcb.cb <span class="keyword">instanceof</span> Children2Callback) &#123;</span><br><span class="line">                    ((Children2Callback) lcb.cb).processResult(lcb.rc, lcb.path, lcb.ctx, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (lcb.cb <span class="keyword">instanceof</span> StringCallback) &#123;</span><br><span class="line">                    ((StringCallback) lcb.cb).processResult(lcb.rc, lcb.path, lcb.ctx, <span class="keyword">null</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    ((VoidCallback) lcb.cb).processResult(lcb.rc, lcb.path, lcb.ctx);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                Packet p = (Packet) event;</span><br><span class="line">                <span class="keyword">int</span> rc = <span class="number">0</span>;</span><br><span class="line">                String clientPath = p.clientPath;</span><br><span class="line">                <span class="keyword">if</span> (p.replyHeader.getErr() != <span class="number">0</span>) &#123;</span><br><span class="line">                    rc = p.replyHeader.getErr();</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (p.cb == <span class="keyword">null</span>) &#123;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> ExistsResponse || p.response <span class="keyword">instanceof</span> SetDataResponse || p.response <span class="keyword">instanceof</span> SetACLResponse) &#123;</span><br><span class="line">                    StatCallback cb = (StatCallback) p.cb;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> ExistsResponse) &#123;</span><br><span class="line">                            cb.processResult(rc, clientPath, p.ctx, ((ExistsResponse) p.response).getStat());</span><br><span class="line">                        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> SetDataResponse) &#123;</span><br><span class="line">                            cb.processResult(rc, clientPath, p.ctx, ((SetDataResponse) p.response).getStat());</span><br><span class="line">                        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> SetACLResponse) &#123;</span><br><span class="line">                            cb.processResult(rc, clientPath, p.ctx, ((SetACLResponse) p.response).getStat());</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> GetDataResponse) &#123;</span><br><span class="line">                    DataCallback cb = (DataCallback) p.cb;</span><br><span class="line">                    GetDataResponse rsp = (GetDataResponse) p.response;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, rsp.getData(), rsp.getStat());</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> GetACLResponse) &#123;</span><br><span class="line">                    ACLCallback cb = (ACLCallback) p.cb;</span><br><span class="line">                    GetACLResponse rsp = (GetACLResponse) p.response;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, rsp.getAcl(), rsp.getStat());</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> GetChildrenResponse) &#123;</span><br><span class="line">                    ChildrenCallback cb = (ChildrenCallback) p.cb;</span><br><span class="line">                    GetChildrenResponse rsp = (GetChildrenResponse) p.response;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, rsp.getChildren());</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> GetChildren2Response) &#123;</span><br><span class="line">                    Children2Callback cb = (Children2Callback) p.cb;</span><br><span class="line">                    GetChildren2Response rsp = (GetChildren2Response) p.response;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, rsp.getChildren(), rsp.getStat());</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> CreateResponse) &#123;</span><br><span class="line">                    StringCallback cb = (StringCallback) p.cb;</span><br><span class="line">                    CreateResponse rsp = (CreateResponse) p.response;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, (chrootPath == <span class="keyword">null</span> ? rsp.getPath() : rsp.getPath().substring(chrootPath.length())));</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> Create2Response) &#123;</span><br><span class="line">                    Create2Callback cb = (Create2Callback) p.cb;</span><br><span class="line">                    Create2Response rsp = (Create2Response) p.response;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, (chrootPath == <span class="keyword">null</span> ? rsp.getPath() : rsp.getPath().substring(chrootPath.length())), rsp.getStat());</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.response <span class="keyword">instanceof</span> MultiResponse) &#123;</span><br><span class="line">                    MultiCallback cb = (MultiCallback) p.cb;</span><br><span class="line">                    MultiResponse rsp = (MultiResponse) p.response;</span><br><span class="line">                    <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">                        List&lt;OpResult&gt; results = rsp.getResultList();</span><br><span class="line">                        <span class="keyword">int</span> newRc = rc;</span><br><span class="line">                        <span class="keyword">for</span> (OpResult result : results) &#123;</span><br><span class="line">                            <span class="keyword">if</span> (result <span class="keyword">instanceof</span> ErrorResult &amp;&amp; KeeperException.Code.OK.intValue() != (newRc = ((ErrorResult) result).getErr())) &#123;</span><br><span class="line">                                <span class="keyword">break</span>;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                        cb.processResult(newRc, clientPath, p.ctx, results);</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        cb.processResult(rc, clientPath, p.ctx, <span class="keyword">null</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.cb <span class="keyword">instanceof</span> VoidCallback) &#123;</span><br><span class="line">                    VoidCallback cb = (VoidCallback) p.cb;</span><br><span class="line">                    cb.processResult(rc, clientPath, p.ctx);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable t) &#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Create"><a href="#Create" class="headerlink" title="Create"></a>Create</h4><p>对于创建节点将数据和serverPath等数据封装到CreateRequest中，调用<strong><code>ClientCnxn</code></strong>的<strong><code>submitRequest</code></strong>方法，将Request封装到packet中，将packet放入发送队列outgoingQueue阻塞队列中等待发送，然后调用<strong><code>ClientCnxnSocketNIO</code></strong>的<strong><code>packetAdded</code></strong>方法<strong>唤醒阻塞在<code>selector</code>的<code>select</code>方法上的线程</strong>，<strong>将待发送队列<code>outgoingQueue</code>中的命令数据发给服务端</strong>。然后调用<strong><code>Packet</code></strong>的<strong><code>wait</code></strong>方法阻塞等待Server返回，最终被<strong><code>SendThread</code></strong>的<strong><code>doIO</code></strong>的isReadable逻辑中执行<strong><code>finishPacket</code></strong>方法中调用Packet的notifyAll方法唤醒。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ZooKeeper</span> <span class="keyword">implements</span> <span class="title">AutoCloseable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">create</span><span class="params">(<span class="keyword">final</span> String path, <span class="keyword">byte</span> data[], List&lt;ACL&gt; acl, CreateMode createMode)</span> <span class="keyword">throws</span> KeeperException, InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> String clientPath = path;</span><br><span class="line">        PathUtils.validatePath(clientPath, createMode.isSequential());</span><br><span class="line">        EphemeralType.validateTTL(createMode, -<span class="number">1</span>);</span><br><span class="line">        <span class="keyword">final</span> String serverPath = prependChroot(clientPath);</span><br><span class="line">        RequestHeader h = <span class="keyword">new</span> RequestHeader();</span><br><span class="line">        h.setType(createMode.isContainer() ? ZooDefs.OpCode.createContainer : ZooDefs.OpCode.create);</span><br><span class="line">        CreateRequest request = <span class="keyword">new</span> CreateRequest();</span><br><span class="line">        CreateResponse response = <span class="keyword">new</span> CreateResponse();</span><br><span class="line">        request.setData(data);</span><br><span class="line">        request.setFlags(createMode.toFlag());</span><br><span class="line">        request.setPath(serverPath);</span><br><span class="line">        <span class="keyword">if</span> (acl != <span class="keyword">null</span> &amp;&amp; acl.size() == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> KeeperException.InvalidACLException();</span><br><span class="line">        &#125;</span><br><span class="line">        request.setAcl(acl);</span><br><span class="line">        ReplyHeader r = cnxn.submitRequest(h, request, response, <span class="keyword">null</span>);</span><br><span class="line">        <span class="keyword">if</span> (r.getErr() != <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> KeeperException.create(KeeperException.Code.get(r.getErr()), clientPath);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (cnxn.chrootPath == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> response.getPath();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> response.getPath().substring(cnxn.chrootPath.length());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientCnxn</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ReplyHeader <span class="title">submitRequest</span><span class="params">(RequestHeader h, Record request, Record response, WatchRegistration watchRegistration)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> submitRequest(h, request, response, watchRegistration, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ReplyHeader <span class="title">submitRequest</span><span class="params">(RequestHeader h, Record request, Record response, WatchRegistration watchRegistration, WatchDeregistration watchDeregistration)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        ReplyHeader r = <span class="keyword">new</span> ReplyHeader();</span><br><span class="line">        <span class="comment">// 将Request封装到packet中，将packet放入发送队列outgoingQueue中等待发送</span></span><br><span class="line">        Packet packet = queuePacket(h, r, request, response, <span class="keyword">null</span>, <span class="keyword">null</span>, <span class="keyword">null</span>, <span class="keyword">null</span>, watchRegistration, watchDeregistration);</span><br><span class="line">        <span class="keyword">synchronized</span> (packet) &#123;</span><br><span class="line">            <span class="keyword">if</span> (requestTimeout &gt; <span class="number">0</span>) &#123; <span class="comment">// Wait for request completion with timeout</span></span><br><span class="line">                waitForPacketFinish(r, packet);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">// Wait for request completion infinitely</span></span><br><span class="line">                <span class="keyword">while</span> (!packet.finished) &#123;</span><br><span class="line">                    packet.wait(); <span class="comment">// 等待Server返回，最终会被SendThread的doIO的isReadable逻辑中执行finishPacket方法唤醒</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (r.getErr() == Code.REQUESTTIMEOUT.intValue()) &#123;</span><br><span class="line">            sendThread.cleanAndNotifyState();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> r;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Packet <span class="title">queuePacket</span><span class="params">(RequestHeader h, ReplyHeader r, Record request, Record response, AsyncCallback cb, String clientPath, String serverPath, Object ctx, WatchRegistration watchRegistration, WatchDeregistration watchDeregistration)</span> </span>&#123;</span><br><span class="line">        Packet packet = <span class="keyword">null</span>;</span><br><span class="line">        <span class="comment">// request中有一个是否监听的watch属性传到服务端，服务端根据该属性做对应监听处理</span></span><br><span class="line">        packet = <span class="keyword">new</span> Packet(h, r, request, response, watchRegistration);</span><br><span class="line">        packet.cb = cb;</span><br><span class="line">        packet.ctx = ctx;</span><br><span class="line">        packet.clientPath = clientPath;</span><br><span class="line">        packet.serverPath = serverPath;</span><br><span class="line">        packet.watchDeregistration = watchDeregistration;</span><br><span class="line">        <span class="keyword">synchronized</span> (state) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!state.isAlive() || closing) &#123;</span><br><span class="line">                conLossPacket(packet);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (h.getType() == OpCode.closeSession) &#123;</span><br><span class="line">                    closing = <span class="keyword">true</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                outgoingQueue.add(packet); <span class="comment">// 将发送数据包放入outgoingQueue阻塞队列</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 用于唤醒阻塞在select方法上的线程，为了出发写事件，底层会往管道中写一个字节，写事件出发后会将待发送队列中的命令数据发给服务端</span></span><br><span class="line">        sendThread.getClientCnxnSocket().packetAdded();</span><br><span class="line">        <span class="keyword">return</span> packet;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="getData"><a href="#getData" class="headerlink" title="getData"></a>getData</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ZooKeeper</span> <span class="keyword">implements</span> <span class="title">AutoCloseable</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">byte</span>[] getData(String path, <span class="keyword">boolean</span> watch, Stat stat) <span class="keyword">throws</span> KeeperException, InterruptedException &#123;</span><br><span class="line">        <span class="keyword">return</span> getData(path, watch ? watchManager.defaultWatcher : <span class="keyword">null</span>, stat);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">byte</span>[] getData(<span class="keyword">final</span> String path, Watcher watcher, Stat stat) <span class="keyword">throws</span> KeeperException, InterruptedException &#123;</span><br><span class="line">        <span class="keyword">final</span> String clientPath = path;</span><br><span class="line">        PathUtils.validatePath(clientPath);</span><br><span class="line">        <span class="comment">// the watch contains the un-chroot path</span></span><br><span class="line">        WatchRegistration wcb = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">if</span> (watcher != <span class="keyword">null</span>) &#123;</span><br><span class="line">            wcb = <span class="keyword">new</span> DataWatchRegistration(watcher, clientPath);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">final</span> String serverPath = prependChroot(clientPath);</span><br><span class="line">        RequestHeader h = <span class="keyword">new</span> RequestHeader();</span><br><span class="line">        h.setType(ZooDefs.OpCode.getData);</span><br><span class="line">        GetDataRequest request = <span class="keyword">new</span> GetDataRequest();</span><br><span class="line">        request.setPath(serverPath);</span><br><span class="line">        request.setWatch(watcher != <span class="keyword">null</span>); <span class="comment">// 是否注册监听器</span></span><br><span class="line">        GetDataResponse response = <span class="keyword">new</span> GetDataResponse();</span><br><span class="line">        ReplyHeader r = cnxn.submitRequest(h, request, response, wcb);</span><br><span class="line">        <span class="keyword">if</span> (r.getErr() != <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> KeeperException.create(KeeperException.Code.get(r.getErr()), clientPath);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (stat != <span class="keyword">null</span>) &#123;</span><br><span class="line">            DataTree.copyStat(response.getStat(), stat);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> response.getData();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>服务端最终通过<strong><code>FinalRequestProcessor</code></strong>的<strong><code>processRequest</code></strong>调用<strong><code>ZKDatabase</code></strong>的<strong><code>getData</code></strong>方法获取数据，若客户端请求时watch为true，则<strong><code>Watcher</code></strong>不为<strong><code>null</code></strong>则将其添加到<strong><code>dataWatches</code></strong>中。若发生数据变更时则调用<strong><code>WatchManager</code></strong>的<strong><code>triggerWatch</code></strong>方法触发监听机制。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ZKDatabase</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">byte</span>[] getData(String path, Stat stat, Watcher watcher) <span class="keyword">throws</span> KeeperException.NoNodeException &#123;</span><br><span class="line">        <span class="keyword">return</span> dataTree.getData(path, stat, watcher);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataTree</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">byte</span>[] getData(String path, Stat stat, Watcher watcher) <span class="keyword">throws</span> KeeperException.NoNodeException &#123;</span><br><span class="line">        DataNode n = nodes.get(path);</span><br><span class="line">        <span class="keyword">if</span> (n == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> KeeperException.NoNodeException();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">synchronized</span> (n) &#123;</span><br><span class="line">            n.copyStat(stat);</span><br><span class="line">            <span class="keyword">if</span> (watcher != <span class="keyword">null</span>) &#123;</span><br><span class="line">                dataWatches.addWatch(path, watcher);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> n.data;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WatchManager</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">addWatch</span><span class="params">(String path, Watcher watcher)</span> </span>&#123;</span><br><span class="line">        HashSet&lt;Watcher&gt; list = watchTable.get(path);</span><br><span class="line">        <span class="keyword">if</span> (list == <span class="keyword">null</span>) &#123;</span><br><span class="line">            list = <span class="keyword">new</span> HashSet&lt;Watcher&gt;(<span class="number">4</span>);</span><br><span class="line">            watchTable.put(path, list);</span><br><span class="line">        &#125;</span><br><span class="line">        list.add(watcher);</span><br><span class="line"></span><br><span class="line">        HashSet&lt;String&gt; paths = watch2Paths.get(watcher);</span><br><span class="line">        <span class="keyword">if</span> (paths == <span class="keyword">null</span>) &#123;</span><br><span class="line">            paths = <span class="keyword">new</span> HashSet&lt;String&gt;();</span><br><span class="line">            watch2Paths.put(watcher, paths);</span><br><span class="line">        &#125;</span><br><span class="line">        paths.add(path);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>triggerWatch触发监听机制首先将该路径对应的监听器移除，然后调用每个监听器对应客户端对应的<strong><code>NettyServerCnxn</code></strong>的process方法通知客户端节点变更，客户端收到通知会触发监听回调方法。<strong>监听的回调方法并没有注册到服务端</strong>，只是将<strong>监听路径</strong>注册到了服务端，当服务端发生数据变更时，遍历监听的路径回发给客户端，<strong>客户端通过路径匹配到对应的监听器回调方法完成回调</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WatchManager</span> </span>&#123;</span><br><span class="line">    <span class="function">Set&lt;Watcher&gt; <span class="title">triggerWatch</span><span class="params">(String path, EventType type)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> triggerWatch(path, type, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function">Set&lt;Watcher&gt; <span class="title">triggerWatch</span><span class="params">(String path, EventType type, Set&lt;Watcher&gt; supress)</span> </span>&#123;</span><br><span class="line">        WatchedEvent e = <span class="keyword">new</span> WatchedEvent(type, KeeperState.SyncConnected, path);</span><br><span class="line">        HashSet&lt;Watcher&gt; watchers;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">            watchers = watchTable.remove(path); <span class="comment">// 一次性监听体现</span></span><br><span class="line">            <span class="keyword">if</span> (watchers == <span class="keyword">null</span> || watchers.isEmpty()) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">for</span> (Watcher w : watchers) &#123;</span><br><span class="line">                HashSet&lt;String&gt; paths = watch2Paths.get(w);</span><br><span class="line">                <span class="keyword">if</span> (paths != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    paths.remove(path);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Watcher w : watchers) &#123;</span><br><span class="line">            <span class="keyword">if</span> (supress != <span class="keyword">null</span> &amp;&amp; supress.contains(w)) &#123;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            w.process(e); <span class="comment">// 调用NettyServerCnxn的process方法节点变更通知客户端，客户端收到通知会触发监听回调方法调用</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> watchers;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NettyServerCnxn</span> <span class="keyword">extends</span> <span class="title">ServerCnxn</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(WatchedEvent event)</span> </span>&#123;</span><br><span class="line">        ReplyHeader h = <span class="keyword">new</span> ReplyHeader(-<span class="number">1</span>, -<span class="number">1L</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="comment">// Convert WatchedEvent to a type that can be sent over the wire</span></span><br><span class="line">        WatcherEvent e = event.getWrapper();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            sendResponse(h, e, <span class="string">"notification"</span>);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e1) &#123;</span><br><span class="line">            close();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/ELK/ElasticSearch基础/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        ElasticSearch基础
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Zookeeper服务端之ZAB</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

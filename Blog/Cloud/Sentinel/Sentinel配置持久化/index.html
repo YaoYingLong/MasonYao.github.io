@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Sentinel配置持久化 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Sentinel">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="sentinel规则的推送模式原始模式、Pull模式、Push模式三种，原始模式是通过API将规则数据推送至客户端，并直接更新到内存中，简单无任何依赖，但规则保存在内存中，重启失效； Pull模式Pull模式是通过扩展写数据源WritableDataSource，客户端主动向某个规则管理中心定期轮训拉取规则，可以是文件或数据库，不能保证很强的实时性，过于频繁拉取可能造成性能问题。 在第一次调用接口">
+<meta name="keywords" content="Sentinel">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sentinel配置持久化">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/Sentinel/Sentinel配置持久化/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="sentinel规则的推送模式原始模式、Pull模式、Push模式三种，原始模式是通过API将规则数据推送至客户端，并直接更新到内存中，简单无任何依赖，但规则保存在内存中，重启失效； Pull模式Pull模式是通过扩展写数据源WritableDataSource，客户端主动向某个规则管理中心定期轮训拉取规则，可以是文件或数据库，不能保证很强的实时性，过于频繁拉取可能造成性能问题。 在第一次调用接口">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/Sentinel/Sentinel持久化Push模式.png">
+<meta property="og:updated_time" content="2022-01-13T12:01:22.178Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Sentinel配置持久化">
+<meta name="twitter:description" content="sentinel规则的推送模式原始模式、Pull模式、Push模式三种，原始模式是通过API将规则数据推送至客户端，并直接更新到内存中，简单无任何依赖，但规则保存在内存中，重启失效； Pull模式Pull模式是通过扩展写数据源WritableDataSource，客户端主动向某个规则管理中心定期轮训拉取规则，可以是文件或数据库，不能保证很强的实时性，过于频繁拉取可能造成性能问题。 在第一次调用接口">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Cloud/Sentinel/Sentinel持久化Push模式.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file active"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/Sentinel/Sentinel配置持久化" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/Sentinel/">Sentinel</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Sentinel/">Sentinel</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">
+            <time datetime="2021-11-04T16:00:00.000Z" itemprop="datePublished">2021-11-05</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Sentinel配置持久化
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>sentinel规则的推送模式<strong>原始模式</strong>、<strong>Pull模式</strong>、<strong>Push模式</strong>三种，<strong>原始模式</strong>是通过API将规则数据推送至客户端，并直接更新到内存中，简单无任何依赖，但规则保存在内存中，重启失效；</p>
+<h4 id="Pull模式"><a href="#Pull模式" class="headerlink" title="Pull模式"></a>Pull模式</h4><p><strong>Pull模式</strong>是通过<strong>扩展写数据源<code>WritableDataSource</code></strong>，客户端主动向某个规则管理中心定期轮训拉取规则，可以是文件或数据库，不能保证很强的实时性，过于频繁拉取可能造成性能问题。</p>
+<p>在第一次调用接口时，会执行<strong><code>Env</code></strong>的静态代码块，该静态代码块中会通过<strong><code>SPI</code>机制</strong>加载sentinel相关依赖包下<strong><code>META/services/</code></strong>下所有的<strong><code>InitFunc</code></strong>实例类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Env</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> Sph sph = <span class="keyword">new</span> CtSph();</span><br><span class="line">    <span class="keyword">static</span> &#123; <span class="comment">// If init fails, the process will exit.</span></span><br><span class="line">        InitExecutor.doInit(); <span class="comment">// 通过SPI机制加载sentinel相关依赖包下META/services/下所有的InitFunc实例类</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">InitExecutor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">doInit</span><span class="params">()</span> </span>&#123; <span class="comment">// Sentinel扩展点，通过SPI的方式加载实现了InitFunc接口的类</span></span><br><span class="line">        <span class="keyword">if</span> (!initialized.compareAndSet(<span class="keyword">false</span>, <span class="keyword">true</span>)) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ServiceLoader&lt;InitFunc&gt; loader = ServiceLoaderUtil.getServiceLoader(InitFunc<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            List&lt;OrderWrapper&gt; initList = <span class="keyword">new</span> ArrayList&lt;OrderWrapper&gt;();</span><br><span class="line">            <span class="keyword">for</span> (InitFunc initFunc : loader) &#123;</span><br><span class="line">                RecordLog.info(<span class="string">"[InitExecutor] Found init func: "</span> + initFunc.getClass().getCanonicalName());</span><br><span class="line">                insertSorted(initList, initFunc);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">for</span> (OrderWrapper w : initList) &#123;</span><br><span class="line">                w.func.init();</span><br><span class="line">                RecordLog.info(String.format(<span class="string">"[InitExecutor] Executing %s with order %d"</span>, w.func.getClass().getCanonicalName(), w.order));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">            RecordLog.warn(<span class="string">"[InitExecutor] WARN: Initialization failed"</span>, ex);</span><br><span class="line">            ex.printStackTrace();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Error error) &#123;</span><br><span class="line">            RecordLog.warn(<span class="string">"[InitExecutor] ERROR: Initialization failed with fatal error"</span>, error);</span><br><span class="line">            error.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">insertSorted</span><span class="params">(List&lt;OrderWrapper&gt; list, InitFunc func)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> order = resolveOrder(func); <span class="comment">// 获取排序，若该类上没有@InitOrder注解则默认是最低优先级即Integer.MAX_VALUE</span></span><br><span class="line">        <span class="keyword">int</span> idx = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (; idx &lt; list.size(); idx++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (list.get(idx).getOrder() &gt; order) &#123;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        list.add(idx, <span class="keyword">new</span> OrderWrapper(order, func)); <span class="comment">// 将其按照order从大到小即优先级越低越排在前面的顺序放入List中</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">resolveOrder</span><span class="params">(InitFunc func)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!func.getClass().isAnnotationPresent(InitOrder<span class="class">.<span class="keyword">class</span>)) </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> InitOrder.LOWEST_PRECEDENCE;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> func.getClass().getAnnotation(InitOrder<span class="class">.<span class="keyword">class</span>).<span class="title">value</span>()</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可通过<strong><code>SPI</code></strong>机制自定义一个<strong><code>FileDataSourceInit</code></strong>类实现<strong><code>InitFunc</code></strong>接口用文件的方式<strong>持久化规则配置</strong>，当然也可以通过数据库的方式来实现<strong>持久化规则配置</strong>原理都一样。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FileDataSourceInit</span> <span class="keyword">implements</span> <span class="title">InitFunc</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        RuleFileUtils.mkdirIfNotExits(PersistenceRuleConstant.STORE_PATH); <span class="comment">// 创建文件存储目录</span></span><br><span class="line">        RuleFileUtils.createFileIfNotExits(PersistenceRuleConstant.RULES_MAP); <span class="comment">// 创建规则文件</span></span><br><span class="line">        dealFlowRules(); <span class="comment">// 处理流控规则逻辑  配置读写数据源</span></span><br><span class="line">        dealDegradeRules(); <span class="comment">// 处理降级规则</span></span><br><span class="line">        dealSystemRules(); <span class="comment">// 处理系统规则</span></span><br><span class="line">        dealParamFlowRules(); <span class="comment">// 处理热点参数规则</span></span><br><span class="line">        dealAuthRules(); <span class="comment">// 处理授权规则</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先通过文件路径初始化<strong><code>FileRefreshableDataSource</code></strong>，在其初始化是首先会先初始化其超类<strong><code>AbstractDataSource</code></strong>，在该超类中会对<strong><code>Converter</code></strong>进行赋值以及<strong><code>SentinelProperty</code></strong>初始化为<strong><code>DynamicSentinelProperty</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">dealFlowRules</span><span class="params">()</span> <span class="keyword">throws</span> FileNotFoundException </span>&#123;</span><br><span class="line">    String ruleFilePath = PersistenceRuleConstant.RULES_MAP.get(PersistenceRuleConstant.FLOW_RULE_PATH).toString();</span><br><span class="line">    ReadableDataSource&lt;String, List&lt;FlowRule&gt;&gt; flowRuleDataSource = <span class="keyword">new</span> FileRefreshableDataSource(ruleFilePath, RuleListConverterUtils.flowRuleListParser);</span><br><span class="line">    FlowRuleManager.register2Property(flowRuleDataSource.getProperty());</span><br><span class="line"></span><br><span class="line">    WritableDataSource&lt;List&lt;FlowRule&gt;&gt; flowRuleWDS = <span class="keyword">new</span> FileWritableDataSource&lt;List&lt;FlowRule&gt;&gt;(</span><br><span class="line">        ruleFilePath, RuleListConverterUtils.flowFuleEnCoding</span><br><span class="line">    );</span><br><span class="line">    <span class="comment">// 将可写数据源注册至transport模块的WritableDataSourceRegistry中.</span></span><br><span class="line">    <span class="comment">// 这样收到控制台推送的规则时，Sentinel 会先更新到内存，然后将规则写入到文件中.</span></span><br><span class="line">    WritableDataSourceRegistry.registerFlowDataSource(flowRuleWDS);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractDataSource</span>&lt;<span class="title">S</span>, <span class="title">T</span>&gt; <span class="keyword">implements</span> <span class="title">ReadableDataSource</span>&lt;<span class="title">S</span>, <span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> Converter&lt;S, T&gt; parser;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> SentinelProperty&lt;T&gt; property;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">AbstractDataSource</span><span class="params">(Converter&lt;S, T&gt; parser)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (parser == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"parser can't be null"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.parser = parser;</span><br><span class="line">        <span class="keyword">this</span>.property = <span class="keyword">new</span> DynamicSentinelProperty&lt;T&gt;();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">loadConfig</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> loadConfig(readSource());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> T <span class="title">loadConfig</span><span class="params">(S conf)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        T value = parser.convert(conf);</span><br><span class="line">        <span class="keyword">return</span> value;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后再初始化<strong><code>AutoRefreshDataSource</code></strong>超类，在该超类中会添加一个<strong>定时刷新文件的规则数据</strong>的定时任务，在更新内存中规则时是通过<strong><code>DynamicSentinelProperty</code></strong>中注册的监听器来完成的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AutoRefreshDataSource</span>&lt;<span class="title">S</span>, <span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">AbstractDataSource</span>&lt;<span class="title">S</span>, <span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> ScheduledExecutorService service;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">long</span> recommendRefreshMs = <span class="number">3000</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">AutoRefreshDataSource</span><span class="params">(Converter&lt;S, T&gt; configParser, <span class="keyword">final</span> <span class="keyword">long</span> recommendRefreshMs)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(configParser);</span><br><span class="line">        <span class="keyword">if</span> (recommendRefreshMs &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"recommendRefreshMs must &gt; 0, but "</span> + recommendRefreshMs + <span class="string">" get"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.recommendRefreshMs = recommendRefreshMs;</span><br><span class="line">        startTimerService(); <span class="comment">// 扩展自动更新功能</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startTimerService</span><span class="params">()</span> </span>&#123; <span class="comment">// 自动更新定时任务，开启线程监控本地文件最后修改时间，周期3s</span></span><br><span class="line">        service = Executors.newScheduledThreadPool(<span class="number">1</span>, <span class="keyword">new</span> NamedThreadFactory(<span class="string">"sentinel-datasource-auto-refresh-task"</span>, <span class="keyword">true</span>));</span><br><span class="line">        service.scheduleAtFixedRate(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (!isModified()) &#123; <span class="comment">// 若没有修改则直接跳过</span></span><br><span class="line">                        <span class="keyword">return</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    T newValue = loadConfig(); <span class="comment">// 若修改过，获取文件最后的修改时间，并加载文件</span></span><br><span class="line">                    getProperty().updateValue(newValue); <span class="comment">// 更新到内存中</span></span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, recommendRefreshMs, recommendRefreshMs, TimeUnit.MILLISECONDS); <span class="comment">// 默认每3s执行一次</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DynamicSentinelProperty</span>&lt;<span class="title">T</span>&gt; <span class="keyword">implements</span> <span class="title">SentinelProperty</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> Set&lt;PropertyListener&lt;T&gt;&gt; listeners = Collections.synchronizedSet(<span class="keyword">new</span> HashSet&lt;PropertyListener&lt;T&gt;&gt;());</span><br><span class="line">    <span class="keyword">private</span> T value = <span class="keyword">null</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addListener</span><span class="params">(PropertyListener&lt;T&gt; listener)</span> </span>&#123;</span><br><span class="line">        listeners.add(listener);</span><br><span class="line">        listener.configLoad(value);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">updateValue</span><span class="params">(T newValue)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (isEqual(value, newValue)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        value = newValue;</span><br><span class="line">        <span class="keyword">for</span> (PropertyListener&lt;T&gt; listener : listeners) &#123;</span><br><span class="line">            listener.configUpdate(newValue); <span class="comment">// 用新规则替换旧规则，并通知所有所有属性监听器回调configUpdate</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FlowPropertyListener</span> <span class="keyword">implements</span> <span class="title">PropertyListener</span>&lt;<span class="title">List</span>&lt;<span class="title">FlowRule</span>&gt;&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">configUpdate</span><span class="params">(List&lt;FlowRule&gt; value)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, List&lt;FlowRule&gt;&gt; rules = FlowRuleUtil.buildFlowRuleMap(value);</span><br><span class="line">        <span class="keyword">if</span> (rules != <span class="keyword">null</span>) &#123;</span><br><span class="line">            flowRules.clear();</span><br><span class="line">            flowRules.putAll(rules);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">configLoad</span><span class="params">(List&lt;FlowRule&gt; conf)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, List&lt;FlowRule&gt;&gt; rules = FlowRuleUtil.buildFlowRuleMap(conf);</span><br><span class="line">        <span class="keyword">if</span> (rules != <span class="keyword">null</span>) &#123;</span><br><span class="line">            flowRules.clear();</span><br><span class="line">            flowRules.putAll(rules);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在初始化<strong><code>FileRefreshableDataSource</code></strong>时会将规则数据加载到内存中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FileRefreshableDataSource</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">AutoRefreshDataSource</span>&lt;<span class="title">String</span>, <span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FileRefreshableDataSource</span><span class="params">(String fileName, Converter&lt;String, T&gt; configParser)</span> <span class="keyword">throws</span> FileNotFoundException </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(<span class="keyword">new</span> File(fileName), configParser, DEFAULT_REFRESH_MS, DEFAULT_BUF_SIZE, DEFAULT_CHAR_SET);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FileRefreshableDataSource</span><span class="params">(File file, Converter&lt;String, T&gt; configParser, <span class="keyword">long</span> recommendRefreshMs, <span class="keyword">int</span> bufSize, Charset charset)</span> <span class="keyword">throws</span> FileNotFoundException </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(configParser, recommendRefreshMs);</span><br><span class="line">        <span class="keyword">if</span> (bufSize &lt;= <span class="number">0</span> || bufSize &gt; MAX_SIZE) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"bufSize must between (0, "</span> + MAX_SIZE + <span class="string">"], but "</span> + bufSize + <span class="string">" get"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (file == <span class="keyword">null</span> || file.isDirectory()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"File can't be null or a directory"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (charset == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"charset can't be null"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.buf = <span class="keyword">new</span> <span class="keyword">byte</span>[bufSize];</span><br><span class="line">        <span class="keyword">this</span>.file = file;</span><br><span class="line">        <span class="keyword">this</span>.charset = charset;</span><br><span class="line">        <span class="comment">// If the file does not exist, the last modified will be 0.</span></span><br><span class="line">        <span class="keyword">this</span>.lastModified = file.lastModified();</span><br><span class="line">        firstLoad();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">firstLoad</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            T newValue = loadConfig();</span><br><span class="line">            getProperty().updateValue(newValue);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">            RecordLog.info(<span class="string">"loadConfig exception"</span>, e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">readSource</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123; <span class="comment">// AbstractDataSource中的loadConfig方法调用该方法加载数据</span></span><br><span class="line">        <span class="keyword">if</span> (!file.exists()) &#123;<span class="comment">// Will throw FileNotFoundException later.</span></span><br><span class="line">            RecordLog.warn(String.format(<span class="string">"[FileRefreshableDataSource] File does not exist: %s"</span>, file.getAbsolutePath()));</span><br><span class="line">        &#125;</span><br><span class="line">        FileInputStream inputStream = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            inputStream = <span class="keyword">new</span> FileInputStream(file);</span><br><span class="line">            FileChannel channel = inputStream.getChannel();</span><br><span class="line">            <span class="keyword">if</span> (channel.size() &gt; buf.length) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(file.getAbsolutePath() + <span class="string">" file size="</span> + channel.size() + <span class="string">", is bigger than bufSize="</span> + buf.length + <span class="string">". Can't read"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">int</span> len = inputStream.read(buf);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> String(buf, <span class="number">0</span>, len, charset);</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (inputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    inputStream.close();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception ignore) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">isModified</span><span class="params">()</span> </span>&#123;  <span class="comment">// 在定时更新规则配置的任务中调用该方法判断文件是否被改变</span></span><br><span class="line">        <span class="keyword">long</span> curLastModified = file.lastModified();</span><br><span class="line">        <span class="keyword">if</span> (curLastModified != <span class="keyword">this</span>.lastModified) &#123;</span><br><span class="line">            <span class="keyword">this</span>.lastModified = curLastModified;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后通过<strong><code>FlowRuleManager</code></strong>给<strong><code>SentinelProperty</code></strong>注册监听器，用于规则数据的刷新，这里是以流控规则为例，其他的规则通过相应的规则管理器的对应方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlowRuleManager</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Map&lt;String, List&lt;FlowRule&gt;&gt; flowRules = <span class="keyword">new</span> ConcurrentHashMap&lt;String, List&lt;FlowRule&gt;&gt;();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> FlowPropertyListener LISTENER = <span class="keyword">new</span> FlowPropertyListener();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> SentinelProperty&lt;List&lt;FlowRule&gt;&gt; currentProperty = <span class="keyword">new</span> DynamicSentinelProperty&lt;List&lt;FlowRule&gt;&gt;();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> ScheduledExecutorService SCHEDULER = Executors.newScheduledThreadPool(<span class="number">1</span>, <span class="keyword">new</span> NamedThreadFactory(<span class="string">"sentinel-metrics-record-task"</span>, <span class="keyword">true</span>));</span><br><span class="line">    <span class="keyword">static</span> &#123;</span><br><span class="line">        currentProperty.addListener(LISTENER);</span><br><span class="line">        SCHEDULER.scheduleAtFixedRate(<span class="keyword">new</span> MetricTimerListener(), <span class="number">0</span>, <span class="number">1</span>, TimeUnit.SECONDS); <span class="comment">// 监控指标的定时统计</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">register2Property</span><span class="params">(SentinelProperty&lt;List&lt;FlowRule&gt;&gt; property)</span> </span>&#123;</span><br><span class="line">        AssertUtil.notNull(property, <span class="string">"property cannot be null"</span>);</span><br><span class="line">        <span class="keyword">synchronized</span> (LISTENER) &#123;</span><br><span class="line">            currentProperty.removeListener(LISTENER);</span><br><span class="line">            property.addListener(LISTENER);</span><br><span class="line">            currentProperty = property;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FlowPropertyListener</span> <span class="keyword">implements</span> <span class="title">PropertyListener</span>&lt;<span class="title">List</span>&lt;<span class="title">FlowRule</span>&gt;&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">configUpdate</span><span class="params">(List&lt;FlowRule&gt; value)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, List&lt;FlowRule&gt;&gt; rules = FlowRuleUtil.buildFlowRuleMap(value);</span><br><span class="line">        <span class="keyword">if</span> (rules != <span class="keyword">null</span>) &#123;</span><br><span class="line">            flowRules.clear();</span><br><span class="line">            flowRules.putAll(rules);</span><br><span class="line">        &#125;</span><br><span class="line">        RecordLog.info(<span class="string">"[FlowRuleManager] Flow rules received: "</span> + flowRules);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">configLoad</span><span class="params">(List&lt;FlowRule&gt; conf)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, List&lt;FlowRule&gt;&gt; rules = FlowRuleUtil.buildFlowRuleMap(conf);</span><br><span class="line">        <span class="keyword">if</span> (rules != <span class="keyword">null</span>) &#123;</span><br><span class="line">            flowRules.clear();</span><br><span class="line">            flowRules.putAll(rules);</span><br><span class="line">        &#125;</span><br><span class="line">        RecordLog.info(<span class="string">"[FlowRuleManager] Flow rules loaded: "</span> + flowRules);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于写规则的实现其实相对简单，最终会调用<strong><code>WritableDataSource</code></strong>的<strong><code>write</code></strong>方法完成数据的持久化。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FileWritableDataSource</span>&lt;<span class="title">T</span>&gt; <span class="keyword">implements</span> <span class="title">WritableDataSource</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FileWritableDataSource</span><span class="params">(String filePath, Converter&lt;T, String&gt; configEncoder)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(<span class="keyword">new</span> File(filePath), configEncoder);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FileWritableDataSource</span><span class="params">(File file, Converter&lt;T, String&gt; configEncoder)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(file, configEncoder, DEFAULT_CHARSET);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FileWritableDataSource</span><span class="params">(File file, Converter&lt;T, String&gt; configEncoder, Charset charset)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (file == <span class="keyword">null</span> || file.isDirectory()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Bad file"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (configEncoder == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Config encoder cannot be null"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (charset == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Charset cannot be null"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.configEncoder = configEncoder;</span><br><span class="line">        <span class="keyword">this</span>.file = file;</span><br><span class="line">        <span class="keyword">this</span>.charset = charset;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">(T value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        lock.lock();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            String convertResult = configEncoder.convert(value);</span><br><span class="line">            FileOutputStream outputStream = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                outputStream = <span class="keyword">new</span> FileOutputStream(file);</span><br><span class="line">                <span class="keyword">byte</span>[] bytesArray = convertResult.getBytes(charset);</span><br><span class="line">                RecordLog.info(String.format(<span class="string">"[FileWritableDataSource] Writing to file %s: %s"</span>, file.toString(), convertResult));</span><br><span class="line">                outputStream.write(bytesArray);</span><br><span class="line">                outputStream.flush();</span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (outputStream != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        outputStream.close();</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (Exception ignore) &#123;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最后通过<strong><code>WritableDataSourceRegistry</code></strong>将对应的<strong><code>WritableDataSource</code></strong>进行注册，在<strong><code>CommandHandler</code></strong>中对其更新是会调用具体的方法获取具体的<strong><code>WritableDataSource</code></strong>进行write操作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">WritableDataSourceRegistry</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> WritableDataSource&lt;List&lt;FlowRule&gt;&gt; flowDataSource = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> WritableDataSource&lt;List&lt;AuthorityRule&gt;&gt; authorityDataSource = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> WritableDataSource&lt;List&lt;DegradeRule&gt;&gt; degradeDataSource = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> WritableDataSource&lt;List&lt;SystemRule&gt;&gt; systemSource = <span class="keyword">null</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">registerFlowDataSource</span><span class="params">(WritableDataSource&lt;List&lt;FlowRule&gt;&gt; datasource)</span> </span>&#123;</span><br><span class="line">        flowDataSource = datasource;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">registerAuthorityDataSource</span><span class="params">(WritableDataSource&lt;List&lt;AuthorityRule&gt;&gt; dataSource)</span> </span>&#123;</span><br><span class="line">        authorityDataSource = dataSource;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">registerDegradeDataSource</span><span class="params">(WritableDataSource&lt;List&lt;DegradeRule&gt;&gt; dataSource)</span> </span>&#123;</span><br><span class="line">        degradeDataSource = dataSource;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">registerSystemDataSource</span><span class="params">(WritableDataSource&lt;List&lt;SystemRule&gt;&gt; dataSource)</span> </span>&#123;</span><br><span class="line">        systemSource = dataSource;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Sentinel控制台通过API将规则推送至客户端并更新到内存中，接着注册的写数据源会将新的规则保存到本地的文件中。使用pull模式的数据源时一般不需要对Sentinel控制台进行改造。使用时首先需要引入<strong><code>sentinel-datasource-extension</code></strong>依赖，让后将自定义的持久化包引入即可。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba.csp<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>sentinel-datasource-extension<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.8.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- sentinel规则pull模式依赖 改造拉模式实现--&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba.csp<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>sentinel-datasource-extension-file-pull<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.8.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="Push模式"><a href="#Push模式" class="headerlink" title="Push模式"></a>Push模式</h4><p>Push是通过通过<strong><code>Sentinel</code>控制台</strong>直接推送到<strong><code>Nacos</code>配置中心</strong>，然后<strong>配置中心再更新到本地</strong>，基于Nacos配置中心的推送需要额外引入<strong><code>sentinel-datasource-nacos</code></strong>依赖。且配置相应规则的数据源：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba.csp<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>sentinel-datasource-nacos<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.8.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">cloud:</span><br><span class="line">  nacos:</span><br><span class="line">    discovery:</span><br><span class="line">      server-addr: 127.0.0.1:8848</span><br><span class="line">      ephemeral: false</span><br><span class="line">  sentinel:</span><br><span class="line">    transport:</span><br><span class="line">      # 添加sentinel的控制台地址</span><br><span class="line">      dashboard: 127.0.0.1:8080</span><br><span class="line">      # 指定应用与Sentinel控制台交互的端口，应用本地会起一个该端口占用的HttpServer</span><br><span class="line">      port: 8719</span><br><span class="line">    datasource:</span><br><span class="line">      ds-flow:</span><br><span class="line">        nacos:</span><br><span class="line">          server-addr: 127.0.0.1:8848</span><br><span class="line">          dataId: $&#123;spring.application.name&#125;-flow</span><br><span class="line">          groupId: DEFAULT_GROUP</span><br><span class="line">          namespace: sentinel</span><br><span class="line">          data-type: json</span><br><span class="line">          rule-type: flow</span><br><span class="line">      ds-degrade:</span><br><span class="line">        nacos:</span><br><span class="line">          server-addr: 127.0.0.1:8848</span><br><span class="line">          dataId: $&#123;spring.application.name&#125;-degrade</span><br><span class="line">          groupId: DEFAULT_GROUP</span><br><span class="line">          namespace: sentinel</span><br><span class="line">          data-type: json</span><br><span class="line">          rule-type: degrade</span><br><span class="line">      ds-param-flow:</span><br><span class="line">        nacos:</span><br><span class="line">          server-addr: 127.0.0.1:8848</span><br><span class="line">          dataId: $&#123;spring.application.name&#125;-param-flow</span><br><span class="line">          groupId: DEFAULT_GROUP</span><br><span class="line">          namespace: sentinel</span><br><span class="line">          data-type: json</span><br><span class="line">          rule-type: param-flow</span><br><span class="line">      ds-system:</span><br><span class="line">        nacos:</span><br><span class="line">          server-addr: 127.0.0.1:8848</span><br><span class="line">          dataId: $&#123;spring.application.name&#125;-system</span><br><span class="line">          groupId: DEFAULT_GROUP</span><br><span class="line">          namespace: sentinel</span><br><span class="line">          data-type: json</span><br><span class="line">          rule-type: system</span><br><span class="line">      ds-authority:</span><br><span class="line">        nacos:</span><br><span class="line">          server-addr: 127.0.0.1:8848</span><br><span class="line">          dataId: $&#123;spring.application.name&#125;-authority</span><br><span class="line">          groupId: DEFAULT_GROUP</span><br><span class="line">          namespace: sentinel</span><br><span class="line">          data-type: json</span><br><span class="line">          rule-type: authority</span><br></pre></td></tr></table></figure>
+<p>对于Nacos的集成是通过<strong><code>SentinelDataSourceHandler</code></strong>中遍历<strong><code>SentinelProperties</code></strong>的<strong><code>datasource</code></strong>属性，该属性是一个存放<strong><code>DataSourcePropertiesConfiguration</code></strong>的Map，而<strong><code>DataSourcePropertiesConfiguration</code></strong>是持有具体的类型的配置类。最后通过<strong><code>AbstractDataSourceProperties</code></strong>根据具体的配置的<strong><code>RuleType</code></strong>调用具体规则管理器给具体的<strong><code>SentinelProperty</code></strong>注册监听器。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SentinelProperties</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Map&lt;String, DataSourcePropertiesConfiguration&gt; datasource = <span class="keyword">new</span> TreeMap&lt;&gt;(String.CASE_INSENSITIVE_ORDER);</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Map&lt;String, DataSourcePropertiesConfiguration&gt; <span class="title">getDatasource</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> datasource;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataSourcePropertiesConfiguration</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> FileDataSourceProperties file;</span><br><span class="line">    <span class="keyword">private</span> NacosDataSourceProperties nacos;</span><br><span class="line">    <span class="keyword">private</span> ZookeeperDataSourceProperties zk;</span><br><span class="line">    <span class="keyword">private</span> ApolloDataSourceProperties apollo;</span><br><span class="line">    <span class="keyword">private</span> RedisDataSourceProperties redis;</span><br><span class="line">    <span class="keyword">private</span> ConsulDataSourceProperties consul;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SentinelDataSourceHandler</span> <span class="keyword">implements</span> <span class="title">SmartInitializingSingleton</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">afterSingletonsInstantiated</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        sentinelProperties.getDatasource().forEach((dataSourceName, dataSourceProperties) -&gt; &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                List&lt;String&gt; validFields = dataSourceProperties.getValidField();</span><br><span class="line">                <span class="keyword">if</span> (validFields.size() != <span class="number">1</span>) &#123;</span><br><span class="line">                    log.error(<span class="string">"[Sentinel Starter] DataSource "</span> + dataSourceName + <span class="string">" multi datasource active and won't loaded: "</span> + dataSourceProperties.getValidField());</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                AbstractDataSourceProperties abstractDataSourceProperties = dataSourceProperties.getValidDataSourceProperties();</span><br><span class="line">                abstractDataSourceProperties.setEnv(env);</span><br><span class="line">                abstractDataSourceProperties.preCheck(dataSourceName);</span><br><span class="line">                registerBean(abstractDataSourceProperties, dataSourceName + <span class="string">"-sentinel-"</span> + validFields.get(<span class="number">0</span>) + <span class="string">"-datasource"</span>);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">registerBean</span><span class="params">(<span class="keyword">final</span> AbstractDataSourceProperties dataSourceProperties, String dataSourceName)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, Object&gt; propertyMap = Arrays.stream(dataSourceProperties.getClass().getDeclaredFields()).collect(HashMap::<span class="keyword">new</span>, (m, v) -&gt; &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                v.setAccessible(<span class="keyword">true</span>);</span><br><span class="line">                m.put(v.getName(), v.get(dataSourceProperties));</span><br><span class="line">            &#125; <span class="keyword">catch</span> (IllegalAccessException e) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"[Sentinel Starter] DataSource "</span> + dataSourceName + <span class="string">" field: "</span> + v.getName() + <span class="string">" invoke error"</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, HashMap::putAll);</span><br><span class="line">        propertyMap.put(CONVERTER_CLASS_FIELD, dataSourceProperties.getConverterClass());</span><br><span class="line">        propertyMap.put(DATA_TYPE_FIELD, dataSourceProperties.getDataType());</span><br><span class="line">        BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(dataSourceProperties.getFactoryBeanName());</span><br><span class="line">        propertyMap.forEach((propertyName, propertyValue) -&gt; &#123;</span><br><span class="line">            Field field = ReflectionUtils.findField(dataSourceProperties.getClass(), propertyName);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == field) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (DATA_TYPE_FIELD.equals(propertyName)) &#123;</span><br><span class="line">                String dataType = StringUtils.trimAllWhitespace(propertyValue.toString());</span><br><span class="line">                <span class="keyword">if</span> (CUSTOM_DATA_TYPE.equals(dataType)) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        <span class="keyword">if</span> (StringUtils.isEmpty(dataSourceProperties.getConverterClass())) &#123;</span><br><span class="line">                            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"[Sentinel Starter] DataSource "</span> + dataSourceName + <span class="string">"dataType is custom, please set converter-class property"</span>);</span><br><span class="line">                        &#125;</span><br><span class="line">                        String customConvertBeanName = <span class="string">"sentinel-"</span> + dataSourceProperties.getConverterClass();</span><br><span class="line">                        <span class="keyword">if</span> (!<span class="keyword">this</span>.beanFactory.containsBean(customConvertBeanName)) &#123;</span><br><span class="line">                            <span class="keyword">this</span>.beanFactory.registerBeanDefinition(customConvertBeanName, BeanDefinitionBuilder.genericBeanDefinition(Class.forName(dataSourceProperties.getConverterClass())).getBeanDefinition());</span><br><span class="line">                        &#125;</span><br><span class="line">                        builder.addPropertyReference(<span class="string">"converter"</span>, customConvertBeanName);</span><br><span class="line">                    &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"[Sentinel Starter] DataSource "</span> + dataSourceName + <span class="string">" handle "</span> + dataSourceProperties.getClass().getSimpleName() + <span class="string">" error, class name: "</span> + dataSourceProperties.getConverterClass(), e);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (!dataTypeList.contains(StringUtils.trimAllWhitespace(propertyValue.toString()))) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"[Sentinel Starter] DataSource "</span> + dataSourceName + <span class="string">" dataType: "</span> + propertyValue + <span class="string">" is not support now. please using these types: "</span> + dataTypeList.toString());</span><br><span class="line">                    &#125;</span><br><span class="line">                    builder.addPropertyReference(<span class="string">"converter"</span>, <span class="string">"sentinel-"</span> + propertyValue.toString() + <span class="string">"-"</span> + dataSourceProperties.getRuleType().getName() + <span class="string">"-converter"</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (CONVERTER_CLASS_FIELD.equals(propertyName)) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">// wired properties</span></span><br><span class="line">                Optional.ofNullable(propertyValue).ifPresent(v -&gt; builder.addPropertyValue(propertyName, v));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        <span class="keyword">this</span>.beanFactory.registerBeanDefinition(dataSourceName, builder.getBeanDefinition());</span><br><span class="line">        AbstractDataSource newDataSource = (AbstractDataSource) <span class="keyword">this</span>.beanFactory.getBean(dataSourceName);</span><br><span class="line">        dataSourceProperties.postRegister(newDataSource); <span class="comment">// 注意配置的数据源类型，给具体的类型注册监听器</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractDataSourceProperties</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postRegister</span><span class="params">(AbstractDataSource dataSource)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">switch</span> (<span class="keyword">this</span>.getRuleType()) &#123;</span><br><span class="line">            <span class="keyword">case</span> FLOW:</span><br><span class="line">                FlowRuleManager.register2Property(dataSource.getProperty());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> DEGRADE:</span><br><span class="line">                DegradeRuleManager.register2Property(dataSource.getProperty());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> PARAM_FLOW:</span><br><span class="line">                ParamFlowRuleManager.register2Property(dataSource.getProperty());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> SYSTEM:</span><br><span class="line">                SystemRuleManager.register2Property(dataSource.getProperty());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> AUTHORITY:</span><br><span class="line">                AuthorityRuleManager.register2Property(dataSource.getProperty());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> GW_FLOW:</span><br><span class="line">                GatewayRuleManager.register2Property(dataSource.getProperty());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> GW_API_GROUP:</span><br><span class="line">                GatewayApiDefinitionManager.register2Property(dataSource.getProperty());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>NacosDataSourceProperties</code></strong>构造方法中调用超类设置<strong><code>factoryBeanName</code></strong>为<strong><code>NacosDataSourceFactoryBean</code></strong>，故在<strong><code>SentinelDataSourceHandler</code></strong>中的<strong><code>registerBean</code></strong>方法中getBean其实是调用<strong><code>NacosDataSourceFactoryBean</code></strong>的<strong><code>getObject</code></strong>方法创建了一个<strong><code>NacosDataSource</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NacosDataSourceProperties</span> <span class="keyword">extends</span> <span class="title">AbstractDataSourceProperties</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">NacosDataSourceProperties</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(NacosDataSourceFactoryBean<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>())</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractDataSourceProperties</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">AbstractDataSourceProperties</span><span class="params">(String factoryBeanName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.factoryBeanName = factoryBeanName;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NacosDataSourceFactoryBean</span> <span class="keyword">implements</span> <span class="title">FactoryBean</span>&lt;<span class="title">NacosDataSource</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> NacosDataSource <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.isEmpty(<span class="keyword">this</span>.serverAddr)) &#123;</span><br><span class="line">            properties.setProperty(PropertyKeyConst.SERVER_ADDR, <span class="keyword">this</span>.serverAddr);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            properties.setProperty(PropertyKeyConst.ACCESS_KEY, <span class="keyword">this</span>.accessKey);</span><br><span class="line">            properties.setProperty(PropertyKeyConst.SECRET_KEY, <span class="keyword">this</span>.secretKey);</span><br><span class="line">            properties.setProperty(PropertyKeyConst.ENDPOINT, <span class="keyword">this</span>.endpoint);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.isEmpty(<span class="keyword">this</span>.namespace)) &#123;</span><br><span class="line">            properties.setProperty(PropertyKeyConst.NAMESPACE, <span class="keyword">this</span>.namespace);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.isEmpty(<span class="keyword">this</span>.username)) &#123;</span><br><span class="line">            properties.setProperty(PropertyKeyConst.USERNAME, <span class="keyword">this</span>.username);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!StringUtils.isEmpty(<span class="keyword">this</span>.password)) &#123;</span><br><span class="line">            properties.setProperty(PropertyKeyConst.PASSWORD, <span class="keyword">this</span>.password);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> NacosDataSource(properties, groupId, dataId, converter); <span class="comment">// 创建NacosNacosDataSource</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<strong><code>NacosDataSource</code></strong>中给具体的<strong><code>dataId</code></strong>注册了监听器，更变时会回调更新。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NacosDataSource</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">AbstractDataSource</span>&lt;<span class="title">String</span>, <span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">NacosDataSource</span><span class="params">(<span class="keyword">final</span> Properties properties, <span class="keyword">final</span> String groupId, <span class="keyword">final</span> String dataId, Converter&lt;String, T&gt; parser)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(parser);</span><br><span class="line">        <span class="keyword">if</span> (StringUtil.isBlank(groupId) || StringUtil.isBlank(dataId)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(String.format(<span class="string">"Bad argument: groupId=[%s], dataId=[%s]"</span>, groupId, dataId));</span><br><span class="line">        &#125;</span><br><span class="line">        AssertUtil.notNull(properties, <span class="string">"Nacos properties must not be null, you could put some keys from PropertyKeyConst"</span>);</span><br><span class="line">        <span class="keyword">this</span>.groupId = groupId;</span><br><span class="line">        <span class="keyword">this</span>.dataId = dataId;</span><br><span class="line">        <span class="keyword">this</span>.properties = properties;</span><br><span class="line">        <span class="keyword">this</span>.configListener = <span class="keyword">new</span> Listener() &#123; <span class="comment">// 创建监听器</span></span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> Executor <span class="title">getExecutor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> pool;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">receiveConfigInfo</span><span class="params">(<span class="keyword">final</span> String configInfo)</span> </span>&#123; <span class="comment">// 当配置发生变更回调该方法</span></span><br><span class="line">                T newValue = NacosDataSource.<span class="keyword">this</span>.parser.convert(configInfo); <span class="comment">// 解析配置</span></span><br><span class="line">                getProperty().updateValue(newValue); <span class="comment">// 通过监听器更新到内存</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        initNacosListener(); <span class="comment">// 初始化Nacos监听器</span></span><br><span class="line">        loadInitialConfig();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initNacosListener</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">this</span>.configService = NacosFactory.createConfigService(<span class="keyword">this</span>.properties);</span><br><span class="line">            configService.addListener(dataId, groupId, configListener); <span class="comment">// 给具体的dataId注册监听器，配置发生变化时回调</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">readSource</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (configService == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Nacos config service has not been initialized or error occurred"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> configService.getConfig(dataId, groupId, DEFAULT_TIMEOUT);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">loadInitialConfig</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            T newValue = loadConfig();</span><br><span class="line">            getProperty().updateValue(newValue);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>目前这种方式集成可在<strong><code>Nacos</code></strong>中修改被<strong><code>Sentinel</code></strong>控制台感应到，但在<strong><code>Sentinel</code></strong>控制台修改不能被<strong><code>Nacos</code></strong>感应到。从Sentinel 1.4.0开始，Sentinel控制台提供用于实现<strong>应用维度</strong>的<strong>规则推送<code>DynamicRulePublisher</code></strong>和<strong>拉取<code>DynamicRuleProvider</code></strong>接口，可以通过对源码进行改造通过直接<strong>让<code>Sentinel</code>控制台与<code>Nacos</code>配置中心通信</strong>，可参照Sentinel Dashboard test包下的流控规则拉取和推送的实现逻辑。</p>
+<p><img src="../../../../../images/Cloud/Sentinel/Sentinel持久化Push模式.png" alt="Sentinel持久化Push模式"></p>
+<p>以流控规则为例，通过实现<strong><code>DynamicRuleProvider</code></strong>和<strong><code>DynamicRulePublisher</code></strong>，从而实现规则向Nacos配置中心的推送和拉取。在具体的规则修改接口中将原来的推送和拉取规则的地方修改为上面实现的内容。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span>(value = <span class="string">"flowRuleNacosProvider"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlowRuleNacosProvider</span> <span class="keyword">implements</span> <span class="title">DynamicRuleProvider</span>&lt;<span class="title">List</span>&lt;<span class="title">FlowRuleEntity</span>&gt;&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> ConfigService configService;</span><br><span class="line">    <span class="meta">@Value</span>(value = <span class="string">"$&#123;sentinel.nacos.config.refreshTimeoutMs:3000&#125;"</span>)</span><br><span class="line">    <span class="keyword">private</span> Integer refreshTimeoutMs;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;FlowRuleEntity&gt; <span class="title">getRules</span><span class="params">(String appName, String ip, Integer port)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// 从Nacos配置中心拉取配置</span></span><br><span class="line">        String rules = configService.getConfig(</span><br><span class="line">            appName + NacosConfigUtil.FLOW_DATA_ID_POSTFIX,</span><br><span class="line">            NacosConfigUtil.GROUP_ID, <span class="number">3000</span>);</span><br><span class="line">        <span class="keyword">if</span> (StringUtil.isEmpty(rules)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        &#125;</span><br><span class="line">        List&lt;FlowRule&gt; flowRuleList = JSON.parseArray(rules, FlowRule<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        <span class="keyword">return</span> flowRuleList.stream()</span><br><span class="line">            .map(rule -&gt; FlowRuleEntity.fromFlowRule(appName, ip, port, rule))</span><br><span class="line">            .collect(Collectors.toList());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@Component</span>(<span class="string">"flowRuleNacosPublisher"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlowRuleNacosPublisher</span> <span class="keyword">implements</span> <span class="title">DynamicRulePublisher</span>&lt;<span class="title">List</span>&lt;<span class="title">FlowRuleEntity</span>&gt;&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> ConfigService configService;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">publish</span><span class="params">(String app, List&lt;FlowRuleEntity&gt; rules)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        AssertUtil.notEmpty(app, <span class="string">"app name cannot be empty"</span>);</span><br><span class="line">        <span class="keyword">if</span> (rules == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        configService.publishConfig(</span><br><span class="line">            app + NacosConfigUtil.FLOW_DATA_ID_POSTFIX,</span><br><span class="line">            NacosConfigUtil.GROUP_ID,</span><br><span class="line">            NacosConfigUtil.convertToRule(rules));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NacosConfig</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Value</span>(value = <span class="string">"$&#123;sentinel.nacos.config.serverAddr:localhost:8848&#125;"</span>)</span><br><span class="line">    <span class="keyword">private</span> String serverAddr;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> ConfigService <span class="title">nacosConfigService</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> ConfigFactory.createConfigService(serverAddr);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/Seata/Seata集成原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Seata集成原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/Sentinel/常见限流算法/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">常见限流算法</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

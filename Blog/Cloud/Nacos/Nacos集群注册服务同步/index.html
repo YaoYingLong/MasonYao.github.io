@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Nacos集群注册服务同步 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="SpringCloud,Nacos">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="服务注册同步客户端在调用服务端接口注册实例时，会调用ConsistencyService#put方法将实例对象添加到注册表，以及同步给其它服务端成员。注册服务的同步是通过调用DistroProtocol的sync同步方法来完成的，然后调用NacosDelayTaskExecuteEngine的addTask方法将同步任务添加到ConcurrentHashMap中。 1234567891011121">
+<meta name="keywords" content="SpringCloud,Nacos">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos集群注册服务同步">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/Nacos/Nacos集群注册服务同步/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="服务注册同步客户端在调用服务端接口注册实例时，会调用ConsistencyService#put方法将实例对象添加到注册表，以及同步给其它服务端成员。注册服务的同步是通过调用DistroProtocol的sync同步方法来完成的，然后调用NacosDelayTaskExecuteEngine的addTask方法将同步任务添加到ConcurrentHashMap中。 1234567891011121">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2022-01-17T11:34:57.511Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Nacos集群注册服务同步">
+<meta name="twitter:description" content="服务注册同步客户端在调用服务端接口注册实例时，会调用ConsistencyService#put方法将实例对象添加到注册表，以及同步给其它服务端成员。注册服务的同步是通过调用DistroProtocol的sync同步方法来完成的，然后调用NacosDelayTaskExecuteEngine的addTask方法将同步任务添加到ConcurrentHashMap中。 1234567891011121">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/Nacos/Nacos集群注册服务同步" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/Nacos/">Nacos</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Nacos/">Nacos</a>, <a class="tag-link" href="/tags/SpringCloud/">SpringCloud</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">
+            <time datetime="2021-10-21T16:00:00.000Z" itemprop="datePublished">2021-10-22</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Nacos集群注册服务同步
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <h4 id="服务注册同步"><a href="#服务注册同步" class="headerlink" title="服务注册同步"></a>服务注册同步</h4><p>客户端在调用服务端接口注册实例时，会调用<strong><code>ConsistencyService#put</code></strong>方法将实例对象添加到注册表，以及同步给其它服务端成员。注册服务的同步是通过调用<strong><code>DistroProtocol</code></strong>的<strong><code>sync</code></strong>同步方法来完成的，然后调用<strong><code>NacosDelayTaskExecuteEngine</code></strong>的<strong><code>addTask</code></strong>方法将同步任务添加到<strong><code>ConcurrentHashMap</code></strong>中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroConsistencyServiceImpl</span> <span class="keyword">implements</span> <span class="title">EphemeralConsistencyService</span>, <span class="title">DistroDataProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">put</span><span class="params">(String key, Record value)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        onPut(key, value); <span class="comment">// 若是ephemeral实例将其添加到DataStore缓存中，然后通过一部任务替换注册表中实例列表</span></span><br><span class="line">        <span class="comment">// 同步实例数据到其它服务端成员列表中，是将当前服务名称下所有实例同步到其他服务端，最终是通过异步任务加队列的方式，调用HTTP接口最终在其他服务上也是通过onPut方法来完成</span></span><br><span class="line">        distroProtocol.sync(<span class="keyword">new</span> DistroKey(key, KeyBuilder.INSTANCE_LIST_KEY_PREFIX), DataOperation.CHANGE, globalConfig.getTaskDispatchPeriod() / <span class="number">2</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroProtocol</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sync</span><span class="params">(DistroKey distroKey, DataOperation action, <span class="keyword">long</span> delay)</span> </span>&#123; <span class="comment">// delay默认值为1000</span></span><br><span class="line">        <span class="keyword">for</span> (Member each : memberManager.allMembersWithoutSelf()) &#123; <span class="comment">// 遍历每个除自己以外的其它成员</span></span><br><span class="line">            <span class="comment">// DistroKey的resourceKey对应的是DataStore中dataMap的key用于获取缓存Service信息的Datum</span></span><br><span class="line">            DistroKey distroKeyWithTarget = <span class="keyword">new</span> DistroKey(distroKey.getResourceKey(), distroKey.getResourceType(), each.getAddress());</span><br><span class="line">            DistroDelayTask distroDelayTask = <span class="keyword">new</span> DistroDelayTask(distroKeyWithTarget, action, delay);</span><br><span class="line">            distroTaskEngineHolder.getDelayTaskExecuteEngine().addTask(distroKeyWithTarget, distroDelayTask);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>NacosDelayTaskExecuteEngine</code></strong>初始化时向延时线程池中添加了一个<strong>延时</strong>任务<strong><code>ProcessRunnable</code></strong>，该任务每<strong><code>100ms</code></strong>执行一次调用<strong><code>processTasks</code></strong>将添加到<strong><code>ConcurrentHashMap</code></strong>中的任务取出调用<strong><code>NacosTaskProcessor#process</code></strong>方法进行同步操作。<strong><code>addTask</code></strong>时若已存在同步任务，则调用<strong><code>DistroDelayTask#merge</code></strong>方法进行<strong>任务合并</strong>，其实就是替换为最新任务的action和createTime。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NacosDelayTaskExecuteEngine</span> <span class="keyword">extends</span> <span class="title">AbstractNacosTaskExecuteEngine</span>&lt;<span class="title">AbstractDelayTask</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> ConcurrentHashMap&lt;Object, AbstractDelayTask&gt; tasks;</span><br><span class="line">    <span class="comment">// 在DistroDelayTaskExecuteEngine中实例化是代用该构造函数实例化</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">NacosDelayTaskExecuteEngine</span><span class="params">(String name, Logger logger)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>(name, <span class="number">32</span>, logger, <span class="number">100L</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">NacosDelayTaskExecuteEngine</span><span class="params">(String name, <span class="keyword">int</span> initCapacity, Logger logger, <span class="keyword">long</span> processInterval)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(logger);</span><br><span class="line">        tasks = <span class="keyword">new</span> ConcurrentHashMap&lt;Object, AbstractDelayTask&gt;(initCapacity);</span><br><span class="line">        processingExecutor = ExecutorFactory.newSingleScheduledExecutorService(<span class="keyword">new</span> NameThreadFactory(name));</span><br><span class="line">        processingExecutor.scheduleWithFixedDelay(<span class="keyword">new</span> ProcessRunnable(), processInterval, processInterval, TimeUnit.MILLISECONDS);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTask</span><span class="params">(Object key, AbstractDelayTask newTask)</span> </span>&#123;</span><br><span class="line">        lock.lock();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            AbstractDelayTask existTask = tasks.get(key);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> != existTask) &#123;</span><br><span class="line">                newTask.merge(existTask); <span class="comment">// 若同步任务已存在，则合并同步任务</span></span><br><span class="line">            &#125;</span><br><span class="line">            tasks.put(key, newTask);</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">processTasks</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        Collection&lt;Object&gt; keys = getAllTaskKeys();</span><br><span class="line">        <span class="keyword">for</span> (Object taskKey : keys) &#123;</span><br><span class="line">            AbstractDelayTask task = removeTask(taskKey);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == task) &#123;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            NacosTaskProcessor processor = getProcessor(taskKey);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> == processor) &#123;</span><br><span class="line">                getEngineLog().error(<span class="string">"processor not found for task, so discarded. "</span> + task);</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (!processor.process(task)) &#123;</span><br><span class="line">                    retryFailedTask(taskKey, task); <span class="comment">// ReAdd task if process failed</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                getEngineLog().error(<span class="string">"Nacos task execute error : "</span> + e.toString(), e);</span><br><span class="line">                retryFailedTask(taskKey, task);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">ProcessRunnable</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123; <span class="comment">// 100毫秒执行一次</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                processTasks();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                getEngineLog().error(e.toString(), e);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroDelayTask</span> <span class="keyword">extends</span> <span class="title">AbstractDelayTask</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">merge</span><span class="params">(AbstractDelayTask task)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!(task <span class="keyword">instanceof</span> DistroDelayTask)) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        DistroDelayTask newTask = (DistroDelayTask) task;</span><br><span class="line">        <span class="keyword">if</span> (!action.equals(newTask.getAction()) &amp;&amp; createTime &lt; newTask.getCreateTime()) &#123;</span><br><span class="line">            action = newTask.getAction();</span><br><span class="line">            createTime = newTask.getCreateTime();</span><br><span class="line">        &#125;</span><br><span class="line">        setLastProcessTime(newTask.getLastProcessTime());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>具体<strong><code>NacosTaskProcessor</code></strong>是在<strong><code>DistroTaskEngineHolder</code></strong>中实例化<strong><code>DistroDelayTaskExecuteEngine</code></strong>时设置了<strong>默认</strong>的<strong><code>DistroDelayTaskProcessor</code></strong>，以及在<strong><code>DistroHttpRegistry</code></strong>中添加了具体的<strong><code>KeyBuilder.INSTANCE_LIST_KEY_PREFIX</code></strong>的<strong><code>DistroHttpDelayTaskProcessor</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroTaskEngineHolder</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> DistroDelayTaskExecuteEngine delayTaskExecuteEngine = <span class="keyword">new</span> DistroDelayTaskExecuteEngine();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> DistroExecuteTaskExecuteEngine executeWorkersManager = <span class="keyword">new</span> DistroExecuteTaskExecuteEngine();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">DistroTaskEngineHolder</span><span class="params">(DistroComponentHolder distroComponentHolder)</span> </span>&#123;</span><br><span class="line">        DistroDelayTaskProcessor defaultDelayTaskProcessor = <span class="keyword">new</span> DistroDelayTaskProcessor(<span class="keyword">this</span>, distroComponentHolder);</span><br><span class="line">        delayTaskExecuteEngine.setDefaultTaskProcessor(defaultDelayTaskProcessor);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerNacosTaskProcessor</span><span class="params">(Object key, NacosTaskProcessor nacosTaskProcessor)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.delayTaskExecuteEngine.addProcessor(key, nacosTaskProcessor);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroHttpRegistry</span> </span>&#123;</span><br><span class="line">    <span class="meta">@PostConstruct</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doRegister</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        componentHolder.registerDataStorage(KeyBuilder.INSTANCE_LIST_KEY_PREFIX, <span class="keyword">new</span> DistroDataStorageImpl(dataStore, distroMapper));</span><br><span class="line">        componentHolder.registerTransportAgent(KeyBuilder.INSTANCE_LIST_KEY_PREFIX, <span class="keyword">new</span> DistroHttpAgent(memberManager));</span><br><span class="line">        componentHolder.registerFailedTaskHandler(KeyBuilder.INSTANCE_LIST_KEY_PREFIX, <span class="keyword">new</span> DistroHttpCombinedKeyTaskFailedHandler(globalConfig, taskEngineHolder));</span><br><span class="line">        taskEngineHolder.registerNacosTaskProcessor(KeyBuilder.INSTANCE_LIST_KEY_PREFIX, <span class="keyword">new</span> DistroHttpDelayTaskProcessor(globalConfig, taskEngineHolder));</span><br><span class="line">        componentHolder.registerDataProcessor(consistencyService);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>很明显<strong><code>NacosTaskProcessor#process</code></strong>具体执行的是<strong><code>DistroHttpDelayTaskProcessor#process</code></strong>，上面<strong><code>DistroTaskEngineHolder</code></strong>中实例化了<strong><code>DistroExecuteTaskExecuteEngine</code></strong>，最终调用其父类<strong><code>NacosExecuteTaskExecuteEngine#addTask</code></strong>方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroHttpDelayTaskProcessor</span> <span class="keyword">implements</span> <span class="title">NacosTaskProcessor</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> DistroTaskEngineHolder distroTaskEngineHolder;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(NacosTask task)</span> </span>&#123;</span><br><span class="line">        DistroDelayTask distroDelayTask = (DistroDelayTask) task;</span><br><span class="line">        DistroKey distroKey = distroDelayTask.getDistroKey();</span><br><span class="line">        DistroHttpCombinedKeyExecuteTask executeTask = <span class="keyword">new</span> DistroHttpCombinedKeyExecuteTask(globalConfig, distroTaskEngineHolder.getDelayTaskExecuteEngine(), distroKey, distroDelayTask.getAction());</span><br><span class="line">        distroTaskEngineHolder.getExecuteWorkersManager().addTask(distroKey, executeTask);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>调用<strong><code>TaskExecuteWorker#process</code></strong>将<strong><code>DistroHttpCombinedKeyExecuteTask</code></strong>添加到<strong>阻塞队列中</strong>，<strong><code>TaskExecuteWorker</code></strong>实例化时创建并启动了<strong><code>InnerWorker</code></strong>线程，该线程对阻塞队列消费取出<strong><code>DistroDelayTask</code></strong>并执行其<strong><code>run</code></strong>方法。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NacosExecuteTaskExecuteEngine</span> <span class="keyword">extends</span> <span class="title">AbstractNacosTaskExecuteEngine</span>&lt;<span class="title">AbstractExecuteTask</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTask</span><span class="params">(Object tag, AbstractExecuteTask task)</span> </span>&#123;</span><br><span class="line">        NacosTaskProcessor processor = getProcessor(tag);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != processor) &#123;</span><br><span class="line">            processor.process(task);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        TaskExecuteWorker worker = getWorker(tag);</span><br><span class="line">        worker.process(task);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">TaskExecuteWorker</span> <span class="keyword">implements</span> <span class="title">NacosTaskProcessor</span>, <span class="title">Closeable</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> BlockingQueue&lt;Runnable&gt; queue;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">TaskExecuteWorker</span><span class="params">(<span class="keyword">final</span> String name, <span class="keyword">final</span> <span class="keyword">int</span> mod, <span class="keyword">final</span> <span class="keyword">int</span> total, <span class="keyword">final</span> Logger logger)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name + <span class="string">"_"</span> + mod + <span class="string">"%"</span> + total;</span><br><span class="line">        <span class="keyword">this</span>.queue = <span class="keyword">new</span> ArrayBlockingQueue&lt;Runnable&gt;(QUEUE_CAPACITY);</span><br><span class="line">        <span class="keyword">this</span>.closed = <span class="keyword">new</span> AtomicBoolean(<span class="keyword">false</span>);</span><br><span class="line">        <span class="keyword">new</span> InnerWorker(name).start();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(NacosTask task)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (task <span class="keyword">instanceof</span> AbstractExecuteTask) &#123;</span><br><span class="line">            putTask((Runnable) task); <span class="comment">// 将任务添加到阻塞对列中</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">putTask</span><span class="params">(Runnable task)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            queue.put(task); <span class="comment">// 该对列最终通过InnerWorker类消费</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException ire) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">InnerWorker</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">while</span> (!closed.get()) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Runnable task = queue.take();</span><br><span class="line">                    task.run();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>最终会将任务封装成<strong><code>DistroHttpCombinedKeyDelayTask</code></strong>，并重新生成一个<strong><code>DistroKey</code></strong>，其实就是再一次执行了上面的入队操作，然后调用<strong><code>DistroDelayTaskProcessor#process</code></strong>方法，最终调用<strong><code>DistroSyncChangeTask#run</code></strong>方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroHttpCombinedKeyExecuteTask</span> <span class="keyword">extends</span> <span class="title">AbstractExecuteTask</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            DistroKey newKey = <span class="keyword">new</span> DistroKey(DistroHttpCombinedKey.getSequenceKey(), DistroHttpCombinedKeyDelayTask<span class="class">.<span class="keyword">class</span>.<span class="title">getSimpleName</span>(), <span class="title">singleDistroKey</span>.<span class="title">getTargetServer</span>())</span>;</span><br><span class="line">            DistroHttpCombinedKeyDelayTask combinedTask = <span class="keyword">new</span> DistroHttpCombinedKeyDelayTask(newKey, taskAction, globalConfig.getTaskDispatchPeriod() / <span class="number">2</span>, globalConfig.getBatchSyncKeyCount());</span><br><span class="line">            combinedTask.getActualResourceKeys().add(singleDistroKey.getResourceKey());</span><br><span class="line">            distroDelayTaskExecuteEngine.addTask(newKey, combinedTask);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroDelayTaskProcessor</span> <span class="keyword">implements</span> <span class="title">NacosTaskProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">process</span><span class="params">(NacosTask task)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!(task <span class="keyword">instanceof</span> DistroDelayTask)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        DistroDelayTask distroDelayTask = (DistroDelayTask) task;</span><br><span class="line">        DistroKey distroKey = distroDelayTask.getDistroKey();</span><br><span class="line">        <span class="keyword">if</span> (DataOperation.CHANGE.equals(distroDelayTask.getAction())) &#123;</span><br><span class="line">            DistroSyncChangeTask syncChangeTask = <span class="keyword">new</span> DistroSyncChangeTask(distroKey, distroComponentHolder);</span><br><span class="line">            distroTaskEngineHolder.getExecuteWorkersManager().addTask(distroKey, syncChangeTask);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroSyncChangeTask</span> <span class="keyword">extends</span> <span class="title">AbstractDistroExecuteTask</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123; <span class="comment">// 最终客户端服务同步是通过该线程来完成的</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            String type = getDistroKey().getResourceType();</span><br><span class="line">            DistroData distroData = distroComponentHolder.findDataStorage(type).getDistroData(getDistroKey());</span><br><span class="line">            distroData.setType(DataOperation.CHANGE); <span class="comment">// DistroData其实就是序列化好的Datum</span></span><br><span class="line">            <span class="keyword">boolean</span> result = distroComponentHolder.findTransportAgent(type).syncData(distroData, getDistroKey().getTargetServer());</span><br><span class="line">            <span class="keyword">if</span> (!result) &#123;</span><br><span class="line">                handleFailedTask(); <span class="comment">// 失败重试</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            handleFailedTask();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终通过调用HTTP接口<strong><code>/v1/ns/distro/datum</code></strong>来实现数据的同步，这里是直接将整个<strong><code>serviceName</code></strong>对应的<strong>实例数据列表全部进行了同步</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroHttpAgent</span> <span class="keyword">implements</span> <span class="title">DistroTransportAgent</span> </span>&#123;</span><br><span class="line">	    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">syncData</span><span class="params">(DistroData data, String targetServer)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!memberManager.hasMember(targetServer)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>; <span class="comment">// 若不存在该成员，则直接跳过</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">byte</span>[] dataContent = data.getContent();</span><br><span class="line">        <span class="keyword">return</span> NamingProxy.syncData(dataContent, data.getDistroKey().getTargetServer());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamingProxy</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">syncData</span><span class="params">(<span class="keyword">byte</span>[] data, String curServer)</span> </span>&#123; <span class="comment">// 调用/v1/ns/distro/datum接口即DistroController#onSyncDatum</span></span><br><span class="line">        Map&lt;String, String&gt; headers = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">128</span>);</span><br><span class="line">        headers.put(HttpHeaderConsts.CLIENT_VERSION_HEADER, VersionUtils.version);</span><br><span class="line">        headers.put(HttpHeaderConsts.USER_AGENT_HEADER, UtilsAndCommons.SERVER_VERSION);</span><br><span class="line">        headers.put(HttpHeaderConsts.ACCEPT_ENCODING, <span class="string">"gzip,deflate,sdch"</span>);</span><br><span class="line">        headers.put(HttpHeaderConsts.CONNECTION, <span class="string">"Keep-Alive"</span>);</span><br><span class="line">        headers.put(HttpHeaderConsts.CONTENT_ENCODING, <span class="string">"gzip"</span>);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            RestResult&lt;String&gt; result = HttpClient.httpPutLarge(<span class="string">"http://"</span> + curServer + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + DATA_ON_SYNC_URL, headers, data);</span><br><span class="line">            <span class="keyword">if</span> (result.ok()) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (HttpURLConnection.HTTP_NOT_MODIFIED == result.getCode()) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"failed to req API:"</span> + <span class="string">"http://"</span> + curServer + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + DATA_ON_SYNC_URL + <span class="string">". code:"</span> + result.getCode() + <span class="string">" msg: "</span> + result.getData());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在其他成员的HTTP接口接收到数据后进行遍历将<strong><code>Datum</code></strong>中的数据通过<strong><code>onPut</code></strong>方法将数据设置到自身的<strong><code>DataStore</code></strong>中，以及更新到注册表中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(UtilsAndCommons.NACOS_NAMING_CONTEXT + <span class="string">"/distro"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroController</span> </span>&#123;</span><br><span class="line">    <span class="meta">@PutMapping</span>(<span class="string">"/datum"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ResponseEntity <span class="title">onSyncDatum</span><span class="params">(@RequestBody Map&lt;String, Datum&lt;Instances&gt;&gt; dataMap)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (dataMap.isEmpty()) &#123;</span><br><span class="line">            Loggers.DISTRO.error(<span class="string">"[onSync] receive empty entity!"</span>);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.INVALID_PARAM, <span class="string">"receive empty entity!"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, Datum&lt;Instances&gt;&gt; entry : dataMap.entrySet()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (KeyBuilder.matchEphemeralInstanceListKey(entry.getKey())) &#123;</span><br><span class="line">                String namespaceId = KeyBuilder.getNamespace(entry.getKey());</span><br><span class="line">                String serviceName = KeyBuilder.getServiceName(entry.getKey());</span><br><span class="line">                <span class="keyword">if</span> (!serviceManager.containService(namespaceId, serviceName) &amp;&amp; switchDomain.isDefaultInstanceEphemeral()) &#123;</span><br><span class="line">                    serviceManager.createEmptyService(namespaceId, serviceName, <span class="keyword">true</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                DistroHttpData distroHttpData = <span class="keyword">new</span> DistroHttpData(createDistroKey(entry.getKey()), entry.getValue());</span><br><span class="line">                distroProtocol.onReceive(distroHttpData);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> ResponseEntity.ok(<span class="string">"ok"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroProtocol</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onReceive</span><span class="params">(DistroData distroData)</span> </span>&#123;</span><br><span class="line">        String resourceType = distroData.getDistroKey().getResourceType();</span><br><span class="line">        DistroDataProcessor dataProcessor = distroComponentHolder.findDataProcessor(resourceType);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == dataProcessor) &#123;</span><br><span class="line">            Loggers.DISTRO.warn(<span class="string">"[DISTRO] Can't find data process for received data &#123;&#125;"</span>, resourceType);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dataProcessor.processData(distroData);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroConsistencyServiceImpl</span> <span class="keyword">implements</span> <span class="title">EphemeralConsistencyService</span>, <span class="title">DistroDataProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">processData</span><span class="params">(DistroData distroData)</span> </span>&#123;</span><br><span class="line">        DistroHttpData distroHttpData = (DistroHttpData) distroData;</span><br><span class="line">        Datum&lt;Instances&gt; datum = (Datum&lt;Instances&gt;) distroHttpData.getDeserializedContent();</span><br><span class="line">        onPut(datum.key, datum.value);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="服务启动同步"><a href="#服务启动同步" class="headerlink" title="服务启动同步"></a>服务启动同步</h4><p>在服务<strong>启动时</strong>会去其它成员服务中<strong>同步注册的实例数据</strong>，通过<strong><code>DistroProtocol</code></strong>实例化时通过<strong><code>startLoadTask</code></strong>方法将同步任务封装成<strong><code>DistroLoadDataTask</code></strong>对象异步来完成。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroProtocol</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">DistroProtocol</span><span class="params">(ServerMemberManager memberManager, DistroComponentHolder distroComponentHolder, DistroTaskEngineHolder distroTaskEngineHolder, DistroConfig distroConfig)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.memberManager = memberManager;</span><br><span class="line">        <span class="keyword">this</span>.distroComponentHolder = distroComponentHolder;</span><br><span class="line">        <span class="keyword">this</span>.distroTaskEngineHolder = distroTaskEngineHolder;</span><br><span class="line">        <span class="keyword">this</span>.distroConfig = distroConfig;</span><br><span class="line">        startDistroTask();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startDistroTask</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (EnvUtil.getStandaloneMode()) &#123;</span><br><span class="line">            isInitialized = <span class="keyword">true</span>;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        startVerifyTask(); <span class="comment">// 注册的客户端服务校验5s后开始，每5s执行一次</span></span><br><span class="line">        startLoadTask(); <span class="comment">// 注册的客户端服务数据同步</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startLoadTask</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        DistroCallback loadCallback = <span class="keyword">new</span> DistroCallback() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onSuccess</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                isInitialized = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onFailed</span><span class="params">(Throwable throwable)</span> </span>&#123;</span><br><span class="line">                isInitialized = <span class="keyword">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        GlobalExecutor.submitLoadDataTask(<span class="keyword">new</span> DistroLoadDataTask(memberManager, distroComponentHolder, distroConfig, loadCallback));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>若数据加载<strong>失败</strong>会再次将任务放入线程池中延时<strong><code>30s</code></strong>后再<strong>重试</strong>同步任务，通过调用目标成员的HTTP接口获取目标成员中全量的注册服务数据。并解析更新到缓存和注册表中，只要有一个成员更新成功则退出循环。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroLoadDataTask</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            load(); <span class="comment">// 加载数据</span></span><br><span class="line">            <span class="keyword">if</span> (!checkCompleted()) &#123; <span class="comment">// 若数据加载失败则重试</span></span><br><span class="line">                GlobalExecutor.submitLoadDataTask(<span class="keyword">this</span>, distroConfig.getLoadDataRetryDelayMillis());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                loadCallback.onSuccess(); <span class="comment">// 加载成功将isInitialized设置为true</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            loadCallback.onFailed(e); <span class="comment">// 异常将isInitialized设置为false</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">load</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (memberManager.allMembersWithoutSelf().isEmpty()) &#123; <span class="comment">// 等待成员数据加载完成</span></span><br><span class="line">            TimeUnit.SECONDS.sleep(<span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">while</span> (distroComponentHolder.getDataStorageTypes().isEmpty()) &#123; <span class="comment">// 等待缓存实例加载完成</span></span><br><span class="line">            TimeUnit.SECONDS.sleep(<span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (String each : distroComponentHolder.getDataStorageTypes()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!loadCompletedMap.containsKey(each) || !loadCompletedMap.get(each)) &#123;</span><br><span class="line">                loadCompletedMap.put(each, loadAllDataSnapshotFromRemote(each)); <span class="comment">// 从其他服务端成员加载数据镜像</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">loadAllDataSnapshotFromRemote</span><span class="params">(String resourceType)</span> </span>&#123;</span><br><span class="line">        DistroTransportAgent transportAgent = distroComponentHolder.findTransportAgent(resourceType);</span><br><span class="line">        DistroDataProcessor dataProcessor = distroComponentHolder.findDataProcessor(resourceType);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == transportAgent || <span class="keyword">null</span> == dataProcessor) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Member each : memberManager.allMembersWithoutSelf()) &#123; <span class="comment">// 遍历除自己以外的所有其它服务端成员</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                DistroData distroData = transportAgent.getDatumSnapshot(each.getAddress()); <span class="comment">// 通过HTTP接口获取目标成员中的注册服务数据</span></span><br><span class="line">                <span class="keyword">boolean</span> result = dataProcessor.processSnapshot(distroData); <span class="comment">// 解析数据并更新到缓存和注册表中</span></span><br><span class="line">                <span class="keyword">if</span> (result) &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="keyword">true</span>; <span class="comment">// 只要有一个成功则退出循环</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">checkCompleted</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (distroComponentHolder.getDataStorageTypes().size() != loadCompletedMap.size()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Boolean each : loadCompletedMap.values()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!each) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终通过<strong><code>DistroHttpAgent</code></strong>调用<strong><code>NamingProxy#getAllData</code></strong>方法从而调用目标成员的<strong><code>/v1/ns/distro/datums</code></strong>接口即<strong><code>DistroController#getAllDatums</code></strong>获取数据列表。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroHttpAgent</span> <span class="keyword">implements</span> <span class="title">DistroTransportAgent</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">getDatumSnapshot</span><span class="params">(String targetServer)</span> </span>&#123; <span class="comment">// 通过HTTP接口获取目标成员中的注册服务数据</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">byte</span>[] allDatum = NamingProxy.getAllData(targetServer);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> DistroData(<span class="keyword">new</span> DistroKey(<span class="string">"snapshot"</span>, KeyBuilder.INSTANCE_LIST_KEY_PREFIX), allDatum);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> DistroException(String.format(<span class="string">"Get snapshot from %s failed."</span>, targetServer), e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamingProxy</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">byte</span>[] getAllData(String server) <span class="keyword">throws</span> Exception &#123; <span class="comment">// 调用目标成员的HTTP接口/v1/ns/distro/datums获取数据列表</span></span><br><span class="line">        Map&lt;String, String&gt; params = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">8</span>);</span><br><span class="line">        RestResult&lt;String&gt; result = HttpClient.httpGet(<span class="string">"http://"</span> + server + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + ALL_DATA_GET_URL, <span class="keyword">new</span> ArrayList&lt;&gt;(), params);</span><br><span class="line">        <span class="keyword">if</span> (result.ok()) &#123;</span><br><span class="line">            <span class="keyword">return</span> result.getData().getBytes();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"failed to req API: "</span> + <span class="string">"http://"</span> + server + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + ALL_DATA_GET_URL + <span class="string">". code: "</span> + result.getCode() + <span class="string">" msg: "</span> + result.getMessage());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其它成员接收到请求后，直接从<strong><code>DataStore</code></strong>缓存中获取到数据进行<strong>序列化</strong>后返回。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(UtilsAndCommons.NACOS_NAMING_CONTEXT + <span class="string">"/distro"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroController</span> </span>&#123;</span><br><span class="line">    <span class="meta">@GetMapping</span>(<span class="string">"/datums"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ResponseEntity <span class="title">getAllDatums</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        DistroData distroData = distroProtocol.onSnapshot(KeyBuilder.INSTANCE_LIST_KEY_PREFIX);</span><br><span class="line">        <span class="keyword">return</span> ResponseEntity.ok(distroData.getContent());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroProtocol</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">onSnapshot</span><span class="params">(String type)</span> </span>&#123;</span><br><span class="line">        DistroDataStorage distroDataStorage = distroComponentHolder.findDataStorage(type);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == distroDataStorage) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> DistroData(<span class="keyword">new</span> DistroKey(<span class="string">"snapshot"</span>, type), <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">0</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> distroDataStorage.getDatumSnapshot();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroDataStorageImpl</span> <span class="keyword">implements</span> <span class="title">DistroDataStorage</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">getDatumSnapshot</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        Map&lt;String, Datum&gt; result = dataStore.getDataMap();</span><br><span class="line">        <span class="keyword">byte</span>[] dataContent = ApplicationUtils.getBean(Serializer<span class="class">.<span class="keyword">class</span>).<span class="title">serialize</span>(<span class="title">result</span>)</span>;</span><br><span class="line">        DistroKey distroKey = <span class="keyword">new</span> DistroKey(<span class="string">"snapshot"</span>, KeyBuilder.INSTANCE_LIST_KEY_PREFIX);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> DistroData(distroKey, dataContent);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于<strong><code>ephemeral</code></strong>为<strong><code>true</code></strong>的<strong>实例</strong>数据，会首先直接添加到缓存中，然后判断若当前没有则创建添加更新到注册表中，对于ephemeral为false的实例数据，若不存在则跳过，若存在则更新注册表数据。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroConsistencyServiceImpl</span> <span class="keyword">implements</span> <span class="title">EphemeralConsistencyService</span>, <span class="title">DistroDataProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">processSnapshot</span><span class="params">(DistroData distroData)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> processData(distroData.getContent());</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">processData</span><span class="params">(<span class="keyword">byte</span>[] data)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (data.length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            Map&lt;String, Datum&lt;Instances&gt;&gt; datumMap = serializer.deserializeMap(data, Instances<span class="class">.<span class="keyword">class</span>)</span>; <span class="comment">// 反序列化</span></span><br><span class="line">            <span class="keyword">for</span> (Map.Entry&lt;String, Datum&lt;Instances&gt;&gt; entry : datumMap.entrySet()) &#123;</span><br><span class="line">                dataStore.put(entry.getKey(), entry.getValue()); <span class="comment">// 替换缓存中的数据</span></span><br><span class="line">                <span class="keyword">if</span> (!listeners.containsKey(entry.getKey())) &#123; <span class="comment">// 若serviceList中不包含该数据则创建一个并更新到注册表中</span></span><br><span class="line">                    <span class="comment">// pretty sure the service not exist:</span></span><br><span class="line">                    <span class="keyword">if</span> (switchDomain.isDefaultInstanceEphemeral()) &#123; <span class="comment">// ephemeral为true的实例，默认为true</span></span><br><span class="line">                        <span class="comment">// create empty service</span></span><br><span class="line">                        Loggers.DISTRO.info(<span class="string">"creating service &#123;&#125;"</span>, entry.getKey());</span><br><span class="line">                        Service service = <span class="keyword">new</span> Service();</span><br><span class="line">                        String serviceName = KeyBuilder.getServiceName(entry.getKey());</span><br><span class="line">                        String namespaceId = KeyBuilder.getNamespace(entry.getKey());</span><br><span class="line">                        service.setName(serviceName);</span><br><span class="line">                        service.setNamespaceId(namespaceId);</span><br><span class="line">                        service.setGroupName(Constants.DEFAULT_GROUP);</span><br><span class="line">                        <span class="comment">// now validate the service. if failed, exception will be thrown</span></span><br><span class="line">                        service.setLastModifiedMillis(System.currentTimeMillis());</span><br><span class="line">                        service.recalculateChecksum();</span><br><span class="line">                        <span class="comment">// The Listener corresponding to the key value must not be empty</span></span><br><span class="line">                        RecordListener listener = listeners.get(KeyBuilder.SERVICE_META_KEY_PREFIX).peek();</span><br><span class="line">                        <span class="keyword">if</span> (Objects.isNull(listener)) &#123;</span><br><span class="line">                            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">                        &#125;</span><br><span class="line">                        listener.onChange(KeyBuilder.buildServiceMetaKey(namespaceId, serviceName), service); <span class="comment">// 更新注册表数据</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">for</span> (Map.Entry&lt;String, Datum&lt;Instances&gt;&gt; entry : datumMap.entrySet()) &#123; <span class="comment">// 处理ephemeral为false的实例</span></span><br><span class="line">                <span class="keyword">if</span> (!listeners.containsKey(entry.getKey())) &#123;<span class="comment">// Should not happen: 若实例不存在则直接跳过</span></span><br><span class="line">                    Loggers.DISTRO.warn(<span class="string">"listener of &#123;&#125; not found."</span>, entry.getKey());</span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">for</span> (RecordListener listener : listeners.get(entry.getKey())) &#123;</span><br><span class="line">                        listener.onChange(entry.getKey(), entry.getValue().value); <span class="comment">// 更新注册表数据</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                dataStore.put(entry.getKey(), entry.getValue()); <span class="comment">// 更新缓存中的数据</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="服务状态定时同步"><a href="#服务状态定时同步" class="headerlink" title="服务状态定时同步"></a>服务状态定时同步</h4><p>注册的实例数据的定时同步是通过<strong><code>DistroProtocol</code></strong>构造方法中<strong><code>startDistroTask</code></strong>中调用<strong><code>startVerifyTask</code></strong>将同步任务封装成<strong><code>DistroVerifyTask</code></strong>添加到周期定时执行线程中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroProtocol</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startVerifyTask</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        GlobalExecutor.schedulePartitionDataTimedSync(<span class="keyword">new</span> DistroVerifyTask(memberManager, distroComponentHolder), distroConfig.getVerifyIntervalMillis());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先会获取<strong>注册在本机上</strong>的所有客户端注册数据计算的<strong><code>checksum</code></strong>放入列表中封装成<strong><code>DistroKey</code></strong>，然后将该数据发送到每一个服务端成员进行校验。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroVerifyTask</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            List&lt;Member&gt; targetServer = serverMemberManager.allMembersWithoutSelf(); <span class="comment">// 获取所有除开自己的其它服务端成员</span></span><br><span class="line">            <span class="keyword">for</span> (String each : distroComponentHolder.getDataStorageTypes()) &#123;</span><br><span class="line">                verifyForDataStorage(each, targetServer);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">verifyForDataStorage</span><span class="params">(String type, List&lt;Member&gt; targetServer)</span> </span>&#123;</span><br><span class="line">        DistroData distroData = distroComponentHolder.findDataStorage(type).getVerifyData(); <span class="comment">// 获取本机上所有客户端服务的注册keyChecksums</span></span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == distroData) &#123;</span><br><span class="line">            <span class="keyword">return</span>; <span class="comment">// 若没有任何客户端注册在本实例上</span></span><br><span class="line">        &#125;</span><br><span class="line">        distroData.setType(DataOperation.VERIFY);</span><br><span class="line">        <span class="keyword">for</span> (Member member : targetServer) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                distroComponentHolder.findTransportAgent(type).syncVerifyData(distroData, member.getAddress());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroDataStorageImpl</span> <span class="keyword">implements</span> <span class="title">DistroDataStorage</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">getVerifyData</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        Map&lt;String, String&gt; keyChecksums = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">64</span>);</span><br><span class="line">        <span class="keyword">for</span> (String key : dataStore.keys()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!distroMapper.responsible(KeyBuilder.getServiceName(key))) &#123;</span><br><span class="line">                <span class="keyword">continue</span>; <span class="comment">// 若key对应的客户端服务不是注册在当前的服务端上，则跳过</span></span><br><span class="line">            &#125;</span><br><span class="line">            Datum datum = dataStore.get(key);</span><br><span class="line">            <span class="keyword">if</span> (datum == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">continue</span>; <span class="comment">// 若当前Key获取到的Service缓存数据为null</span></span><br><span class="line">            &#125;</span><br><span class="line">            keyChecksums.put(key, datum.value.getChecksum());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (keyChecksums.isEmpty()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>; <span class="comment">// 若没有找到注册的服务信息</span></span><br><span class="line">        &#125;</span><br><span class="line">        DistroKey distroKey = <span class="keyword">new</span> DistroKey(<span class="string">"checksum"</span>, KeyBuilder.INSTANCE_LIST_KEY_PREFIX);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> DistroData(distroKey, ApplicationUtils.getBean(Serializer<span class="class">.<span class="keyword">class</span>).<span class="title">serialize</span>(<span class="title">keyChecksums</span>))</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终挨个调用目标成员的<strong><code>/v1/ns/distro/checksum</code></strong>接口进行数据校验，这里<strong><code>localServer</code></strong>的目的是用于目标成员回调，获取更新的服务实例数据。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroHttpAgent</span> <span class="keyword">implements</span> <span class="title">DistroTransportAgent</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">syncVerifyData</span><span class="params">(DistroData verifyData, String targetServer)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!memberManager.hasMember(targetServer)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>; <span class="comment">// 若当前服务端实例不在成员列表中</span></span><br><span class="line">        &#125;</span><br><span class="line">        NamingProxy.syncCheckSums(verifyData.getContent(), targetServer);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamingProxy</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">syncCheckSums</span><span class="params">(<span class="keyword">byte</span>[] checksums, String server)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123; <span class="comment">// 调用/v1/ns/distro/checksum?source=localServer接口校验</span></span><br><span class="line">            Map&lt;String, String&gt; headers = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">128</span>);</span><br><span class="line">            headers.put(HttpHeaderConsts.CLIENT_VERSION_HEADER, VersionUtils.version);</span><br><span class="line">            headers.put(HttpHeaderConsts.USER_AGENT_HEADER, UtilsAndCommons.SERVER_VERSION);</span><br><span class="line">            headers.put(HttpHeaderConsts.CONNECTION, <span class="string">"Keep-Alive"</span>);</span><br><span class="line">            HttpClient.asyncHttpPutLarge(<span class="string">"http://"</span> + server + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + TIMESTAMP_SYNC_URL + <span class="string">"?source="</span> + NetUtils.localServer(), headers, checksums, <span class="keyword">new</span> Callback&lt;String&gt;() &#123;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceive</span><span class="params">(RestResult&lt;String&gt; result)</span> </span>&#123;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable throwable)</span> </span>&#123;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="meta">@Override</span></span><br><span class="line">                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCancel</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>若<strong>上一次任务还没有执行完成</strong>又接收到了新的任务会<strong>直接跳过</strong>，若接收的实例列表存在注册在当前机器上发送者是本机则直接中断，让后将新增和更新的服务实例的Key添加到<strong><code>toUpdateKeys</code></strong>中，然后遍历本机中<strong>注册在发送请求验证的服务成员上</strong>的实例列表，判断实例是否已删除。最后通过<strong><code>onRemove</code></strong>异步执行更新注册表，对于需要更新的数据会回调<strong><code>/v1/ns/distro/datum</code></strong>接口获取最新的实例数据然后解析更新缓存和注册表中的数据。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(UtilsAndCommons.NACOS_NAMING_CONTEXT + <span class="string">"/distro"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroController</span> </span>&#123;</span><br><span class="line">    <span class="meta">@PutMapping</span>(<span class="string">"/checksum"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ResponseEntity <span class="title">syncChecksum</span><span class="params">(@RequestParam String source, @RequestBody Map&lt;String, String&gt; dataMap)</span> </span>&#123;</span><br><span class="line">        DistroHttpData distroHttpData = <span class="keyword">new</span> DistroHttpData(createDistroKey(source), dataMap);</span><br><span class="line">        distroProtocol.onVerify(distroHttpData);</span><br><span class="line">        <span class="keyword">return</span> ResponseEntity.ok(<span class="string">"ok"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroProtocol</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">onVerify</span><span class="params">(DistroData distroData)</span> </span>&#123;</span><br><span class="line">        String resourceType = distroData.getDistroKey().getResourceType();</span><br><span class="line">        DistroDataProcessor dataProcessor = distroComponentHolder.findDataProcessor(resourceType);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == dataProcessor) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> dataProcessor.processVerifyData(distroData);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroConsistencyServiceImpl</span> <span class="keyword">implements</span> <span class="title">EphemeralConsistencyService</span>, <span class="title">DistroDataProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">processVerifyData</span><span class="params">(DistroData distroData)</span> </span>&#123;</span><br><span class="line">        DistroHttpData distroHttpData = (DistroHttpData) distroData;</span><br><span class="line">        String sourceServer = distroData.getDistroKey().getResourceKey();</span><br><span class="line">        Map&lt;String, String&gt; verifyData = (Map&lt;String, String&gt;) distroHttpData.getDeserializedContent();</span><br><span class="line">        onReceiveChecksums(verifyData, sourceServer);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceiveChecksums</span><span class="params">(Map&lt;String, String&gt; checksumMap, String server)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (syncChecksumTasks.containsKey(server)) &#123; <span class="comment">// Already in process of this server:</span></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        syncChecksumTasks.put(server, <span class="string">"1"</span>); <span class="comment">// 将任务添加到syncChecksumTasks中</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            List&lt;String&gt; toUpdateKeys = <span class="keyword">new</span> ArrayList&lt;&gt;(); <span class="comment">// 需要更新的列表，包括更新和添加的数据</span></span><br><span class="line">            List&lt;String&gt; toRemoveKeys = <span class="keyword">new</span> ArrayList&lt;&gt;(); <span class="comment">// 需要移除的列表</span></span><br><span class="line">            <span class="keyword">for</span> (Map.Entry&lt;String, String&gt; entry : checksumMap.entrySet()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (distroMapper.responsible(KeyBuilder.getServiceName(entry.getKey()))) &#123;<span class="comment">// this key should not be sent from remote server:</span></span><br><span class="line">                    <span class="keyword">return</span>; <span class="comment">// abort the procedure: 当前客户端服务注册在当前的服务端上</span></span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (!dataStore.contains(entry.getKey()) || dataStore.get(entry.getKey()).value == <span class="keyword">null</span> || !dataStore.get(entry.getKey()).value.getChecksum().equals(entry.getValue())) &#123;</span><br><span class="line">                    toUpdateKeys.add(entry.getKey()); <span class="comment">// 若DataStore缓存中key不存在或key对应的值不存在或值的checksum不相等</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">for</span> (String key : dataStore.keys()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (!server.equals(distroMapper.mapSrv(KeyBuilder.getServiceName(key)))) &#123;</span><br><span class="line">                    <span class="keyword">continue</span>; <span class="comment">// 若当前客户端服务不是注册在发送校验请求的服务端成员上</span></span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (!checksumMap.containsKey(key)) &#123;</span><br><span class="line">                    toRemoveKeys.add(key); <span class="comment">// 若当前客户端服务不在接收列表中，说明已被删除</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">for</span> (String key : toRemoveKeys) &#123;</span><br><span class="line">                onRemove(key); <span class="comment">// 将需要删除的service数据从缓存中移除</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (toUpdateKeys.isEmpty()) &#123;</span><br><span class="line">                <span class="keyword">return</span>; <span class="comment">// 若更新列表为空</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                DistroHttpCombinedKey distroKey = <span class="keyword">new</span> DistroHttpCombinedKey(KeyBuilder.INSTANCE_LIST_KEY_PREFIX, server);</span><br><span class="line">                distroKey.getActualResourceTypes().addAll(toUpdateKeys);</span><br><span class="line">                DistroData remoteData = distroProtocol.queryFromRemote(distroKey); <span class="comment">// 调用对应的服务端成员查询数据</span></span><br><span class="line">                <span class="keyword">if</span> (<span class="keyword">null</span> != remoteData) &#123;</span><br><span class="line">                    processData(remoteData.getContent());</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;<span class="comment">// Remove this 'in process' flag:</span></span><br><span class="line">            syncChecksumTasks.remove(server);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">queryFromRemote</span><span class="params">(DistroKey distroKey)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == distroKey.getTargetServer()) &#123;</span><br><span class="line">            Loggers.DISTRO.warn(<span class="string">"[DISTRO] Can't query data from empty server"</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        String resourceType = distroKey.getResourceType();</span><br><span class="line">        DistroTransportAgent transportAgent = distroComponentHolder.findTransportAgent(resourceType);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == transportAgent) &#123;</span><br><span class="line">            Loggers.DISTRO.warn(<span class="string">"[DISTRO] Can't find transport agent for key &#123;&#125;"</span>, resourceType);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> transportAgent.getData(distroKey, distroKey.getTargetServer());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onRemove</span><span class="params">(String key)</span> </span>&#123;</span><br><span class="line">        dataStore.remove(key); <span class="comment">// 从缓存中移除</span></span><br><span class="line">        <span class="keyword">if</span> (!listeners.containsKey(key)) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        notifier.addTask(key, DataOperation.DELETE); <span class="comment">// 更注册表</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroHttpAgent</span> <span class="keyword">implements</span> <span class="title">DistroTransportAgent</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">getData</span><span class="params">(DistroKey key, String targetServer)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            List&lt;String&gt; toUpdateKeys = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">if</span> (key <span class="keyword">instanceof</span> DistroHttpCombinedKey) &#123;</span><br><span class="line">                toUpdateKeys = ((DistroHttpCombinedKey) key).getActualResourceTypes();</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                toUpdateKeys = <span class="keyword">new</span> ArrayList&lt;&gt;(<span class="number">1</span>);</span><br><span class="line">                toUpdateKeys.add(key.getResourceKey());</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">byte</span>[] queriedData = NamingProxy.getData(toUpdateKeys, key.getTargetServer());</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> DistroData(key, queriedData);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NamingProxy</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">byte</span>[] getData(List&lt;String&gt; keys, String server) <span class="keyword">throws</span> Exception &#123; <span class="comment">// 回调/v1/ns/distro/datum接口获取最新的实例数据</span></span><br><span class="line">        Map&lt;String, String&gt; params = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">8</span>);</span><br><span class="line">        params.put(<span class="string">"keys"</span>, StringUtils.join(keys, <span class="string">","</span>));</span><br><span class="line">        RestResult&lt;String&gt; result = HttpClient.httpGetLarge(<span class="string">"http://"</span> + server + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + DATA_GET_URL, <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">8</span>), JacksonUtils.toJson(params));</span><br><span class="line">        <span class="keyword">if</span> (result.ok()) &#123;</span><br><span class="line">            <span class="keyword">return</span> result.getData().getBytes();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"failed to req API: "</span> + <span class="string">"http://"</span> + server + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + DATA_GET_URL + <span class="string">". code: "</span> + result.getCode() + <span class="string">" msg: "</span> + result.getMessage());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终会将最新的数据<strong>批量</strong>从缓存中获取然后返给请求方。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(UtilsAndCommons.NACOS_NAMING_CONTEXT + <span class="string">"/distro"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroController</span> </span>&#123;</span><br><span class="line">    <span class="meta">@GetMapping</span>(<span class="string">"/datum"</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> ResponseEntity <span class="title">get</span><span class="params">(@RequestBody String body)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        JsonNode bodyNode = JacksonUtils.toObj(body);</span><br><span class="line">        String keys = bodyNode.get(<span class="string">"keys"</span>).asText();</span><br><span class="line">        String keySplitter = <span class="string">","</span>;</span><br><span class="line">        DistroHttpCombinedKey distroKey = <span class="keyword">new</span> DistroHttpCombinedKey(KeyBuilder.INSTANCE_LIST_KEY_PREFIX, <span class="string">""</span>);</span><br><span class="line">        <span class="keyword">for</span> (String key : keys.split(keySplitter)) &#123;</span><br><span class="line">            distroKey.getActualResourceTypes().add(key);</span><br><span class="line">        &#125;</span><br><span class="line">        DistroData distroData = distroProtocol.onQuery(distroKey);</span><br><span class="line">        <span class="keyword">return</span> ResponseEntity.ok(distroData.getContent());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroProtocol</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">onQuery</span><span class="params">(DistroKey distroKey)</span> </span>&#123;</span><br><span class="line">        String resourceType = distroKey.getResourceType();</span><br><span class="line">        DistroDataStorage distroDataStorage = distroComponentHolder.findDataStorage(resourceType);</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> == distroDataStorage) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> DistroData(distroKey, <span class="keyword">new</span> <span class="keyword">byte</span>[<span class="number">0</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> distroDataStorage.getDistroData(distroKey);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroDataStorageImpl</span> <span class="keyword">implements</span> <span class="title">DistroDataStorage</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> DistroData <span class="title">getDistroData</span><span class="params">(DistroKey distroKey)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, Datum&gt; result = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">1</span>);</span><br><span class="line">        <span class="keyword">if</span> (distroKey <span class="keyword">instanceof</span> DistroHttpCombinedKey) &#123;</span><br><span class="line">            result = dataStore.batchGet(((DistroHttpCombinedKey) distroKey).getActualResourceTypes());</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            Datum datum = dataStore.get(distroKey.getResourceKey());</span><br><span class="line">            result.put(distroKey.getResourceKey(), datum);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">byte</span>[] dataContent = ApplicationUtils.getBean(Serializer<span class="class">.<span class="keyword">class</span>).<span class="title">serialize</span>(<span class="title">result</span>)</span>;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> DistroData(distroKey, dataContent);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataStore</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Map&lt;String, Datum&gt; <span class="title">batchGet</span><span class="params">(List&lt;String&gt; keys)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, Datum&gt; map = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">128</span>);</span><br><span class="line">        <span class="keyword">for</span> (String key : keys) &#123;</span><br><span class="line">            Datum datum = dataMap.get(key);</span><br><span class="line">            <span class="keyword">if</span> (datum == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            map.put(key, datum);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> map;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/Nacos/Nacos集群CP模式/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Nacos集群CP模式
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Nacos集群成员信息同步</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

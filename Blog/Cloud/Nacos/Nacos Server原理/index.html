@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Nacos Server原理 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="SpringCloud,Nacos">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="服务注册：Nacos Client通过发送REST请求的方式向Nacos Server注册自己的服务，提供自身元数据，如ip地址、端口等信息。Nacos Server接收到注册请求后，把这些元数据信息存储在一个双层的内存Map中 服务心跳：在服务注册后，Nacos Client会维护一个定时心跳来持续通知Nacos Server，说明服务一直处于可用状态，防止被剔除。默认5s发送一次心跳 服务健">
+<meta name="keywords" content="SpringCloud,Nacos">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Nacos Server原理">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/Nacos/Nacos Server原理/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="服务注册：Nacos Client通过发送REST请求的方式向Nacos Server注册自己的服务，提供自身元数据，如ip地址、端口等信息。Nacos Server接收到注册请求后，把这些元数据信息存储在一个双层的内存Map中 服务心跳：在服务注册后，Nacos Client会维护一个定时心跳来持续通知Nacos Server，说明服务一直处于可用状态，防止被剔除。默认5s发送一次心跳 服务健">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/Nacos/Nacos整体架构图.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/Nacos/Nacos服务注册表结构实例.png">
+<meta property="og:updated_time" content="2022-01-13T12:01:21.973Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Nacos Server原理">
+<meta name="twitter:description" content="服务注册：Nacos Client通过发送REST请求的方式向Nacos Server注册自己的服务，提供自身元数据，如ip地址、端口等信息。Nacos Server接收到注册请求后，把这些元数据信息存储在一个双层的内存Map中 服务心跳：在服务注册后，Nacos Client会维护一个定时心跳来持续通知Nacos Server，说明服务一直处于可用状态，防止被剔除。默认5s发送一次心跳 服务健">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Cloud/Nacos/Nacos整体架构图.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/Nacos/Nacos Server原理" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/Nacos/">Nacos</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Nacos/">Nacos</a>, <a class="tag-link" href="/tags/SpringCloud/">SpringCloud</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/Nacos/Nacos Server原理/">
+            <time datetime="2021-10-19T16:00:00.000Z" itemprop="datePublished">2021-10-20</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Nacos Server原理
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p><img src="../../../../../images/Cloud/Nacos/Nacos整体架构图.png" alt></p>
+<p><strong>服务注册</strong>：Nacos Client通过发送REST请求的方式向Nacos Server注册自己的服务，提供自身元数据，如ip地址、端口等信息。Nacos Server接收到注册请求后，把这些元数据信息存储在一个双层的内存Map中</p>
+<p><strong>服务心跳</strong>：在服务注册后，Nacos Client会维护一个<strong>定时心跳</strong>来持续通知Nacos Server，说明服务一直处于可用状态，防止被剔除。<strong>默认<code>5s</code></strong>发送一次心跳</p>
+<p><strong>服务健康检查</strong>：Nacos Server会开启一个<strong>定时任务</strong>用来<strong>检查注册服务实例的健康情况</strong>，对于<strong>超过<code>15s</code></strong>没有收到客户端心跳的实例会将它的<strong><code>healthy</code></strong>属性置为<strong><code>false</code></strong>，若某个实例超过<strong><code>30s</code></strong>没收到心跳，直接剔除该实例，被剔除实例若恢复发送心跳则重新注册</p>
+<p><strong>服务发现</strong>：Nacos Client调用服务提供者服务时，会发送一个REST请求给Nacos Server，获取注册服务清单，且缓存在Nacos Client本地，同时会在Nacos Client本地开启一个定时任务<strong>定时拉取</strong>服务端最新注册表信息更新到本地缓存</p>
+<p><strong>服务同步</strong>：Nacos Server集群之间会互相同步服务实例，用来保证服务信息的一致性。 </p>
+<p><img src="../../../../../images/Cloud/Nacos/Nacos服务注册表结构实例.png" alt="Nacos服务注册表结构实例"></p>
+<h4 id="服务注册"><a href="#服务注册" class="headerlink" title="服务注册"></a>服务注册</h4><p>客户端服务注册调用的<strong><code>InstanceController</code></strong>的<strong><code>register</code></strong>最终调用<strong><code>ServiceManager</code></strong>的<strong><code>registerInstance</code></strong>注册服务实例。首先判断当前命名空间下该服务名称的服务是否存在若不存在这创建一个服务，将其放入<strong>服务注册表<code>serviceMap</code></strong>中，添加心跳监控检查，以及创建<strong><code>RecordListener</code></strong>，将当前实例添加到服务中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@CanDistro</span></span><br><span class="line"><span class="meta">@PostMapping</span></span><br><span class="line"><span class="meta">@Secured</span>(parser = NamingResourceParser<span class="class">.<span class="keyword">class</span>, <span class="title">action</span> </span>= ActionTypes.WRITE)</span><br><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">register</span><span class="params">(HttpServletRequest request)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> String namespaceId = WebUtils.optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);</span><br><span class="line">    <span class="keyword">final</span> String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);</span><br><span class="line">    NamingUtils.checkServiceNameFormat(serviceName);</span><br><span class="line">    <span class="keyword">final</span> Instance instance = parseInstance(request); <span class="comment">// 解析请求参数为Instance</span></span><br><span class="line">    serviceManager.registerInstance(namespaceId, serviceName, instance);</span><br><span class="line">    <span class="keyword">return</span> <span class="string">"ok"</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ServiceManager</span> <span class="keyword">implements</span> <span class="title">RecordListener</span>&lt;<span class="title">Service</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, Map&lt;String, Service&gt;&gt; serviceMap = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerInstance</span><span class="params">(String namespaceId, String serviceName, Instance instance)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        createEmptyService(namespaceId, serviceName, instance.isEphemeral()); <span class="comment">// 若对应的Service不存在，则先创建</span></span><br><span class="line">        Service service = getService(namespaceId, serviceName); <span class="comment">// 从缓存中获取Service</span></span><br><span class="line">        <span class="keyword">if</span> (service == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> NacosException(NacosException.INVALID_PARAM, <span class="string">"service not found, namespace: "</span> + namespaceId + <span class="string">", service: "</span> + serviceName);</span><br><span class="line">        &#125;</span><br><span class="line">        addInstance(namespaceId, serviceName, instance.isEphemeral(), instance); <span class="comment">// 将实例对象添加到注册表，以及同步给其它服务端成员</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">createEmptyService</span><span class="params">(String namespaceId, String serviceName, <span class="keyword">boolean</span> local)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        createServiceIfAbsent(namespaceId, serviceName, local, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">createServiceIfAbsent</span><span class="params">(String namespaceId, String serviceName, <span class="keyword">boolean</span> local, Cluster cluster)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        Service service = getService(namespaceId, serviceName);</span><br><span class="line">        <span class="keyword">if</span> (service == <span class="keyword">null</span>) &#123; <span class="comment">// 若缓存中namespaceId下无serviceName对应的Service</span></span><br><span class="line">            service = <span class="keyword">new</span> Service();</span><br><span class="line">            service.setName(serviceName);   <span class="comment">// 设置serviceName</span></span><br><span class="line">            service.setNamespaceId(namespaceId);    <span class="comment">// 设置namespaceId</span></span><br><span class="line">            service.setGroupName(NamingUtils.getGroupName(serviceName));</span><br><span class="line">            service.setLastModifiedMillis(System.currentTimeMillis()); <span class="comment">// 设置服务最新更新时间为当前时间</span></span><br><span class="line">            service.recalculateChecksum();</span><br><span class="line">            <span class="keyword">if</span> (cluster != <span class="keyword">null</span>) &#123; <span class="comment">// cluster传入的是null，故这里Service中clusterMap为空</span></span><br><span class="line">                cluster.setService(service);</span><br><span class="line">                service.getClusterMap().put(cluster.getName(), cluster);</span><br><span class="line">            &#125;</span><br><span class="line">            service.validate();</span><br><span class="line">            putServiceAndInit(service); <span class="comment">// 将Service添加到注册表中，添加心跳监控检查，以及创建RecordListener</span></span><br><span class="line">            <span class="keyword">if</span> (!local) &#123; <span class="comment">// AP模式local为true，CP模式local为false</span></span><br><span class="line">                addOrReplaceService(service); <span class="comment">// CP模式添加或替换服务</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Service <span class="title">getService</span><span class="params">(String namespaceId, String serviceName)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (serviceMap.get(namespaceId) == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>; <span class="comment">// 若namespaceId对应的Service Map都不存在</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> chooseServiceMap(namespaceId).get(serviceName); <span class="comment">// 从缓存serviceMap中获取serviceName的Service</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先通过<strong><code>putService</code></strong>方法将当前Service添加到<strong>注册表</strong>中，然后通过Service的<strong><code>init</code></strong>方法为当前服务注册<strong>AP模式</strong>的健康检查心跳任务<strong><code>ClientBeatCheckTask</code></strong>，该心跳任务<strong><code>5s</code></strong>后执行，且任务执行完后每<strong><code>5s</code></strong>执行。以及<strong>CP模式</strong>的健康检查心跳任务<strong><code>HealthCheckTask</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">putServiceAndInit</span><span class="params">(Service service)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    putService(service); <span class="comment">// 将服务添加到注册表</span></span><br><span class="line">    service.init(); <span class="comment">// 心跳检查注册，创建时不会创建CP模式心跳监控检查任务</span></span><br><span class="line">    <span class="comment">// 给AP模式的服务注册监听器，以便服务变更时将服务同步给其他服务端成员</span></span><br><span class="line">    consistencyService.listen(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), <span class="keyword">true</span>), service);</span><br><span class="line">    <span class="comment">// 给CP模式的服务注册监听器，以便服务变更时将服务同步给其他服务端成员</span></span><br><span class="line">    consistencyService.listen(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), <span class="keyword">false</span>), service);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">putService</span><span class="params">(Service service)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!serviceMap.containsKey(service.getNamespaceId())) &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (putServiceLock) &#123; <span class="comment">// 若namespaceId对应的Map不存在，则先创建一个ConcurrentSkipListMap</span></span><br><span class="line">            <span class="keyword">if</span> (!serviceMap.containsKey(service.getNamespaceId())) &#123;</span><br><span class="line">                serviceMap.put(service.getNamespaceId(), <span class="keyword">new</span> ConcurrentSkipListMap&lt;&gt;());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    serviceMap.get(service.getNamespaceId()).put(service.getName(), service); <span class="comment">// 将服务添加到注册表</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Service</span> <span class="keyword">extends</span> <span class="title">com</span>.<span class="title">alibaba</span>.<span class="title">nacos</span>.<span class="title">api</span>.<span class="title">naming</span>.<span class="title">pojo</span>.<span class="title">Service</span> <span class="keyword">implements</span> <span class="title">Record</span>, <span class="title">RecordListener</span>&lt;<span class="title">Instances</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        HealthCheckReactor.scheduleCheck(clientBeatCheckTask); <span class="comment">// CP模式心跳检测</span></span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, Cluster&gt; entry : clusterMap.entrySet()) &#123;</span><br><span class="line">            entry.getValue().setService(<span class="keyword">this</span>);</span><br><span class="line">            entry.getValue().init();  <span class="comment">// 创建CP模式心跳监控检查任务</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HealthCheckReactor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">scheduleCheck</span><span class="params">(ClientBeatCheckTask task)</span> </span>&#123;</span><br><span class="line">        futureMap.putIfAbsent(task.taskKey(), GlobalExecutor.scheduleNamingHealth(task, <span class="number">5000</span>, <span class="number">5000</span>, TimeUnit.MILLISECONDS));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Cluster</span> <span class="keyword">extends</span> <span class="title">com</span>.<span class="title">alibaba</span>.<span class="title">nacos</span>.<span class="title">api</span>.<span class="title">naming</span>.<span class="title">pojo</span>.<span class="title">Cluster</span> <span class="keyword">implements</span> <span class="title">Cloneable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (inited) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        checkTask = <span class="keyword">new</span> HealthCheckTask(<span class="keyword">this</span>); <span class="comment">// 创建CP模式心跳监控检查任务</span></span><br><span class="line">        HealthCheckReactor.scheduleCheck(checkTask);</span><br><span class="line">        inited = <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先获取该Service下所有实例对象，然后遍历通过<strong>当前时间</strong>减去客户端<strong>最后发送心跳时间</strong>若大于<strong><code>15s</code></strong>则将当前实例<strong>健康状态</strong>设置为<strong><code>false</code></strong>。若当<strong>前时间</strong>减去客户端<strong>最后发送心跳时间</strong>大于<strong><code>30s</code></strong>，则异步调用自身的HTTP接口<strong><code>/v1/ns/instance</code></strong>将其踢出。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClientBeatCheckTask</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123; <span class="comment">// 客户端心跳检测</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (!getDistroMapper().responsible(service.getName())) &#123;</span><br><span class="line">                <span class="keyword">return</span>;<span class="comment">// 当前客户端服务不是注册在当前的服务端上</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!getSwitchDomain().isHealthCheckEnabled()) &#123;</span><br><span class="line">                <span class="keyword">return</span>; <span class="comment">// 若不允许健康检查则跳过</span></span><br><span class="line">            &#125;</span><br><span class="line">            List&lt;Instance&gt; instances = service.allIPs(<span class="keyword">true</span>); <span class="comment">// 获取所有ephemeralInstances实例，即AP模式的实例</span></span><br><span class="line">            <span class="keyword">for</span> (Instance instance : instances) &#123;</span><br><span class="line">                <span class="keyword">if</span> (System.currentTimeMillis() - instance.getLastBeat() &gt; instance.getInstanceHeartBeatTimeOut()) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (!instance.isMarked()) &#123; <span class="comment">// 判断最后心跳时间是否大于15s，marked默认为false</span></span><br><span class="line">                        <span class="keyword">if</span> (instance.isHealthy()) &#123;</span><br><span class="line">                            instance.setHealthy(<span class="keyword">false</span>); <span class="comment">// 若当前节点状态是健康的则置为非健康状态</span></span><br><span class="line">                            getPushService().serviceChanged(service);</span><br><span class="line">                            ApplicationUtils.publishEvent(<span class="keyword">new</span> InstanceHeartbeatTimeoutEvent(<span class="keyword">this</span>, instance)); <span class="comment">// 发布实例健康检查超时事件</span></span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!getGlobalConfig().isExpireInstance()) &#123;<span class="comment">// expireInstance默认为true</span></span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">for</span> (Instance instance : instances) &#123;</span><br><span class="line">                <span class="keyword">if</span> (instance.isMarked()) &#123; <span class="comment">// marked默认为false</span></span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (System.currentTimeMillis() - instance.getLastBeat() &gt; instance.getIpDeleteTimeout()) &#123;</span><br><span class="line">                    deleteIp(instance); <span class="comment">// 判断最后心跳时间是否大于30s，若是则移除该实例</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> List&lt;Instance&gt; <span class="title">allIPs</span><span class="params">(<span class="keyword">boolean</span> ephemeral)</span> </span>&#123;</span><br><span class="line">    List&lt;Instance&gt; result = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (Map.Entry&lt;String, Cluster&gt; entry : clusterMap.entrySet()) &#123;</span><br><span class="line">        result.addAll(entry.getValue().allIPs(ephemeral));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> List&lt;Instance&gt; <span class="title">allIPs</span><span class="params">(<span class="keyword">boolean</span> ephemeral)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> ephemeral ? <span class="keyword">new</span> ArrayList&lt;&gt;(ephemeralInstances) : <span class="keyword">new</span> ArrayList&lt;&gt;(persistentInstances);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">deleteIp</span><span class="params">(Instance instance)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;<span class="comment">// 通过异步调用/v1/ns/instance接口的deregister来删除实例</span></span><br><span class="line">        NamingProxy.Request request = NamingProxy.Request.newRequest();</span><br><span class="line">        request.appendParam(<span class="string">"ip"</span>, instance.getIp()).appendParam(<span class="string">"port"</span>, String.valueOf(instance.getPort()))</span><br><span class="line">            .appendParam(<span class="string">"ephemeral"</span>, <span class="string">"true"</span>).appendParam(<span class="string">"clusterName"</span>, instance.getClusterName())</span><br><span class="line">            .appendParam(<span class="string">"serviceName"</span>, service.getName()).appendParam(<span class="string">"namespaceId"</span>, service.getNamespaceId());</span><br><span class="line">        String url = <span class="string">"http://"</span> + IPUtil.localHostIP() + IPUtil.IP_PORT_SPLITER + EnvUtil.getPort() + EnvUtil.getContextPath() + UtilsAndCommons.NACOS_NAMING_CONTEXT + <span class="string">"/instance?"</span> + request.toUrl();</span><br><span class="line">        HttpClient.asyncHttpDelete(url, <span class="keyword">null</span>, <span class="keyword">null</span>, <span class="keyword">new</span> Callback&lt;String&gt;() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onReceive</span><span class="params">(RestResult&lt;String&gt; result)</span> </span>&#123;&#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(Throwable throwable)</span> </span>&#123;&#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCancel</span><span class="params">()</span> </span>&#123;&#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroMapper</span> <span class="keyword">extends</span> <span class="title">MemberChangeListener</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">responsible</span><span class="params">(String serviceName)</span> </span>&#123; <span class="comment">// 当前客户端服务是否注册在当前的服务端上，在返回true</span></span><br><span class="line">        <span class="keyword">final</span> List&lt;String&gt; servers = healthyList; <span class="comment">// 健康的服务端成员列表</span></span><br><span class="line">        <span class="keyword">if</span> (!switchDomain.isDistroEnabled() || EnvUtil.getStandaloneMode()) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>; <span class="comment">// 若是standalone启动模式</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (CollectionUtils.isEmpty(servers)) &#123; <span class="comment">// 健康的服务端成员列表为空</span></span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">int</span> index = servers.indexOf(EnvUtil.getLocalAddress());</span><br><span class="line">        <span class="keyword">int</span> lastIndex = servers.lastIndexOf(EnvUtil.getLocalAddress());</span><br><span class="line">        <span class="keyword">if</span> (lastIndex &lt; <span class="number">0</span> || index &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>; <span class="comment">// 若本机不在健康的服务端成员列表中</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">int</span> target = distroHash(serviceName) % servers.size();</span><br><span class="line">        <span class="keyword">return</span> target &gt;= index &amp;&amp; target &lt;= lastIndex;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>添加实例时将<strong><code>DataStore</code></strong>缓存中数据获取出来，与注册表中的数据进行对比，并更新健康状态和最后心跳时间，将新增实例添加到Map中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addInstance</span><span class="params">(String namespaceId, String serviceName, <span class="keyword">boolean</span> ephemeral, Instance... ips)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    String key = KeyBuilder.buildInstanceListKey(namespaceId, serviceName, ephemeral);</span><br><span class="line">    Service service = getService(namespaceId, serviceName);</span><br><span class="line">    <span class="keyword">synchronized</span> (service) &#123;</span><br><span class="line">        List&lt;Instance&gt; instanceList = addIpAddresses(service, ephemeral, ips); <span class="comment">// 获取实例最新实例列表</span></span><br><span class="line">        Instances instances = <span class="keyword">new</span> Instances();</span><br><span class="line">        instances.setInstanceList(instanceList);</span><br><span class="line">        consistencyService.put(key, instances); <span class="comment">// 将实例对象添加到注册表，以及同步给其它服务端成员</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> List&lt;Instance&gt; <span class="title">addIpAddresses</span><span class="params">(Service service, <span class="keyword">boolean</span> ephemeral, Instance... ips)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD, ephemeral, ips);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> List&lt;Instance&gt; <span class="title">updateIpAddresses</span><span class="params">(Service service, String action, <span class="keyword">boolean</span> ephemeral, Instance... ips)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    <span class="comment">// 首先从缓存中获取客户端服务缓存</span></span><br><span class="line">    Datum datum = consistencyService.get(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), ephemeral));</span><br><span class="line">    List&lt;Instance&gt; currentIPs = service.allIPs(ephemeral); <span class="comment">// 从注册表中获取该服务下的实例列表</span></span><br><span class="line">    Map&lt;String, Instance&gt; currentInstances = <span class="keyword">new</span> HashMap&lt;&gt;(currentIPs.size());</span><br><span class="line">    Set&lt;String&gt; currentInstanceIds = Sets.newHashSet();</span><br><span class="line">    <span class="keyword">for</span> (Instance instance : currentIPs) &#123;</span><br><span class="line">        currentInstances.put(instance.toIpAddr(), instance);</span><br><span class="line">        currentInstanceIds.add(instance.getInstanceId());</span><br><span class="line">    &#125;</span><br><span class="line">    Map&lt;String, Instance&gt; instanceMap;</span><br><span class="line">    <span class="keyword">if</span> (datum != <span class="keyword">null</span> &amp;&amp; <span class="keyword">null</span> != datum.value) &#123; <span class="comment">// 若存在缓存数据，则用注册表中的实例数据更新缓存中实例的健康状态和最后心跳时间</span></span><br><span class="line">        instanceMap = setValid(((Instances) datum.value).getInstanceList(), currentInstances);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        instanceMap = <span class="keyword">new</span> HashMap&lt;&gt;(ips.length); <span class="comment">// 不存在缓存数据，创建一个空的Map</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span> (Instance instance : ips) &#123; <span class="comment">// 遍历传入的实例列表，创建是一个</span></span><br><span class="line">        <span class="keyword">if</span> (!service.getClusterMap().containsKey(instance.getClusterName())) &#123;</span><br><span class="line">            Cluster cluster = <span class="keyword">new</span> Cluster(instance.getClusterName(), service);</span><br><span class="line">            cluster.init();  <span class="comment">// 若实例集群不存在，则创建集群，且创建CP模式心跳监控检查任务</span></span><br><span class="line">            service.getClusterMap().put(instance.getClusterName(), cluster);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (UtilsAndCommons.UPDATE_INSTANCE_ACTION_REMOVE.equals(action)) &#123;</span><br><span class="line">            instanceMap.remove(instance.getDatumKey()); <span class="comment">// 若是删除实例，则直接从移除</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123; <span class="comment">// 若是添加实例</span></span><br><span class="line">            Instance oldInstance = instanceMap.get(instance.getDatumKey());</span><br><span class="line">            <span class="keyword">if</span> (oldInstance != <span class="keyword">null</span>) &#123; <span class="comment">// 若存在旧实例，则将新增实例的instanceId替换为旧实例的instanceId</span></span><br><span class="line">                instance.setInstanceId(oldInstance.getInstanceId());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">// 若不存在旧实例则构建一个instanceId，默认ip#port#clusterName#serviceName</span></span><br><span class="line">                instance.setInstanceId(instance.generateInstanceId(currentInstanceIds));</span><br><span class="line">            &#125;</span><br><span class="line">            instanceMap.put(instance.getDatumKey(), instance); <span class="comment">// 将新增实例放入instanceMap</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 若是添加实例，且添加实例失败抛出异常</span></span><br><span class="line">    <span class="keyword">if</span> (instanceMap.size() &lt;= <span class="number">0</span> &amp;&amp; UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD.equals(action)) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"ip list can not be empty, service: "</span> + service.getName() + <span class="string">", ip list: "</span> + JacksonUtils.toJson(instanceMap.values()));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> ArrayList&lt;&gt;(instanceMap.values());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>获取到最新的实例列表后通过调用<strong><code>DistroConsistencyServiceImpl</code></strong>的<strong><code>put</code></strong>方法将实例列表放入缓存，然后将其添加到<strong><code>Notifier</code></strong>中的<strong>阻塞队列</strong>。<strong>同步实例数据</strong>到其它服务端成员列表中，是将<strong>当前服务名称下所有实例</strong>同步到其他服务端，最终是<strong>通过异步任务加队列</strong>的方式，调用HTTP接口最终在<strong>其他服务上也是通过<code>onPut</code>方法来完成</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DistroConsistencyServiceImpl</span> <span class="keyword">implements</span> <span class="title">EphemeralConsistencyService</span>, <span class="title">DistroDataProcessor</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">put</span><span class="params">(String key, Record value)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        onPut(key, value); <span class="comment">// 若是ephemeral实例将其添加到DataStore缓存中，然后通过异步任务替换注册表中实例列表</span></span><br><span class="line">        <span class="comment">// 同步实例数据到其它服务端成员列表中，是将当前服务名称下所有实例同步到其他服务端，最终是通过异步任务加队列的方式，调用HTTP接口最终在其他服务上也是通过onPut方法来完成</span></span><br><span class="line">        distroProtocol.sync(<span class="keyword">new</span> DistroKey(key, KeyBuilder.INSTANCE_LIST_KEY_PREFIX), DataOperation.CHANGE, globalConfig.getTaskDispatchPeriod() / <span class="number">2</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onPut</span><span class="params">(String key, Record value)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (KeyBuilder.matchEphemeralInstanceListKey(key)) &#123; <span class="comment">// 若是ephemeral实例记录</span></span><br><span class="line">            Datum&lt;Instances&gt; datum = <span class="keyword">new</span> Datum&lt;&gt;();</span><br><span class="line">            datum.value = (Instances) value;</span><br><span class="line">            datum.key = key;</span><br><span class="line">            datum.timestamp.incrementAndGet();</span><br><span class="line">            dataStore.put(key, datum); <span class="comment">// 更新缓存数据</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (!listeners.containsKey(key)) &#123;</span><br><span class="line">            <span class="keyword">return</span>; <span class="comment">// 若对应的RecordListener不存在则直接跳过，一般在创建实例时会添加该监听器</span></span><br><span class="line">        &#125;</span><br><span class="line">        notifier.addTask(key, DataOperation.CHANGE);<span class="comment">// 将当前任务放入阻塞队列</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Notifier</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addTask</span><span class="params">(String datumKey, DataOperation action)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (services.containsKey(datumKey) &amp;&amp; action == DataOperation.CHANGE) &#123;</span><br><span class="line">            <span class="keyword">return</span>; <span class="comment">// 若当前Task已存在则直接忽略</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (action == DataOperation.CHANGE) &#123;</span><br><span class="line">            services.put(datumKey, StringUtils.EMPTY); <span class="comment">// 将当前任务添加到services列表中</span></span><br><span class="line">        &#125;</span><br><span class="line">        tasks.offer(Pair.with(datumKey, action)); <span class="comment">// 将当前任务放入阻塞队列</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (; ; ) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Pair&lt;String, DataOperation&gt; pair = tasks.take(); <span class="comment">// 阻塞消费队列</span></span><br><span class="line">                handle(pair);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handle</span><span class="params">(Pair&lt;String, DataOperation&gt; pair)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            String datumKey = pair.getValue0();</span><br><span class="line">            DataOperation action = pair.getValue1();</span><br><span class="line">            services.remove(datumKey); <span class="comment">// 从任务列表移除</span></span><br><span class="line">            <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">if</span> (!listeners.containsKey(datumKey)) &#123;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 这里的获取到的RecordListener是在创建实例对象时在putServiceAndInit中通过ConsistencyService#listen方法添加的</span></span><br><span class="line">            <span class="keyword">for</span> (RecordListener listener : listeners.get(datumKey)) &#123; <span class="comment">// listener就是一个Service对象</span></span><br><span class="line">                count++;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (action == DataOperation.CHANGE) &#123; <span class="comment">// 将最新的实例列表数据通过Service的onChange方法进行注册表更新</span></span><br><span class="line">                        listener.onChange(datumKey, dataStore.get(datumKey).value);</span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (action == DataOperation.DELETE) &#123; <span class="comment">// 通过Service的onDelete方法进行删除</span></span><br><span class="line">                        listener.onDelete(datumKey); <span class="comment">// 在Service中是空实现</span></span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终调用<strong><code>Service</code></strong>的<strong><code>onChange</code></strong>方法来，最终替换注册表中<strong><code>Cluster</code></strong>的实例列表。这里更新注册表内存方法中，为了防止读写并发冲突，大量运用了<strong><code>CopyOnWrite</code></strong>思想防止并发冲突。这里也会使用<strong><code>PushService</code></strong>将服务变动通过<strong><code>UDP</code></strong>的方式通知给订阅的客户端。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Service</span> <span class="keyword">extends</span> <span class="title">com</span>.<span class="title">alibaba</span>.<span class="title">nacos</span>.<span class="title">api</span>.<span class="title">naming</span>.<span class="title">pojo</span>.<span class="title">Service</span> <span class="keyword">implements</span> <span class="title">Record</span>, <span class="title">RecordListener</span>&lt;<span class="title">Instances</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onChange</span><span class="params">(String key, Instances value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : value.getInstanceList()) &#123; <span class="comment">// 遍历实例列表</span></span><br><span class="line">            <span class="keyword">if</span> (instance == <span class="keyword">null</span>) &#123; <span class="comment">// 若实例为null抛出异常</span></span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"got null instance "</span> + key);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (instance.getWeight() &gt; <span class="number">10000.0</span>D) &#123;</span><br><span class="line">                instance.setWeight(<span class="number">10000.0</span>D); <span class="comment">// 权重最大值为10000</span></span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (instance.getWeight() &lt; <span class="number">0.01</span>D &amp;&amp; instance.getWeight() &gt; <span class="number">0.0</span>D) &#123;</span><br><span class="line">                instance.setWeight(<span class="number">0.01</span>D); <span class="comment">// 权重最小值为0.01</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        updateIPs(value.getInstanceList(), KeyBuilder.matchEphemeralInstanceListKey(key)); <span class="comment">// 更新注册表中实例列表</span></span><br><span class="line">        recalculateChecksum(); <span class="comment">// 根据最新实例列表重新计算checksum</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">updateIPs</span><span class="params">(Collection&lt;Instance&gt; instances, <span class="keyword">boolean</span> ephemeral)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, List&lt;Instance&gt;&gt; ipMap = <span class="keyword">new</span> HashMap&lt;&gt;(clusterMap.size());</span><br><span class="line">        <span class="keyword">for</span> (String clusterName : clusterMap.keySet()) &#123; <span class="comment">// 构造一个空的Map来存放最新的实例列表</span></span><br><span class="line">            ipMap.put(clusterName, <span class="keyword">new</span> ArrayList&lt;&gt;());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : instances) &#123; <span class="comment">// 遍历最新的实例列表</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (instance == <span class="keyword">null</span>) &#123; <span class="comment">// 跳过为null的实例</span></span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (StringUtils.isEmpty(instance.getClusterName())) &#123; <span class="comment">// 若实例集群名称为null则设置为DEFAULT集群</span></span><br><span class="line">                    instance.setClusterName(UtilsAndCommons.DEFAULT_CLUSTER_NAME);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (!clusterMap.containsKey(instance.getClusterName())) &#123;</span><br><span class="line">                    Cluster cluster = <span class="keyword">new</span> Cluster(instance.getClusterName(), <span class="keyword">this</span>);</span><br><span class="line">                    cluster.init(); <span class="comment">// 若当前实例集群在注册表中不存在，则创建一个服务集群并初始化</span></span><br><span class="line">                    getClusterMap().put(instance.getClusterName(), cluster);</span><br><span class="line">                &#125;</span><br><span class="line">                List&lt;Instance&gt; clusterIPs = ipMap.get(instance.getClusterName());</span><br><span class="line">                <span class="keyword">if</span> (clusterIPs == <span class="keyword">null</span>) &#123;</span><br><span class="line">                    clusterIPs = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line">                    ipMap.put(instance.getClusterName(), clusterIPs);</span><br><span class="line">                &#125;</span><br><span class="line">                clusterIPs.add(instance); <span class="comment">// 将实例分集群放入ipMap中</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, List&lt;Instance&gt;&gt; entry : ipMap.entrySet()) &#123;</span><br><span class="line">            List&lt;Instance&gt; entryIPs = entry.getValue(); <span class="comment">//make every ip mine</span></span><br><span class="line">            clusterMap.get(entry.getKey()).updateIps(entryIPs, ephemeral); <span class="comment">// 真正更新注册表中实例列表</span></span><br><span class="line">        &#125;</span><br><span class="line">        setLastModifiedMillis(System.currentTimeMillis()); <span class="comment">// 设置服务最后更新时间为当前时间</span></span><br><span class="line">        getPushService().serviceChanged(<span class="keyword">this</span>); <span class="comment">// 发布服务变更事件</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当服务实例发生变更会发送<strong><code>ServiceChangeEvent</code></strong>监听事件，该事件会给<strong>客户端</strong>发送<strong><code>UDP</code></strong>请求通知服务信息变更。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">PushService</span> <span class="keyword">implements</span> <span class="title">ApplicationContextAware</span>, <span class="title">ApplicationListener</span>&lt;<span class="title">ServiceChangeEvent</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">serviceChanged</span><span class="params">(Service service)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (futureMap.containsKey(UtilsAndCommons.assembleFullServiceName(service.getNamespaceId(), service.getName()))) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.applicationContext.publishEvent(<span class="keyword">new</span> ServiceChangeEvent(<span class="keyword">this</span>, service));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onApplicationEvent</span><span class="params">(ServiceChangeEvent event)</span> </span>&#123;</span><br><span class="line">        Service service = event.getService();</span><br><span class="line">        String serviceName = service.getName();</span><br><span class="line">        String namespaceId = service.getNamespaceId();</span><br><span class="line">        Future future = GlobalExecutor.scheduleUdpSender(() -&gt; &#123; <span class="comment">// 每1s执行一次</span></span><br><span class="line">            <span class="keyword">try</span> &#123;<span class="comment">// // 客户端拉取某个服务时，会将客户端记录下来</span></span><br><span class="line">                ConcurrentMap&lt;String, PushClient&gt; clients = clientMap.get(UtilsAndCommons.assembleFullServiceName(namespaceId, serviceName));</span><br><span class="line">                <span class="keyword">if</span> (MapUtils.isEmpty(clients)) &#123;</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                Map&lt;String, Object&gt; cache = <span class="keyword">new</span> HashMap&lt;&gt;(<span class="number">16</span>);</span><br><span class="line">                <span class="keyword">long</span> lastRefTime = System.nanoTime();</span><br><span class="line">                <span class="keyword">for</span> (PushClient client : clients.values()) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (client.zombie()) &#123;</span><br><span class="line">                        clients.remove(client.toString());</span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    Receiver.AckEntry ackEntry;</span><br><span class="line">                    String key = getPushCacheKey(serviceName, client.getIp(), client.getAgent());</span><br><span class="line">                    <span class="keyword">byte</span>[] compressData = <span class="keyword">null</span>;</span><br><span class="line">                    Map&lt;String, Object&gt; data = <span class="keyword">null</span>;</span><br><span class="line">                    <span class="keyword">if</span> (switchDomain.getDefaultPushCacheMillis() &gt;= <span class="number">20000</span> &amp;&amp; cache.containsKey(key)) &#123;</span><br><span class="line">                        org.javatuples.Pair pair = (org.javatuples.Pair) cache.get(key);</span><br><span class="line">                        compressData = (<span class="keyword">byte</span>[]) (pair.getValue0());</span><br><span class="line">                        data = (Map&lt;String, Object&gt;) pair.getValue1();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (compressData != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        ackEntry = prepareAckEntry(client, compressData, data, lastRefTime);</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        ackEntry = prepareAckEntry(client, prepareHostsData(client), lastRefTime);</span><br><span class="line">                        <span class="keyword">if</span> (ackEntry != <span class="keyword">null</span>) &#123;</span><br><span class="line">                            cache.put(key, <span class="keyword">new</span> org.javatuples.Pair&lt;&gt;(ackEntry.origin.getData(), ackEntry.data));</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    udpPush(ackEntry); <span class="comment">// 发送UDP通知客户端</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                futureMap.remove(UtilsAndCommons.assembleFullServiceName(namespaceId, serviceName));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, <span class="number">1000</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">        futureMap.put(UtilsAndCommons.assembleFullServiceName(namespaceId, serviceName), future);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Receiver.<span class="function">AckEntry <span class="title">udpPush</span><span class="params">(Receiver.AckEntry ackEntry)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (ackEntry == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (ackEntry.getRetryTimes() &gt; MAX_RETRY_TIMES) &#123;</span><br><span class="line">            ackMap.remove(ackEntry.key);</span><br><span class="line">            udpSendTimeMap.remove(ackEntry.key);</span><br><span class="line">            failedPush += <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">return</span> ackEntry;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (!ackMap.containsKey(ackEntry.key)) &#123;</span><br><span class="line">                totalPush++;</span><br><span class="line">            &#125;</span><br><span class="line">            ackMap.put(ackEntry.key, ackEntry);</span><br><span class="line">            udpSendTimeMap.put(ackEntry.key, System.currentTimeMillis());</span><br><span class="line">            udpSocket.send(ackEntry.origin);</span><br><span class="line">            ackEntry.increaseRetryTime();</span><br><span class="line">            GlobalExecutor.scheduleRetransmitter(<span class="keyword">new</span> Retransmitter(ackEntry), TimeUnit.NANOSECONDS.toMillis(ACK_TIMEOUT_NANOS), TimeUnit.MILLISECONDS);</span><br><span class="line">            <span class="keyword">return</span> ackEntry;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            ackMap.remove(ackEntry.key);</span><br><span class="line">            udpSendTimeMap.remove(ackEntry.key);</span><br><span class="line">            failedPush += <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>更新注册表中实例列表是通过<strong><code>Cluster</code></strong>的<strong><code>updateIps</code></strong>方法，使用<strong><code>CopyOnWrite</code></strong>思想来完成注册表的更新。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Cluster</span> <span class="keyword">extends</span> <span class="title">com</span>.<span class="title">alibaba</span>.<span class="title">nacos</span>.<span class="title">api</span>.<span class="title">naming</span>.<span class="title">pojo</span>.<span class="title">Cluster</span> <span class="keyword">implements</span> <span class="title">Cloneable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">updateIps</span><span class="params">(List&lt;Instance&gt; ips, <span class="keyword">boolean</span> ephemeral)</span> </span>&#123;</span><br><span class="line">        Set&lt;Instance&gt; toUpdateInstances = ephemeral ? ephemeralInstances : persistentInstances;</span><br><span class="line">        HashMap&lt;String, Instance&gt; oldIpMap = <span class="keyword">new</span> HashMap&lt;&gt;(toUpdateInstances.size());</span><br><span class="line">        <span class="keyword">for</span> (Instance ip : toUpdateInstances) &#123; <span class="comment">// 注册表中旧实例列表</span></span><br><span class="line">            oldIpMap.put(ip.getDatumKey(), ip);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// updatedIPs为即在旧实例列表中也在新实例列表中的实例替换为新实例后的数据</span></span><br><span class="line">        List&lt;Instance&gt; updatedIPs = updatedIps(ips, oldIpMap.values());</span><br><span class="line">        <span class="keyword">if</span> (updatedIPs.size() &gt; <span class="number">0</span>) &#123; <span class="comment">// 主要逻辑是打印日志和简健康状态替换为旧的健康状态</span></span><br><span class="line">            <span class="keyword">for</span> (Instance ip : updatedIPs) &#123;</span><br><span class="line">                Instance oldIP = oldIpMap.get(ip.getDatumKey()); <span class="comment">// 获取到旧的实例数据</span></span><br><span class="line">                <span class="keyword">if</span> (!ip.isMarked()) &#123; <span class="comment">// marked默认为false</span></span><br><span class="line">                    ip.setHealthy(oldIP.isHealthy()); <span class="comment">// 将新实例对象的健康状态设置为旧实例的健康状态</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        List&lt;Instance&gt; newIPs = subtract(ips, oldIpMap.values()); <span class="comment">// 返回新增的实例列表</span></span><br><span class="line">        <span class="keyword">if</span> (newIPs.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">for</span> (Instance ip : newIPs) &#123;</span><br><span class="line">                HealthCheckStatus.reset(ip);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        List&lt;Instance&gt; deadIPs = subtract(oldIpMap.values(), ips);  <span class="comment">// 返回需删除的实例列表</span></span><br><span class="line">        <span class="keyword">if</span> (deadIPs.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">for</span> (Instance ip : deadIPs) &#123;</span><br><span class="line">                HealthCheckStatus.remv(ip);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        toUpdateInstances = <span class="keyword">new</span> HashSet&lt;&gt;(ips); <span class="comment">// 通过CopyOnWrite将新的实例列表覆盖注册表中的实例列表</span></span><br><span class="line">        <span class="keyword">if</span> (ephemeral) &#123;</span><br><span class="line">            ephemeralInstances = toUpdateInstances;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            persistentInstances = toUpdateInstances;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> List&lt;Instance&gt; <span class="title">updatedIps</span><span class="params">(Collection&lt;Instance&gt; newInstance, Collection&lt;Instance&gt; oldInstance)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 旧实例列表与新实例列表的交集，即未发送变化的实例列表</span></span><br><span class="line">        List&lt;Instance&gt; intersects = (List&lt;Instance&gt;) CollectionUtils.intersection(newInstance, oldInstance);</span><br><span class="line">        Map&lt;String, Instance&gt; stringIpAddressMap = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;(intersects.size());</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : intersects) &#123; <span class="comment">// 将未变化的实例列表放入stringIpAddressMap中</span></span><br><span class="line">            stringIpAddressMap.put(instance.getIp() + <span class="string">":"</span> + instance.getPort(), instance);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 新实例和就实例总和</span></span><br><span class="line">        Map&lt;String, Integer&gt; intersectMap = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;(newInstance.size() + oldInstance.size());</span><br><span class="line">        Map&lt;String, Instance&gt; updatedInstancesMap = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;(newInstance.size());</span><br><span class="line">        Map&lt;String, Instance&gt; newInstancesMap = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;(newInstance.size());</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : oldInstance) &#123;</span><br><span class="line">            <span class="keyword">if</span> (stringIpAddressMap.containsKey(instance.getIp() + <span class="string">":"</span> + instance.getPort())) &#123;</span><br><span class="line">                intersectMap.put(instance.toString(), <span class="number">1</span>); <span class="comment">// 将旧实例放入intersectMap中，且值设置为1</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : newInstance) &#123;</span><br><span class="line">            <span class="keyword">if</span> (stringIpAddressMap.containsKey(instance.getIp() + <span class="string">":"</span> + instance.getPort())) &#123;</span><br><span class="line">                <span class="keyword">if</span> (intersectMap.containsKey(instance.toString())) &#123;</span><br><span class="line">                    intersectMap.put(instance.toString(), <span class="number">2</span>); <span class="comment">// 将新实例放入intersectMap中，且值设置为2</span></span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    intersectMap.put(instance.toString(), <span class="number">1</span>); <span class="comment">// 将即在旧实例列表中也在新实例列表中放入intersectMap中，且值设置为1</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            newInstancesMap.put(instance.toString(), instance); <span class="comment">// 新实例方法newInstancesMap</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, Integer&gt; entry : intersectMap.entrySet()) &#123;</span><br><span class="line">            String key = entry.getKey();</span><br><span class="line">            Integer value = entry.getValue();</span><br><span class="line">            <span class="keyword">if</span> (value == <span class="number">1</span>) &#123; <span class="comment">// 若是旧实例</span></span><br><span class="line">                <span class="keyword">if</span> (newInstancesMap.containsKey(key)) &#123; <span class="comment">// 即在旧实例列表中也在新实例列表中</span></span><br><span class="line">                    updatedInstancesMap.put(key, newInstancesMap.get(key)); <span class="comment">// 将即在旧实例列表中也在新实例列表中的实例替换为新实例</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ArrayList&lt;&gt;(updatedInstancesMap.values()); <span class="comment">// 返回即在旧实例列表中也在新实例列表中</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> List&lt;Instance&gt; <span class="title">subtract</span><span class="params">(Collection&lt;Instance&gt; oldIp, Collection&lt;Instance&gt; ips)</span> </span>&#123;</span><br><span class="line">        Map&lt;String, Instance&gt; ipsMap = <span class="keyword">new</span> HashMap&lt;&gt;(ips.size());</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : ips) &#123;</span><br><span class="line">            ipsMap.put(instance.getIp() + <span class="string">":"</span> + instance.getPort(), instance);</span><br><span class="line">        &#125;</span><br><span class="line">        List&lt;Instance&gt; instanceResult = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : oldIp) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!ipsMap.containsKey(instance.getIp() + <span class="string">":"</span> + instance.getPort())) &#123;</span><br><span class="line">                instanceResult.add(instance); <span class="comment">// 将新的实例列表中不包含的实例添加到instanceResult</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instanceResult; <span class="comment">// 获取需要删除的实例列表，即新的实例列表中不包含旧的实例列表中存在的实例</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="删除下线实例"><a href="#删除下线实例" class="headerlink" title="删除下线实例"></a>删除下线实例</h4><p><strong>删除已下线实例</strong>是通过对客户端做心跳健康检查时，判断心跳时间，若<strong>超过<code>30s</code></strong>表示服务已下线，则通过异步调用<strong><code>/v1/ns/instance</code></strong>接口来完成已下线实例的删除。最终调用<strong><code>InstanceController</code></strong>接口的<strong><code>deregister</code></strong>方法。最终通过<strong><code>substractIpAddresses</code></strong>方法将已下线服务实例从列表中删除。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@CanDistro</span></span><br><span class="line"><span class="meta">@DeleteMapping</span></span><br><span class="line"><span class="meta">@Secured</span>(parser = NamingResourceParser<span class="class">.<span class="keyword">class</span>, <span class="title">action</span> </span>= ActionTypes.WRITE)</span><br><span class="line"><span class="function"><span class="keyword">public</span> String <span class="title">deregister</span><span class="params">(HttpServletRequest request)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    Instance instance = getIpAddress(request);</span><br><span class="line">    String namespaceId = WebUtils.optional(request, CommonParams.NAMESPACE_ID, Constants.DEFAULT_NAMESPACE_ID);</span><br><span class="line">    String serviceName = WebUtils.required(request, CommonParams.SERVICE_NAME);</span><br><span class="line">    NamingUtils.checkServiceNameFormat(serviceName);</span><br><span class="line">    Service service = serviceManager.getService(namespaceId, serviceName);</span><br><span class="line">    <span class="keyword">if</span> (service == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"ok"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    serviceManager.removeInstance(namespaceId, serviceName, instance.isEphemeral(), instance);</span><br><span class="line">    <span class="keyword">return</span> <span class="string">"ok"</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeInstance</span><span class="params">(String namespaceId, String serviceName, <span class="keyword">boolean</span> ephemeral, Instance... ips)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    Service service = getService(namespaceId, serviceName); <span class="comment">// 从注册表中获取服务</span></span><br><span class="line">    <span class="keyword">synchronized</span> (service) &#123;</span><br><span class="line">        removeInstance(namespaceId, serviceName, ephemeral, service, ips);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">removeInstance</span><span class="params">(String namespaceId, String serviceName, <span class="keyword">boolean</span> ephemeral, Service service, Instance... ips)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">    String key = KeyBuilder.buildInstanceListKey(namespaceId, serviceName, ephemeral);</span><br><span class="line">    List&lt;Instance&gt; instanceList = substractIpAddresses(service, ephemeral, ips); <span class="comment">// 返回最新的实例列表</span></span><br><span class="line">    Instances instances = <span class="keyword">new</span> Instances();</span><br><span class="line">    instances.setInstanceList(instanceList);</span><br><span class="line">    consistencyService.put(key, instances);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最终调用<strong><code>updateIpAddresses</code></strong>方法，该方法<strong>既可以完成实例的添加也可以完成实例的删除</strong>。首先从<strong>缓存</strong>中获取该服务下的实例列表，然后从<strong>注册表</strong>中获取该服务下的实例列表，若存在缓存数据，则用注册表中的实例数据更新缓存中实例的健康状态和最后心跳时间，遍历传入的实例列表，判断若是删除实例，则直接移除。最终<strong>返回最新的服务实例列表</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ServiceManager</span> <span class="keyword">implements</span> <span class="title">RecordListener</span>&lt;<span class="title">Service</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> List&lt;Instance&gt; <span class="title">substractIpAddresses</span><span class="params">(Service service, <span class="keyword">boolean</span> ephemeral, Instance... ips)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_REMOVE, ephemeral, ips);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;Instance&gt; <span class="title">updateIpAddresses</span><span class="params">(Service service, String action, <span class="keyword">boolean</span> ephemeral, Instance... ips)</span> <span class="keyword">throws</span> NacosException </span>&#123;</span><br><span class="line">        <span class="comment">// 首先从缓存中获取客户端服务缓存</span></span><br><span class="line">        Datum datum = consistencyService.get(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), ephemeral));</span><br><span class="line">        List&lt;Instance&gt; currentIPs = service.allIPs(ephemeral); <span class="comment">// 从注册表中获取该服务下的实例列表</span></span><br><span class="line">        Map&lt;String, Instance&gt; currentInstances = <span class="keyword">new</span> HashMap&lt;&gt;(currentIPs.size());</span><br><span class="line">        Set&lt;String&gt; currentInstanceIds = Sets.newHashSet();</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : currentIPs) &#123;</span><br><span class="line">            currentInstances.put(instance.toIpAddr(), instance);</span><br><span class="line">            currentInstanceIds.add(instance.getInstanceId());</span><br><span class="line">        &#125;</span><br><span class="line">        Map&lt;String, Instance&gt; instanceMap;</span><br><span class="line">        <span class="keyword">if</span> (datum != <span class="keyword">null</span> &amp;&amp; <span class="keyword">null</span> != datum.value) &#123; <span class="comment">// 若存在缓存数据，则用注册表中的实例数据更新缓存中实例的健康状态和最后心跳时间</span></span><br><span class="line">            instanceMap = setValid(((Instances) datum.value).getInstanceList(), currentInstances);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            instanceMap = <span class="keyword">new</span> HashMap&lt;&gt;(ips.length); <span class="comment">// 不存在缓存数据，创建一个空的Map</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (Instance instance : ips) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!service.getClusterMap().containsKey(instance.getClusterName())) &#123;</span><br><span class="line">                Cluster cluster = <span class="keyword">new</span> Cluster(instance.getClusterName(), service);</span><br><span class="line">                cluster.init();  <span class="comment">// 若实例集群不存在，则创建集群</span></span><br><span class="line">                service.getClusterMap().put(instance.getClusterName(), cluster);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (UtilsAndCommons.UPDATE_INSTANCE_ACTION_REMOVE.equals(action)) &#123;</span><br><span class="line">                instanceMap.remove(instance.getDatumKey()); <span class="comment">// 若是删除实例，则直接从移除</span></span><br><span class="line">            &#125; <span class="keyword">else</span> &#123; <span class="comment">// 若是添加实例</span></span><br><span class="line">                Instance oldInstance = instanceMap.get(instance.getDatumKey());</span><br><span class="line">                <span class="keyword">if</span> (oldInstance != <span class="keyword">null</span>) &#123; <span class="comment">// 若存在旧实例，则将新增实例的instanceId替换为旧实例的instanceId</span></span><br><span class="line">                    instance.setInstanceId(oldInstance.getInstanceId());</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123; <span class="comment">// 若不存在旧实例则构建一个instanceId</span></span><br><span class="line">                    instance.setInstanceId(instance.generateInstanceId(currentInstanceIds));</span><br><span class="line">                &#125;</span><br><span class="line">                instanceMap.put(instance.getDatumKey(), instance); <span class="comment">// 将新增实例放入instanceMap</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 若是添加实例，且添加实例失败抛出异常</span></span><br><span class="line">        <span class="keyword">if</span> (instanceMap.size() &lt;= <span class="number">0</span> &amp;&amp; UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD.equals(action)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"ip list can not be empty, service: "</span> + service.getName() + <span class="string">", ip list: "</span> + JacksonUtils.toJson(instanceMap.values()));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ArrayList&lt;&gt;(instanceMap.values());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最后通过<strong><code>DistroConsistencyServiceImpl</code></strong>的<strong><code>put</code></strong>方法将实例，将其添加到<strong><code>DataStore</code>缓存</strong>中，然后通过<strong>异步任务替换注册表中实例列表</strong>，以及<strong>同步实例数据</strong>到其它服务端成员列表中。</p>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/Nacos/Nacos Client原理/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Nacos Client原理
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">SpringBoot Jar包启动原理</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

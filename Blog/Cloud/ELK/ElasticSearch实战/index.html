@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        ElasticSearch实战 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="ElasticSearch">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="12345&amp;lt;dependency&amp;gt;    &amp;lt;groupId&amp;gt;org.elasticsearch.client&amp;lt;/groupId&amp;gt;    &amp;lt;artifactId&amp;gt;elasticsearch-rest-high-level-client&amp;lt;/artifactId&amp;gt;    &amp;lt;version&amp;gt;7.6.1&amp;lt;/version&amp;gt;&amp;">
+<meta name="keywords" content="ElasticSearch">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ElasticSearch实战">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/ELK/ElasticSearch实战/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="12345&amp;lt;dependency&amp;gt;    &amp;lt;groupId&amp;gt;org.elasticsearch.client&amp;lt;/groupId&amp;gt;    &amp;lt;artifactId&amp;gt;elasticsearch-rest-high-level-client&amp;lt;/artifactId&amp;gt;    &amp;lt;version&amp;gt;7.6.1&amp;lt;/version&amp;gt;&amp;">
+<meta property="og:locale" content="en">
+<meta property="og:updated_time" content="2021-12-27T11:45:52.071Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ElasticSearch实战">
+<meta name="twitter:description" content="12345&amp;lt;dependency&amp;gt;    &amp;lt;groupId&amp;gt;org.elasticsearch.client&amp;lt;/groupId&amp;gt;    &amp;lt;artifactId&amp;gt;elasticsearch-rest-high-level-client&amp;lt;/artifactId&amp;gt;    &amp;lt;version&amp;gt;7.6.1&amp;lt;/version&amp;gt;&amp;">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/ELK/ElasticSearch实战" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/ELK/">ELK</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/ElasticSearch/">ElasticSearch</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/ELK/ElasticSearch实战/">
+            <time datetime="2021-12-26T16:00:00.000Z" itemprop="datePublished">2021-12-27</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            ElasticSearch实战
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.elasticsearch.client<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>elasticsearch-rest-high-level-client<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>7.6.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>使用Java API来操作ES集群初始化连接，基于<strong><code>RestClient.builder</code></strong>方法来构建<strong><code>RestClientBuilder</code></strong>，使用<strong><code>RestHighLevelClient</code></strong>去连接ES集群，用<strong><code>HttpHost</code></strong>来添加ES的节点。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 建立与ES的连接</span></span><br><span class="line"><span class="comment">// 1. 使用RestHighLevelClient构建客户端连接。</span></span><br><span class="line"><span class="comment">// 2. 基于RestClient.builder方法来构建RestClientBuilder</span></span><br><span class="line"><span class="comment">// 3. 用HttpHost来添加ES的节点</span></span><br><span class="line">RestClientBuilder restClientBuilder = RestClient.builder(</span><br><span class="line">    <span class="keyword">new</span> HttpHost(<span class="string">"192.168.21.130"</span>, <span class="number">9200</span>, <span class="string">"http"</span>)</span><br><span class="line">    , <span class="keyword">new</span> HttpHost(<span class="string">"192.168.21.131"</span>, <span class="number">9200</span>, <span class="string">"http"</span>)</span><br><span class="line">    , <span class="keyword">new</span> HttpHost(<span class="string">"192.168.21.132"</span>, <span class="number">9200</span>, <span class="string">"http"</span>));</span><br><span class="line">RestHighLevelClient restHighLevelClient = <span class="keyword">new</span> RestHighLevelClient(restClientBuilder);</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">(JobDetail jobDetail)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="comment">// 构建IndexRequest对象，用来描述ES发起请求的数据</span></span><br><span class="line">    IndexRequest indexRequest = <span class="keyword">new</span> IndexRequest(JOB_IDX);</span><br><span class="line">    <span class="comment">// 设置文档ID</span></span><br><span class="line">    indexRequest.id(String.valueOf(jobDetail.getId()));</span><br><span class="line">    <span class="comment">// 使用FastJSON将实体类对象转换为JSON</span></span><br><span class="line">    String json = JSONObject.toJSONString(jobDetail);</span><br><span class="line">    <span class="comment">// 使用IndexRequest.source方法设置文档数据，并设置请求的数据为JSON格式</span></span><br><span class="line">    indexRequest.source(json, XContentType.JSON);</span><br><span class="line">    <span class="comment">// 使用ES RestHighLevelClient调用index方法发起请求，将一个文档添加到索引中</span></span><br><span class="line">    restHighLevelClient.index(indexRequest, RequestOptions.DEFAULT);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> JobDetail <span class="title">findById</span><span class="params">(<span class="keyword">long</span> id)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    GetRequest getRequest = <span class="keyword">new</span> GetRequest(JOB_IDX, id + <span class="string">""</span>); <span class="comment">// 构建GetRequest请求</span></span><br><span class="line">    <span class="comment">// 使用RestHighLevelClient.get发送GetRequest请求，并获取到ES服务器的响应。</span></span><br><span class="line">    GetResponse getResponse = restHighLevelClient.get(getRequest, RequestOptions.DEFAULT);</span><br><span class="line">    String json = getResponse.getSourceAsString();<span class="comment">// 将ES响应的数据转换为JSON字符串</span></span><br><span class="line">    <span class="comment">// 并使用FastJSON将JSON字符串转换为JobDetail类对象</span></span><br><span class="line">    JobDetail jobDetail = JSONObject.parseObject(json, JobDetail<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">    jobDetail.setId(id);<span class="comment">// 单独设置ID</span></span><br><span class="line">    <span class="keyword">return</span> jobDetail;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">update</span><span class="params">(JobDetail jobDetail)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="comment">// 判断对应ID的文档是否存在，构建GetRequest</span></span><br><span class="line">    GetRequest getRequest = <span class="keyword">new</span> GetRequest(JOB_IDX, jobDetail.getId() + <span class="string">""</span>);</span><br><span class="line">    <span class="comment">// 执行client的exists方法，发起请求，判断是否存在</span></span><br><span class="line">    <span class="keyword">boolean</span> exists = restHighLevelClient.exists(getRequest, RequestOptions.DEFAULT);</span><br><span class="line">    <span class="keyword">if</span>(exists) &#123;</span><br><span class="line">        <span class="comment">// 构建UpdateRequest请求</span></span><br><span class="line">        UpdateRequest updateRequest = <span class="keyword">new</span> UpdateRequest(JOB_IDX, jobDetail.getId() + <span class="string">""</span>);</span><br><span class="line">        <span class="comment">// 设置UpdateRequest的文档，并配置为JSON格式</span></span><br><span class="line">        updateRequest.doc(JSONObject.toJSONString(jobDetail), XContentType.JSON);</span><br><span class="line">        <span class="comment">// 执行client发起update请求</span></span><br><span class="line">        restHighLevelClient.update(updateRequest, RequestOptions.DEFAULT);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deleteById</span><span class="params">(<span class="keyword">long</span> id)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    DeleteRequest deleteRequest = <span class="keyword">new</span> DeleteRequest(JOB_IDX, id + <span class="string">""</span>);<span class="comment">// 构建delete请求</span></span><br><span class="line">    restHighLevelClient.delete(deleteRequest, RequestOptions.DEFAULT);<span class="comment">// 使用RestHighLevelClient执行delete请求</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> List&lt;JobDetail&gt; <span class="title">searchByKeywords</span><span class="params">(String keywords)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="comment">// 构建SearchRequest检索请求 专门用来进行全文检索、关键字检索的API</span></span><br><span class="line">    SearchRequest searchRequest = <span class="keyword">new</span> SearchRequest(JOB_IDX);</span><br><span class="line">    <span class="comment">// 创建一个SearchSourceBuilder专门用于构建查询条件</span></span><br><span class="line">    SearchSourceBuilder searchSourceBuilder = <span class="keyword">new</span> SearchSourceBuilder();</span><br><span class="line">    <span class="comment">// 使用QueryBuilders.multiMatchQuery构建一个查询条件（搜索title、jd），并配置到SearchSourceBuilder</span></span><br><span class="line">    MultiMatchQueryBuilder multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(keywords, <span class="string">"title"</span>, <span class="string">"jd"</span>);</span><br><span class="line">    searchSourceBuilder.query(multiMatchQueryBuilder);<span class="comment">// 将查询条件设置到查询请求构建器中</span></span><br><span class="line">    searchRequest.source(searchSourceBuilder);<span class="comment">// 调用SearchRequest.source将查询条件设置到检索请求</span></span><br><span class="line">    <span class="comment">// 执行RestHighLevelClient.search发起请求</span></span><br><span class="line">    SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);</span><br><span class="line">    SearchHit[] hitArray = searchResponse.getHits().getHits();</span><br><span class="line">    ArrayList&lt;JobDetail&gt; jobDetailArrayList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (SearchHit documentFields : hitArray) &#123;<span class="comment">// 遍历结果</span></span><br><span class="line">        String json = documentFields.getSourceAsString();<span class="comment">// 获取命中的结果</span></span><br><span class="line">        JobDetail jobDetail = JSONObject.parseObject(json, JobDetail<span class="class">.<span class="keyword">class</span>)</span>;<span class="comment">// 将JSON字符串转换为对象</span></span><br><span class="line">        jobDetail.setId(Long.parseLong(documentFields.getId()));<span class="comment">// 使用SearchHit.getId设置文档ID</span></span><br><span class="line">        jobDetailArrayList.add(jobDetail);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> jobDetailArrayList;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> Map&lt;String, Object&gt; <span class="title">searchByPage</span><span class="params">(String keywords, <span class="keyword">int</span> pageNum, <span class="keyword">int</span> pageSize)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    <span class="comment">// 构建SearchRequest检索请求 专门用来进行全文检索、关键字检索的API</span></span><br><span class="line">    SearchRequest searchRequest = <span class="keyword">new</span> SearchRequest(JOB_IDX);</span><br><span class="line">    <span class="comment">// 创建一个SearchSourceBuilder专门用于构建查询条件</span></span><br><span class="line">    SearchSourceBuilder searchSourceBuilder = <span class="keyword">new</span> SearchSourceBuilder();</span><br><span class="line">    <span class="comment">// 使用QueryBuilders.multiMatchQuery构建一个查询条件（搜索title、jd），并配置到SearchSourceBuilder</span></span><br><span class="line">    MultiMatchQueryBuilder multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(keywords, <span class="string">"title"</span>, <span class="string">"jd"</span>);</span><br><span class="line">    searchSourceBuilder.query(multiMatchQueryBuilder); <span class="comment">// 将查询条件设置到查询请求构建器中</span></span><br><span class="line">    searchSourceBuilder.size(pageSize);<span class="comment">// 每页显示多少条</span></span><br><span class="line">    searchSourceBuilder.from((pageNum - <span class="number">1</span>) * pageSize);<span class="comment">// 设置从第几条开始查询</span></span><br><span class="line">    searchRequest.source(searchSourceBuilder);<span class="comment">// 调用SearchRequest.source将查询条件设置到检索请求</span></span><br><span class="line">    <span class="comment">// 执行RestHighLevelClient.search发起请求</span></span><br><span class="line">    SearchResponse searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);</span><br><span class="line">    SearchHit[] hitArray = searchResponse.getHits().getHits();</span><br><span class="line">    ArrayList&lt;JobDetail&gt; jobDetailArrayList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (SearchHit documentFields : hitArray) &#123;<span class="comment">// 遍历结果</span></span><br><span class="line">        String json = documentFields.getSourceAsString();<span class="comment">// 获取命中的结果</span></span><br><span class="line">        JobDetail jobDetail = JSONObject.parseObject(json, JobDetail<span class="class">.<span class="keyword">class</span>)</span>;<span class="comment">// 将JSON字符串转换为对象</span></span><br><span class="line">        jobDetail.setId(Long.parseLong(documentFields.getId()));<span class="comment">// 使用SearchHit.getId设置文档ID</span></span><br><span class="line">        jobDetailArrayList.add(jobDetail);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 将结果封装到Map结构中（带有分页信息）</span></span><br><span class="line">    <span class="keyword">long</span> totalNum = searchResponse.getHits().getTotalHits().value;</span><br><span class="line">    Map&lt;String, Object&gt; resultMap = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">    resultMap.put(<span class="string">"total"</span>, totalNum); <span class="comment">// total -&gt; 使用SearchHits.getTotalHits().value获取到所有的记录数</span></span><br><span class="line">    resultMap.put(<span class="string">"content"</span>, jobDetailArrayList); content -&gt; 当前分页中的数据</span><br><span class="line">    <span class="keyword">return</span> resultMap;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> Map&lt;String, Object&gt; <span class="title">searchByScrollPage</span><span class="params">(String keywords, String scrollId, <span class="keyword">int</span> pageSize)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    SearchResponse searchResponse = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span>(scrollId == <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="comment">// 构建SearchRequest检索请求 专门用来进行全文检索、关键字检索的API</span></span><br><span class="line">        SearchRequest searchRequest = <span class="keyword">new</span> SearchRequest(JOB_IDX);</span><br><span class="line">        <span class="comment">// 创建一个SearchSourceBuilder专门用于构建查询条件</span></span><br><span class="line">        SearchSourceBuilder searchSourceBuilder = <span class="keyword">new</span> SearchSourceBuilder();</span><br><span class="line">        <span class="comment">// 使用QueryBuilders.multiMatchQuery构建一个查询条件（搜索title、jd），并配置到SearchSourceBuilder</span></span><br><span class="line">        MultiMatchQueryBuilder multiMatchQueryBuilder = QueryBuilders.multiMatchQuery(keywords, <span class="string">"title"</span>, <span class="string">"jd"</span>);</span><br><span class="line">        searchSourceBuilder.query(multiMatchQueryBuilder);<span class="comment">// 将查询条件设置到查询请求构建器中</span></span><br><span class="line">        HighlightBuilder highlightBuilder = <span class="keyword">new</span> HighlightBuilder(); <span class="comment">// 设置高亮</span></span><br><span class="line">        highlightBuilder.field(<span class="string">"title"</span>);</span><br><span class="line">        highlightBuilder.field(<span class="string">"jd"</span>);</span><br><span class="line">        highlightBuilder.preTags(<span class="string">"&lt;font color='red'&gt;"</span>);</span><br><span class="line">        highlightBuilder.postTags(<span class="string">"&lt;/font&gt;"</span>);</span><br><span class="line">        searchSourceBuilder.highlighter(highlightBuilder); <span class="comment">// 给请求设置高亮</span></span><br><span class="line">        searchSourceBuilder.size(pageSize); <span class="comment">// 每页显示多少条</span></span><br><span class="line">        searchRequest.source(searchSourceBuilder); <span class="comment">// 调用SearchRequest.source将查询条件设置到检索请求</span></span><br><span class="line">        searchRequest.scroll(TimeValue.timeValueMinutes(<span class="number">5</span>)); <span class="comment">// 设置scroll查询</span></span><br><span class="line">        <span class="comment">// 执行RestHighLevelClient.search发起请求</span></span><br><span class="line">        searchResponse = restHighLevelClient.search(searchRequest, RequestOptions.DEFAULT);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123; <span class="comment">// 第二次查询的时候，直接通过scroll id查询数据</span></span><br><span class="line">        SearchScrollRequest searchScrollRequest = <span class="keyword">new</span> SearchScrollRequest(scrollId);</span><br><span class="line">        searchScrollRequest.scroll(TimeValue.timeValueMinutes(<span class="number">5</span>));</span><br><span class="line">        <span class="comment">// 使用RestHighLevelClient发送scroll请求</span></span><br><span class="line">        searchResponse = restHighLevelClient.scroll(searchScrollRequest, RequestOptions.DEFAULT);</span><br><span class="line">    &#125;</span><br><span class="line">    SearchHit[] hitArray = searchResponse.getHits().getHits();</span><br><span class="line">    ArrayList&lt;JobDetail&gt; jobDetailArrayList = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (SearchHit documentFields : hitArray) &#123; <span class="comment">// 遍历结果，迭代ES响应的数据</span></span><br><span class="line">        String json = documentFields.getSourceAsString(); <span class="comment">// 获取命中的结果</span></span><br><span class="line">        JobDetail jobDetail = JSONObject.parseObject(json, JobDetail<span class="class">.<span class="keyword">class</span>)</span>; <span class="comment">// 将JSON字符串转换为对象</span></span><br><span class="line">        jobDetail.setId(Long.parseLong(documentFields.getId())); <span class="comment">// 使用SearchHit.getId设置文档ID</span></span><br><span class="line">        jobDetailArrayList.add(jobDetail);</span><br><span class="line">        <span class="comment">// 设置高亮的一些文本到实体类中 封装了高亮</span></span><br><span class="line">        Map&lt;String, HighlightField&gt; highlightFieldMap = documentFields.getHighlightFields();</span><br><span class="line">        HighlightField titleHL = highlightFieldMap.get(<span class="string">"title"</span>);</span><br><span class="line">        HighlightField jdHL = highlightFieldMap.get(<span class="string">"jd"</span>);</span><br><span class="line">        <span class="keyword">if</span>(titleHL != <span class="keyword">null</span>) &#123;</span><br><span class="line">            Text[] fragments = titleHL.getFragments(); <span class="comment">// 获取指定字段的高亮片段</span></span><br><span class="line">            StringBuilder builder = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">            <span class="keyword">for</span>(Text text : fragments) &#123; <span class="comment">// 将这些高亮片段拼接成一个完整的高亮字段</span></span><br><span class="line">                builder.append(text);</span><br><span class="line">            &#125;</span><br><span class="line">            jobDetail.setTitle(builder.toString()); <span class="comment">// 设置到实体类中</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(jdHL != <span class="keyword">null</span>) &#123;</span><br><span class="line">            Text[] fragments = jdHL.getFragments(); <span class="comment">// 获取指定字段的高亮片段</span></span><br><span class="line">            StringBuilder builder = <span class="keyword">new</span> StringBuilder(); </span><br><span class="line">            <span class="keyword">for</span>(Text text : fragments) &#123;<span class="comment">// 将这些高亮片段拼接成一个完整的高亮字段</span></span><br><span class="line">                builder.append(text);</span><br><span class="line">            &#125;</span><br><span class="line">            jobDetail.setJd(builder.toString()); <span class="comment">// 设置到实体类中</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 将结果封装到Map结构中，带有分页信息</span></span><br><span class="line">    <span class="keyword">long</span> totalNum = searchResponse.getHits().getTotalHits().value;</span><br><span class="line">    Map&lt;String, Object&gt; hashMap = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">    hashMap.put(<span class="string">"scroll_id"</span>, searchResponse.getScrollId());</span><br><span class="line">    hashMap.put(<span class="string">"content"</span>, jobDetailArrayList); <span class="comment">// content -&gt; 当前分页中的数据</span></span><br><span class="line">    hashMap.put(<span class="string">"total_num"</span>, totalNum); <span class="comment">// total -&gt; 使用SearchHits.getTotalHits().value获取到所有的记录数</span></span><br><span class="line">    <span class="keyword">return</span> hashMap;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    restHighLevelClient.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="京东商城搜索效果实现"><a href="#京东商城搜索效果实现" class="headerlink" title="京东商城搜索效果实现"></a>京东商城搜索效果实现</h4><p>ES索引库表结构分析</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">PUT product_db  <span class="comment">// 创建索引库</span></span><br><span class="line">&#123;<span class="string">"mappings"</span>:&#123;<span class="string">"properties"</span>:&#123;<span class="string">"id"</span>:&#123;<span class="string">"type"</span>:<span class="string">"long"</span>&#125;,<span class="string">"name"</span>:&#123;<span class="string">"type"</span>:<span class="string">"text"</span>,<span class="string">"analyzer"</span>:<span class="string">"ik_max_word"</span>&#125;,<span class="string">"keywords"</span>:&#123;<span class="string">"type"</span>:<span class="string">"text"</span>,<span class="string">"analyzer"</span>:<span class="string">"ik_max_word"</span>&#125;,<span class="string">"subTitle"</span>:&#123;<span class="string">"type"</span>:<span class="string">"text"</span>,<span class="string">"analyzer"</span>:<span class="string">"ik_max_word"</span>&#125;,<span class="string">"salecount"</span>:&#123;<span class="string">"type"</span>:<span class="string">"long"</span>&#125;,<span class="string">"putawayDate"</span>:&#123;<span class="string">"type"</span>:<span class="string">"date"</span>&#125;,<span class="string">"price"</span>:&#123;<span class="string">"type"</span>:<span class="string">"double"</span>&#125;,<span class="string">"promotionPrice"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"originalPrice"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"pic"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"sale"</span>:&#123;<span class="string">"type"</span>:<span class="string">"long"</span>&#125;,<span class="string">"hasStock"</span>:&#123;<span class="string">"type"</span>:<span class="string">"boolean"</span>&#125;,<span class="string">"brandId"</span>:&#123;<span class="string">"type"</span>:<span class="string">"long"</span>&#125;,<span class="string">"brandName"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"brandImg"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"categoryId"</span>:&#123;<span class="string">"type"</span>:<span class="string">"long"</span>&#125;,<span class="string">"categoryName"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"attrs"</span>:&#123;<span class="string">"type"</span>:<span class="string">"nested"</span>,<span class="string">"properties"</span>:&#123;<span class="string">"attrId"</span>:&#123;<span class="string">"type"</span>:<span class="string">"long"</span>&#125;,<span class="string">"attrName"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"attrValue"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;&#125;&#125;&#125;&#125;&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 索引数据准备</span></span><br><span class="line">PUT /product_db/_doc/<span class="number">1</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"26"</span>,<span class="string">"name"</span>:<span class="string">"小米 11 手机"</span>,<span class="string">"keywords"</span>:<span class="string">"小米手机"</span>,<span class="string">"subTitle"</span>:<span class="string">"AI智慧全面屏 6GB +64GB 亮黑色 全网通版 移动联通电信4G手机 双卡双待 双卡双待"</span>,<span class="string">"price"</span>:<span class="string">"3999"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"2999"</span>,<span class="string">"originalPrice"</span>:<span class="string">"5999"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/xiaomi.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">999</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-01"</span>,<span class="string">"brandId"</span>:<span class="number">6</span>,<span class="string">"brandName"</span>:<span class="string">"小米"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/1e34aef2a409119018a4c6258e39ecfb_222_222.png"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">1</span>,<span class="string">"attrName"</span>:<span class="string">"cpu"</span>,<span class="string">"attrValue"</span>:<span class="string">"2核"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">2</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"黑色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">2</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"27"</span>,<span class="string">"name"</span>:<span class="string">"小米 10 手机"</span>,<span class="string">"keywords"</span>:<span class="string">"小米手机"</span>,<span class="string">"subTitle"</span>:<span class="string">"AI智慧全面屏 4GB +64GB 亮白色 全网通版 移动联通电信4G手机 双卡双待 双卡双待"</span>,<span class="string">"price"</span>:<span class="string">"2999"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"1999"</span>,<span class="string">"originalPrice"</span>:<span class="string">"3999"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/xiaomi.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">false</span>,<span class="string">"salecount"</span>:<span class="number">99</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-02"</span>,<span class="string">"brandId"</span>:<span class="number">6</span>,<span class="string">"brandName"</span>:<span class="string">"小米"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/1e34aef2a409119018a4c6258e39ecfb_222_222.png"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">1</span>,<span class="string">"attrName"</span>:<span class="string">"cpu"</span>,<span class="string">"attrValue"</span>:<span class="string">"4核"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">2</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"白色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">3</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"28"</span>,<span class="string">"name"</span>:<span class="string">"小米  手机"</span>,<span class="string">"keywords"</span>:<span class="string">"小米手机"</span>,<span class="string">"subTitle"</span>:<span class="string">"AI智慧全面屏 4GB +64GB 亮蓝色 全网通版 移动联通电信4G手机 双卡双待 双卡双待"</span>,<span class="string">"price"</span>:<span class="string">"2999"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"1999"</span>,<span class="string">"originalPrice"</span>:<span class="string">"3999"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/xiaomi.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">199</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-03"</span>,<span class="string">"brandId"</span>:<span class="number">6</span>,<span class="string">"brandName"</span>:<span class="string">"小米"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/1e34aef2a409119018a4c6258e39ecfb_222_222.png"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">1</span>,<span class="string">"attrName"</span>:<span class="string">"cpu"</span>,<span class="string">"attrValue"</span>:<span class="string">"2核"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">2</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"蓝色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">4</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"29"</span>,<span class="string">"name"</span>:<span class="string">"Apple iPhone 8 Plus 64GB 金色特别版 移动联通电信4G手机"</span>,<span class="string">"keywords"</span>:<span class="string">"苹果手机"</span>,<span class="string">"subTitle"</span>:<span class="string">"苹果手机 Apple产品年中狂欢节，好物尽享，美在智慧！速来 &gt;&gt; 勾选[保障服务][原厂保2年]，获得AppleCare+全方位服务计划，原厂延保售后无忧。"</span>,<span class="string">"price"</span>:<span class="string">"5999"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"4999"</span>,<span class="string">"originalPrice"</span>:<span class="string">"7999"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5acc5248N6a5f81cd.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">1199</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-04"</span>,<span class="string">"brandId"</span>:<span class="number">51</span>,<span class="string">"brandName"</span>:<span class="string">"苹果"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180607/timg.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">1</span>,<span class="string">"attrName"</span>:<span class="string">"cpu"</span>,<span class="string">"attrValue"</span>:<span class="string">"4核"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">2</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"金色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">5</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"30"</span>,<span class="string">"name"</span>:<span class="string">"HLA海澜之家简约动物印花短袖T恤"</span>,<span class="string">"keywords"</span>:<span class="string">"海澜之家衣服"</span>,<span class="string">"subTitle"</span>:<span class="string">"HLA海澜之家短袖T恤"</span>,<span class="string">"price"</span>:<span class="string">"199"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"99"</span>,<span class="string">"originalPrice"</span>:<span class="string">"299"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5ad83a4fN6ff67ecd.jpg!cc_350x449.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">19</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-05"</span>,<span class="string">"brandId"</span>:<span class="number">50</span>,<span class="string">"brandName"</span>:<span class="string">"海澜之家"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/99d3279f1029d32b929343b09d3c72de_222_222.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">8</span>,<span class="string">"categoryName"</span>:<span class="string">"T恤"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">3</span>,<span class="string">"attrName"</span>:<span class="string">"尺寸"</span>,<span class="string">"attrValue"</span>:<span class="string">"M"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">4</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"黑色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">6</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"31"</span>,<span class="string">"name"</span>:<span class="string">"HLA海澜之家蓝灰花纹圆领针织布短袖T恤"</span>,<span class="string">"keywords"</span>:<span class="string">"海澜之家衣服"</span>,<span class="string">"subTitle"</span>:<span class="string">"HLA海澜之家短袖T恤"</span>,<span class="string">"price"</span>:<span class="string">"299"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"199"</span>,<span class="string">"originalPrice"</span>:<span class="string">"299"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5ac98b64N70acd82f.jpg!cc_350x449.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">399</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-06"</span>,<span class="string">"brandId"</span>:<span class="number">50</span>,<span class="string">"brandName"</span>:<span class="string">"海澜之家"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/99d3279f1029d32b929343b09d3c72de_222_222.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">8</span>,<span class="string">"categoryName"</span>:<span class="string">"T恤"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">3</span>,<span class="string">"attrName"</span>:<span class="string">"尺寸"</span>,<span class="string">"attrValue"</span>:<span class="string">"X"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">4</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"蓝灰"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">7</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"32"</span>,<span class="string">"name"</span>:<span class="string">"HLA海澜之家短袖T恤男基础款"</span>,<span class="string">"keywords"</span>:<span class="string">"海澜之家衣服"</span>,<span class="string">"subTitle"</span>:<span class="string">"HLA海澜之家短袖T恤"</span>,<span class="string">"price"</span>:<span class="string">"269"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"169"</span>,<span class="string">"originalPrice"</span>:<span class="string">"399"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5a51eb88Na4797877.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">399</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-07"</span>,<span class="string">"brandId"</span>:<span class="number">50</span>,<span class="string">"brandName"</span>:<span class="string">"海澜之家"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/99d3279f1029d32b929343b09d3c72de_222_222.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">8</span>,<span class="string">"categoryName"</span>:<span class="string">"T恤"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">3</span>,<span class="string">"attrName"</span>:<span class="string">"尺寸"</span>,<span class="string">"attrValue"</span>:<span class="string">"L"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">4</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"蓝色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">8</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"33"</span>,<span class="string">"name"</span>:<span class="string">"小米（MI）小米电视4A "</span>,<span class="string">"keywords"</span>:<span class="string">"小米电视机家用电器"</span>,<span class="string">"subTitle"</span>:<span class="string">"小米（MI）小米电视4A 55英寸 L55M5-AZ/L55M5-AD 2GB+8GB HDR 4K超高清 人工智能网络液晶平板电视"</span>,<span class="string">"price"</span>:<span class="string">"2269"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"2169"</span>,<span class="string">"originalPrice"</span>:<span class="string">"2399"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5b02804dN66004d73.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">132</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-09"</span>,<span class="string">"brandId"</span>:<span class="number">6</span>,<span class="string">"brandName"</span>:<span class="string">"小米"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/1e34aef2a409119018a4c6258e39ecfb_222_222.png"</span>,<span class="string">"categoryId"</span>:<span class="number">35</span>,<span class="string">"categoryName"</span>:<span class="string">"手机数码"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">5</span>,<span class="string">"attrName"</span>:<span class="string">"屏幕尺寸"</span>,<span class="string">"attrValue"</span>:<span class="string">"52"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">6</span>,<span class="string">"attrName"</span>:<span class="string">"机身颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"黑色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">9</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"34"</span>,<span class="string">"name"</span>:<span class="string">"小米（MI）小米电视4A 65英寸"</span>,<span class="string">"keywords"</span>:<span class="string">"小米电视机家用电器"</span>,<span class="string">"subTitle"</span>:<span class="string">"小米（MI）小米电视4A 65英寸 L55M5-AZ/L55M5-AD 2GB+8GB HDR 4K超高清 人工智能网络液晶平板电视"</span>,<span class="string">"price"</span>:<span class="string">"3269"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"3169"</span>,<span class="string">"originalPrice"</span>:<span class="string">"3399"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5b028530N51eee7d4.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">999</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-10"</span>,<span class="string">"brandId"</span>:<span class="number">6</span>,<span class="string">"brandName"</span>:<span class="string">"小米"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/1e34aef2a409119018a4c6258e39ecfb_222_222.png"</span>,<span class="string">"categoryId"</span>:<span class="number">35</span>,<span class="string">"categoryName"</span>:<span class="string">"手机数码"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">5</span>,<span class="string">"attrName"</span>:<span class="string">"屏幕尺寸"</span>,<span class="string">"attrValue"</span>:<span class="string">"65"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">6</span>,<span class="string">"attrName"</span>:<span class="string">"机身颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"金色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">10</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"35"</span>,<span class="string">"name"</span>:<span class="string">"耐克NIKE 男子 休闲鞋 ROSHE RUN 运动鞋 511881-010黑色41码"</span>,<span class="string">"keywords"</span>:<span class="string">"耐克运动鞋 鞋子"</span>,<span class="string">"subTitle"</span>:<span class="string">"耐克NIKE 男子 休闲鞋 ROSHE RUN 运动鞋 511881-010黑色41码"</span>,<span class="string">"price"</span>:<span class="string">"569"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"369"</span>,<span class="string">"originalPrice"</span>:<span class="string">"899"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5b235bb9Nf606460b.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">399</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-11"</span>,<span class="string">"brandId"</span>:<span class="number">58</span>,<span class="string">"brandName"</span>:<span class="string">"NIKE"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/timg (51).jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">29</span>,<span class="string">"categoryName"</span>:<span class="string">"男鞋"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">7</span>,<span class="string">"attrName"</span>:<span class="string">"尺码"</span>,<span class="string">"attrValue"</span>:<span class="string">"42"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">8</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"黑色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">11</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"36"</span>,<span class="string">"name"</span>:<span class="string">"耐克NIKE 男子 气垫 休闲鞋 AIR MAX 90 ESSENTIAL 运动鞋 AJ1285-101白色41码"</span>,<span class="string">"keywords"</span>:<span class="string">"耐克运动鞋 鞋子"</span>,<span class="string">"subTitle"</span>:<span class="string">"AIR MAX 90 ESSENTIAL 运动鞋 AJ1285-101白色"</span>,<span class="string">"price"</span>:<span class="string">"769"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"469"</span>,<span class="string">"originalPrice"</span>:<span class="string">"999"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/5b19403eN9f0b3cb8.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">499</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-13"</span>,<span class="string">"brandId"</span>:<span class="number">58</span>,<span class="string">"brandName"</span>:<span class="string">"NIKE"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/timg (51).jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">29</span>,<span class="string">"categoryName"</span>:<span class="string">"男鞋"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">7</span>,<span class="string">"attrName"</span>:<span class="string">"尺码"</span>,<span class="string">"attrValue"</span>:<span class="string">"44"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">8</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"白色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">12</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"37"</span>,<span class="string">"name"</span>:<span class="string">"(华为)HUAWEI MateBook X Pro 2019款 13.9英寸3K触控全面屏 轻薄笔记本"</span>,<span class="string">"keywords"</span>:<span class="string">"轻薄笔记本华为 笔记本电脑"</span>,<span class="string">"subTitle"</span>:<span class="string">"轻薄华为笔记本 电脑"</span>,<span class="string">"price"</span>:<span class="string">"4769"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"4469"</span>,<span class="string">"originalPrice"</span>:<span class="string">"4999"</span>,<span class="string">"pic"</span>:<span class="string">"http://tuling-mall.oss-cn-shenzhen.aliyuncs.com/tulingmall/images/20200317/800_800_1555752016264mp.png"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">699</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-14"</span>,<span class="string">"brandId"</span>:<span class="number">3</span>,<span class="string">"brandName"</span>:<span class="string">"华为"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/17f2dd9756d9d333bee8e60ce8c03e4c_222_222.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">9</span>,<span class="string">"attrName"</span>:<span class="string">"容量"</span>,<span class="string">"attrValue"</span>:<span class="string">"16G"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">10</span>,<span class="string">"attrName"</span>:<span class="string">"网络"</span>,<span class="string">"attrValue"</span>:<span class="string">"4G"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">13</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"38"</span>,<span class="string">"name"</span>:<span class="string">"华为nova6se 手机 绮境森林 全网通（8G+128G)"</span>,<span class="string">"keywords"</span>:<span class="string">"轻薄笔记本华为 手机"</span>,<span class="string">"subTitle"</span>:<span class="string">"华为nova6se 手机"</span>,<span class="string">"price"</span>:<span class="string">"6769"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"6469"</span>,<span class="string">"originalPrice"</span>:<span class="string">"6999"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180607/5ac1bf58Ndefaac16.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">899</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-15"</span>,<span class="string">"brandId"</span>:<span class="number">3</span>,<span class="string">"brandName"</span>:<span class="string">"华为"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/17f2dd9756d9d333bee8e60ce8c03e4c_222_222.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">9</span>,<span class="string">"attrName"</span>:<span class="string">"容量"</span>,<span class="string">"attrValue"</span>:<span class="string">"64G"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">10</span>,<span class="string">"attrName"</span>:<span class="string">"网络"</span>,<span class="string">"attrValue"</span>:<span class="string">"5G"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">14</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"39"</span>,<span class="string">"name"</span>:<span class="string">"iPhone7/6s/8钢化膜苹果8Plus全屏复盖抗蓝光防窥防偷看手机膜"</span>,<span class="string">"keywords"</span>:<span class="string">"手机膜"</span>,<span class="string">"subTitle"</span>:<span class="string">"iPhone7/6s/8钢化膜苹果8Plus全屏复盖抗蓝光防窥防偷看手机膜"</span>,<span class="string">"price"</span>:<span class="string">"29"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"39"</span>,<span class="string">"originalPrice"</span>:<span class="string">"49"</span>,<span class="string">"pic"</span>:<span class="string">"http://tuling-mall.oss-cn-shenzhen.aliyuncs.com/tulingmall/images/20200311/6df99dab78bb2014.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">799</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-16"</span>,<span class="string">"brandId"</span>:<span class="number">51</span>,<span class="string">"brandName"</span>:<span class="string">"苹果"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://tuling-mall.oss-cn-shenzhen.aliyuncs.com/tulingmall/images/20200311/2b84746650fc122d67749a876c453619.png"</span>,<span class="string">"categoryId"</span>:<span class="number">30</span>,<span class="string">"categoryName"</span>:<span class="string">"手机配件"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">11</span>,<span class="string">"attrName"</span>:<span class="string">"手机膜-材料"</span>,<span class="string">"attrValue"</span>:<span class="string">"钢化"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">12</span>,<span class="string">"attrName"</span>:<span class="string">"手机膜-颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"白色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">15</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"40"</span>,<span class="string">"name"</span>:<span class="string">"七匹狼短袖T恤男纯棉舒适春夏修身运动休闲短袖三条装 圆领3条装"</span>,<span class="string">"keywords"</span>:<span class="string">"七匹狼服装 衣服"</span>,<span class="string">"subTitle"</span>:<span class="string">"七匹狼短袖T恤男纯棉舒适春夏修身运动休闲短袖三条装 圆领3条装"</span>,<span class="string">"price"</span>:<span class="string">"129"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"139"</span>,<span class="string">"originalPrice"</span>:<span class="string">"149"</span>,<span class="string">"pic"</span>:<span class="string">"http://tuling-mall.oss-cn-shenzhen.aliyuncs.com/tulingmall/images/20200311/19e846e727dff337.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">199</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-04-20"</span>,<span class="string">"brandId"</span>:<span class="number">49</span>,<span class="string">"brandName"</span>:<span class="string">"七匹狼"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/18d8bc3eb13533fab466d702a0d3fd1f40345bcd.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">8</span>,<span class="string">"categoryName"</span>:<span class="string">"T恤"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">3</span>,<span class="string">"attrName"</span>:<span class="string">"尺寸"</span>,<span class="string">"attrValue"</span>:<span class="string">"M"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">4</span>,<span class="string">"attrName"</span>:<span class="string">"颜色"</span>,<span class="string">"attrValue"</span>:<span class="string">"白色"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">16</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"41"</span>,<span class="string">"name"</span>:<span class="string">"华为P40 Pro手机"</span>,<span class="string">"keywords"</span>:<span class="string">"华为手机"</span>,<span class="string">"subTitle"</span>:<span class="string">"华为P40 Pro手机"</span>,<span class="string">"price"</span>:<span class="string">"2129"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"2139"</span>,<span class="string">"originalPrice"</span>:<span class="string">"2149"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180607/5ac1bf58Ndefaac16.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">199</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-05-03"</span>,<span class="string">"brandId"</span>:<span class="number">3</span>,<span class="string">"brandName"</span>:<span class="string">"华为"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20190129/17f2dd9756d9d333bee8e60ce8c03e4c_222_222.jpg"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">9</span>,<span class="string">"attrName"</span>:<span class="string">"容量"</span>,<span class="string">"attrValue"</span>:<span class="string">"128G"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">10</span>,<span class="string">"attrName"</span>:<span class="string">"网络"</span>,<span class="string">"attrValue"</span>:<span class="string">"5G"</span>&#125;]&#125;</span><br><span class="line">PUT /product_db/_doc/<span class="number">17</span></span><br><span class="line">&#123;<span class="string">"id"</span>:<span class="string">"42"</span>,<span class="string">"name"</span>:<span class="string">"朵唯智能手机 4G全网通 老人学生双卡双待手机"</span>,<span class="string">"keywords"</span>:<span class="string">"朵唯手机"</span>,<span class="string">"subTitle"</span>:<span class="string">"朵唯手机后置双摄，国产虎贲芯片！优化散热结构！浅薄机身！朵唯4月特惠！"</span>,<span class="string">"price"</span>:<span class="string">"3129"</span>,<span class="string">"promotionPrice"</span>:<span class="string">"3139"</span>,<span class="string">"originalPrice"</span>:<span class="string">"3249"</span>,<span class="string">"pic"</span>:<span class="string">"http://macro-oss.oss-cn-shenzhen.aliyuncs.com/mall/images/20180615/xiaomi.jpg"</span>,<span class="string">"sale"</span>:<span class="number">999</span>,<span class="string">"hasStock"</span>:<span class="keyword">true</span>,<span class="string">"salecount"</span>:<span class="number">1199</span>,<span class="string">"putawayDate"</span>:<span class="string">"2021-06-01"</span>,<span class="string">"brandId"</span>:<span class="number">59</span>,<span class="string">"brandName"</span>:<span class="string">"朵唯"</span>,<span class="string">"brandImg"</span>:<span class="string">"http://tuling-mall.oss-cn-shenzhen.aliyuncs.com/tulingmall/images/20200311/2b84746650fc122d67749a876c453619.png"</span>,<span class="string">"categoryId"</span>:<span class="number">19</span>,<span class="string">"categoryName"</span>:<span class="string">"手机通讯"</span>,<span class="string">"attrs"</span>:[&#123;<span class="string">"attrId"</span>:<span class="number">9</span>,<span class="string">"attrName"</span>:<span class="string">"容量"</span>,<span class="string">"attrValue"</span>:<span class="string">"32G"</span>&#125;,&#123;<span class="string">"attrId"</span>:<span class="number">10</span>,<span class="string">"attrName"</span>:<span class="string">"网络"</span>,<span class="string">"attrValue"</span>:<span class="string">"4G"</span>&#125;]&#125;</span><br></pre></td></tr></table></figure>
+<p>检索<code>DSL</code>语句构建</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">POST /product_db/_doc/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"from"</span>: <span class="number">0</span>,</span><br><span class="line">  <span class="string">"size"</span>: <span class="number">8</span>,</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"bool"</span>: &#123;</span><br><span class="line">      <span class="string">"must"</span>: [&#123;<span class="string">"match"</span>: &#123;<span class="string">"name"</span>: &#123;<span class="string">"query"</span>: <span class="string">"手机"</span>&#125;&#125;&#125;],</span><br><span class="line">      <span class="string">"filter"</span>: [</span><br><span class="line">        &#123;<span class="string">"term"</span>: &#123;<span class="string">"hasStock"</span>: &#123;<span class="string">"value"</span>: <span class="keyword">true</span>&#125;&#125;&#125;,</span><br><span class="line">        &#123;<span class="string">"range"</span>: &#123;<span class="string">"price"</span>: &#123;<span class="string">"from"</span>: <span class="string">"1"</span>,<span class="string">"to"</span>: <span class="string">"5000"</span>&#125;&#125;&#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"sort"</span>: [&#123;<span class="string">"salecount"</span>: &#123;<span class="string">"order"</span>: <span class="string">"asc"</span>&#125;&#125;],</span><br><span class="line">  <span class="string">"aggregations"</span>: &#123;</span><br><span class="line">    <span class="string">"brand_agg"</span>: &#123;</span><br><span class="line">      <span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"brandId"</span>,<span class="string">"size"</span>: <span class="number">50</span>&#125;,</span><br><span class="line">      <span class="string">"aggregations"</span>: &#123;</span><br><span class="line">        <span class="string">"brand_name_agg"</span>: &#123;<span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"brandName"</span>&#125;&#125;,</span><br><span class="line">        <span class="string">"brand_img_agg"</span>: &#123;<span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"brandImg"</span>&#125;&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"category_agg"</span>: &#123;</span><br><span class="line">      <span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"categoryId"</span>,<span class="string">"size"</span>: <span class="number">50</span>,<span class="string">"min_doc_count"</span>: <span class="number">1</span>&#125;,</span><br><span class="line">      <span class="string">"aggregations"</span>: &#123;</span><br><span class="line">        <span class="string">"category_name_agg"</span>: &#123;<span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"categoryName"</span>&#125;&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"attr_agg"</span>: &#123;</span><br><span class="line">      <span class="string">"nested"</span>: &#123;<span class="string">"path"</span>: <span class="string">"attrs"</span>&#125;,</span><br><span class="line">      <span class="string">"aggregations"</span>: &#123;</span><br><span class="line">        <span class="string">"attr_id_agg"</span>: &#123;</span><br><span class="line">          <span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"attrs.attrId"</span>&#125;,</span><br><span class="line">          <span class="string">"aggregations"</span>: &#123;</span><br><span class="line">            <span class="string">"attr_name_agg"</span>: &#123;<span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"attrs.attrName"</span>&#125;&#125;,</span><br><span class="line">            <span class="string">"attr_value_agg"</span>: &#123;<span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"attrs.attrValue"</span>&#125;&#125;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"highlight"</span>: &#123;</span><br><span class="line">    <span class="string">"pre_tags"</span>: [<span class="string">"&lt;b style='color:red'&gt;"</span>],</span><br><span class="line">    <span class="string">"post_tags"</span>: [<span class="string">"&lt;/b&gt;"</span>],</span><br><span class="line">    <span class="string">"fields"</span>: &#123;<span class="string">"name"</span>: &#123;&#125;&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Java代码实现</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@ResponseBody</span></span><br><span class="line"><span class="meta">@RequestMapping</span>(value = <span class="string">"/searchList"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> CommonResult&lt;ESResponseResult&gt; <span class="title">listPage</span><span class="params">(ESRequestParam param, HttpServletRequest request)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 根据传递来的页面的查询参数，去es中检索商品</span></span><br><span class="line">    ESResponseResult searchResult = tulingMallSearchService.search(param);</span><br><span class="line">    <span class="keyword">return</span> CommonResult.success(searchResult);</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ESResponseResult <span class="title">search</span><span class="params">(ESRequestParam param)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 构建检索对象-封装请求相关参数信息</span></span><br><span class="line">        SearchRequest searchRequest = startBuildRequestParam(param);</span><br><span class="line">        <span class="comment">// 进行检索操作</span></span><br><span class="line">        SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);</span><br><span class="line">        <span class="comment">// 分析响应数据，封装成指定的格式</span></span><br><span class="line">        ESResponseResult responseResult = startBuildResponseResult(response, param);</span><br><span class="line">        <span class="keyword">return</span> responseResult;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 封装请求参数信息，关键字查询、根据属性、分类、品牌、价格区间、是否有库存等进行过滤、分页、高亮、以及聚合统计品牌分类属性</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> SearchRequest <span class="title">startBuildRequestParam</span><span class="params">(ESRequestParam param)</span> </span>&#123;</span><br><span class="line">    SearchSourceBuilder searchSourceBuilder = <span class="keyword">new</span> SearchSourceBuilder();</span><br><span class="line">    <span class="comment">// 关键字查询、根据属性、分类、品牌、价格区间、是否有库存等进行过滤、分页、高亮、以及聚合统计品牌分类属性</span></span><br><span class="line">    BoolQueryBuilder boolQueryBuilder = <span class="keyword">new</span> BoolQueryBuilder();</span><br><span class="line">    <span class="keyword">if</span> (!StringUtils.isEmpty(param.getKeyword())) &#123;</span><br><span class="line">        <span class="comment">//单字段查询 boolQueryBuilder.must(QueryBuilders.matchQuery("name", param.getKeyword()));</span></span><br><span class="line">        <span class="comment">//多字段查询</span></span><br><span class="line">        boolQueryBuilder.must(QueryBuilders.multiMatchQuery(param.getKeyword(),<span class="string">"name"</span>,<span class="string">"keywords"</span>,<span class="string">"subTitle"</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 根据类目ID进行过滤</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> != param.getCategoryId()) &#123;</span><br><span class="line">        boolQueryBuilder.filter(QueryBuilders.termQuery(<span class="string">"categoryId"</span>, param.getCategoryId()));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 根据品牌ID进行过滤</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> != param.getBrandId() &amp;&amp; param.getBrandId().size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        boolQueryBuilder.filter(QueryBuilders.termsQuery(<span class="string">"brandId"</span>, param.getBrandId()));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 根据属性进行相关过滤</span></span><br><span class="line">    <span class="keyword">if</span> (param.getAttrs() != <span class="keyword">null</span> &amp;&amp; param.getAttrs().size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        param.getAttrs().forEach(item -&gt; &#123;</span><br><span class="line">            <span class="comment">//attrs=1_白色&amp;2_4核</span></span><br><span class="line">            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();</span><br><span class="line">            <span class="comment">//attrs=1_64G</span></span><br><span class="line">            String[] s = item.split(<span class="string">"_"</span>);</span><br><span class="line">            String attrId = s[<span class="number">0</span>];</span><br><span class="line">            String[] attrValues = s[<span class="number">1</span>].split(<span class="string">":"</span>);<span class="comment">//这个属性检索用的值</span></span><br><span class="line">            boolQuery.must(QueryBuilders.termQuery(<span class="string">"attrs.attrId"</span>, attrId));</span><br><span class="line">            boolQuery.must(QueryBuilders.termsQuery(<span class="string">"attrs.attrValue"</span>, attrValues));</span><br><span class="line"></span><br><span class="line">            NestedQueryBuilder nestedQueryBuilder = QueryBuilders.nestedQuery(<span class="string">"attrs"</span>, boolQuery, ScoreMode.None);</span><br><span class="line">            boolQueryBuilder.filter(nestedQueryBuilder);</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 是否有库存</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">null</span> != param.getHasStock()) &#123;</span><br><span class="line">        boolQueryBuilder.filter(QueryBuilders.termQuery(<span class="string">"hasStock"</span>, param.getHasStock() == <span class="number">1</span>));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 根据价格过滤</span></span><br><span class="line">    <span class="keyword">if</span> (!StringUtils.isEmpty(param.getPrice())) &#123;</span><br><span class="line">        <span class="comment">// 价格的输入形式为：10-100（起始价格和最终价格）或-100（不指定起始价格）或10-（不限制最终价格）</span></span><br><span class="line">        RangeQueryBuilder rangeQueryBuilder = QueryBuilders.rangeQuery(<span class="string">"price"</span>);</span><br><span class="line">        String[] price = param.getPrice().split(<span class="string">"_"</span>);</span><br><span class="line">        <span class="keyword">if</span> (price.length == <span class="number">2</span>) &#123;</span><br><span class="line">            rangeQueryBuilder.gte(price[<span class="number">0</span>]).lte(price[<span class="number">1</span>]);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (price.length == <span class="number">1</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (param.getPrice().startsWith(<span class="string">"_"</span>)) &#123;</span><br><span class="line">                rangeQueryBuilder.lte(price[<span class="number">1</span>]);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (param.getPrice().endsWith(<span class="string">"_"</span>)) &#123;</span><br><span class="line">                rangeQueryBuilder.gte(price[<span class="number">0</span>]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        boolQueryBuilder.filter(rangeQueryBuilder);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 封装所有查询条件</span></span><br><span class="line">    searchSourceBuilder.query(boolQueryBuilder);</span><br><span class="line">    <span class="comment">//实现排序、高亮、分页操作，排序，页面传入的参数值形式 sort=price_asc/desc</span></span><br><span class="line">    <span class="keyword">if</span> (!StringUtils.isEmpty(param.getSort())) &#123;</span><br><span class="line">        String sort = param.getSort();</span><br><span class="line">        String[] sortFileds = sort.split(<span class="string">"_"</span>);</span><br><span class="line">        System.out.println(<span class="string">"sortFileds:"</span>+sortFileds.length);</span><br><span class="line">        <span class="keyword">if</span>(!StringUtils.isEmpty(sortFileds[<span class="number">0</span>]))&#123;</span><br><span class="line">            SortOrder sortOrder = <span class="string">"asc"</span>.equalsIgnoreCase(sortFileds[<span class="number">1</span>]) ? SortOrder.ASC : SortOrder.DESC;</span><br><span class="line">            searchSourceBuilder.sort(sortFileds[<span class="number">0</span>], sortOrder);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 分页查询</span></span><br><span class="line">    searchSourceBuilder.from((param.getPageNum() - <span class="number">1</span>) * SearchConstant.PAGE_SIZE);</span><br><span class="line">    searchSourceBuilder.size(SearchConstant.PAGE_SIZE);</span><br><span class="line">    <span class="comment">// 高亮显示</span></span><br><span class="line">    <span class="keyword">if</span> (!StringUtils.isEmpty(param.getKeyword())) &#123;</span><br><span class="line">        HighlightBuilder highlightBuilder = <span class="keyword">new</span> HighlightBuilder();</span><br><span class="line">        highlightBuilder.field(<span class="string">"name"</span>);</span><br><span class="line">        highlightBuilder.preTags(<span class="string">"&lt;b style='color:red'&gt;"</span>);</span><br><span class="line">        highlightBuilder.postTags(<span class="string">"&lt;/b&gt;"</span>);</span><br><span class="line">        searchSourceBuilder.highlighter(highlightBuilder);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 对品牌、分类信息、属性信息进行聚合分析，按照品牌进行聚合</span></span><br><span class="line">    TermsAggregationBuilder brand_agg = AggregationBuilders.terms(<span class="string">"brand_agg"</span>);</span><br><span class="line">    brand_agg.field(<span class="string">"brandId"</span>).size(<span class="number">50</span>);</span><br><span class="line">    <span class="comment">// 品牌的子聚合-品牌名聚合</span></span><br><span class="line">    brand_agg.subAggregation(AggregationBuilders.terms(<span class="string">"brand_name_agg"</span>).field(<span class="string">"brandName"</span>).size(<span class="number">1</span>));</span><br><span class="line">    <span class="comment">// 品牌的子聚合-品牌图片聚合</span></span><br><span class="line">    brand_agg.subAggregation(AggregationBuilders.terms(<span class="string">"brand_img_agg"</span>).field(<span class="string">"brandImg"</span>).size(<span class="number">1</span>));</span><br><span class="line">    searchSourceBuilder.aggregation(brand_agg);</span><br><span class="line">    <span class="comment">// 按照分类信息进行聚合</span></span><br><span class="line">    TermsAggregationBuilder category_agg = AggregationBuilders.terms(<span class="string">"category_agg"</span>);</span><br><span class="line">    category_agg.field(<span class="string">"categoryId"</span>).size(<span class="number">50</span>);    category_agg.subAggregation(AggregationBuilders.terms(<span class="string">"category_name_agg"</span>).field(<span class="string">"categoryName"</span>).size(<span class="number">1</span>));</span><br><span class="line">    searchSourceBuilder.aggregation(category_agg);</span><br><span class="line">    <span class="comment">// 按照属性信息进行聚合</span></span><br><span class="line">    NestedAggregationBuilder attr_agg = AggregationBuilders.nested(<span class="string">"attr_agg"</span>, <span class="string">"attrs"</span>);</span><br><span class="line">    <span class="comment">// 按照属性ID进行聚合</span></span><br><span class="line">    TermsAggregationBuilder attr_id_agg = AggregationBuilders.terms(<span class="string">"attr_id_agg"</span>).field(<span class="string">"attrs.attrId"</span>);</span><br><span class="line">    attr_agg.subAggregation(attr_id_agg);</span><br><span class="line">    <span class="comment">// 在每个属性ID下，按照属性名进行聚合</span></span><br><span class="line">    attr_id_agg.subAggregation(AggregationBuilders.terms(<span class="string">"attr_name_agg"</span>).field(<span class="string">"attrs.attrName"</span>).size(<span class="number">1</span>));</span><br><span class="line">    <span class="comment">// 在每个属性ID下，按照属性值进行聚合</span></span><br><span class="line">    attr_id_agg.subAggregation(AggregationBuilders.terms(<span class="string">"attr_value_agg"</span>).field(<span class="string">"attrs.attrValue"</span>).size(<span class="number">50</span>));</span><br><span class="line">    searchSourceBuilder.aggregation(attr_agg);</span><br><span class="line">    System.out.println(<span class="string">"构建的DSL语句 &#123;&#125;:"</span>+ searchSourceBuilder.toString());</span><br><span class="line">    SearchRequest searchRequest = <span class="keyword">new</span> SearchRequest(<span class="keyword">new</span> String[]&#123;SearchConstant.INDEX_NAME&#125;, searchSourceBuilder);</span><br><span class="line">    <span class="keyword">return</span> searchRequest;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 封装查询到的结果信息，关键字查询、根据属性、分类、品牌、价格区间、是否有库存等进行过滤、分页、高亮、以及聚合统计品牌分类属性</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> ESResponseResult <span class="title">startBuildResponseResult</span><span class="params">(SearchResponse response, ESRequestParam param)</span> </span>&#123;</span><br><span class="line">    ESResponseResult result = <span class="keyword">new</span> ESResponseResult();</span><br><span class="line">    <span class="comment">// 获取查询到的商品信息</span></span><br><span class="line">    SearchHits hits = response.getHits();</span><br><span class="line">    List&lt;EsProduct&gt; esModels = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="comment">// 遍历所有商品信息</span></span><br><span class="line">    <span class="keyword">if</span> (hits.getHits() != <span class="keyword">null</span> &amp;&amp; hits.getHits().length &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">for</span> (SearchHit hit : hits.getHits()) &#123;</span><br><span class="line">            String sourceAsString = hit.getSourceAsString();</span><br><span class="line">            EsProduct esModel = JSON.parseObject(sourceAsString, EsProduct<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">            <span class="comment">// 判断是否按关键字检索，若是就显示高亮，否则不显示</span></span><br><span class="line">            <span class="keyword">if</span> (!StringUtils.isEmpty(param.getKeyword())) &#123;</span><br><span class="line">                <span class="comment">// 拿到高亮信息显示标题</span></span><br><span class="line">                HighlightField name = hit.getHighlightFields().get(<span class="string">"name"</span>);</span><br><span class="line">                <span class="comment">// 判断name中是否含有查询的关键字(因为是多字段查询，因此可能不包含指定的关键字，假设不包含则显示原始name字段的信息)</span></span><br><span class="line">                String nameValue = name!=<span class="keyword">null</span> ? name.getFragments()[<span class="number">0</span>].string() : esModel.getName();</span><br><span class="line">                esModel.setName(nameValue);</span><br><span class="line">            &#125;</span><br><span class="line">            esModels.add(esModel);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    result.setProducts(esModels);</span><br><span class="line">    <span class="comment">// 当前商品涉及到的所有品牌信息，小米手机和小米电脑都属于小米品牌，过滤重复品牌信息</span></span><br><span class="line">    Set&lt;ESResponseResult.BrandVo&gt; brandVos = <span class="keyword">new</span> LinkedHashSet&lt;&gt;();</span><br><span class="line">    <span class="comment">// 获取到品牌的聚合</span></span><br><span class="line">    ParsedLongTerms brandAgg = response.getAggregations().get(<span class="string">"brand_agg"</span>);</span><br><span class="line">    <span class="keyword">for</span> (Terms.Bucket bucket : brandAgg.getBuckets()) &#123;</span><br><span class="line">        ESResponseResult.BrandVo brandVo = <span class="keyword">new</span> ESResponseResult.BrandVo();</span><br><span class="line">        <span class="comment">// 获取品牌的id</span></span><br><span class="line">        <span class="keyword">long</span> brandId = bucket.getKeyAsNumber().longValue();</span><br><span class="line">        brandVo.setBrandId(brandId);</span><br><span class="line">        <span class="comment">// 获取品牌的名字</span></span><br><span class="line">        ParsedStringTerms brandNameAgg = bucket.getAggregations().get(<span class="string">"brand_name_agg"</span>);</span><br><span class="line">        String brandName = brandNameAgg.getBuckets().get(<span class="number">0</span>).getKeyAsString();</span><br><span class="line">        brandVo.setBrandName(brandName);</span><br><span class="line">        <span class="comment">// 获取品牌的LOGO</span></span><br><span class="line">        ParsedStringTerms brandImgAgg = bucket.getAggregations().get(<span class="string">"brand_img_agg"</span>);</span><br><span class="line">        String brandImg = brandImgAgg.getBuckets().get(<span class="number">0</span>).getKeyAsString();</span><br><span class="line">        brandVo.setBrandImg(brandImg);</span><br><span class="line">        System.out.println(<span class="string">"brandId:"</span>+brandId+<span class="string">"brandName:"</span>+brandName+<span class="string">"brandImg"</span>);</span><br><span class="line">        brandVos.add(brandVo);</span><br><span class="line">    &#125;</span><br><span class="line">    System.out.println(<span class="string">"brandVos.size:"</span>+brandVos.size());</span><br><span class="line">    result.setBrands(brandVos);</span><br><span class="line">    <span class="comment">// 当前商品相关的所有类目信息，获取到分类的聚合</span></span><br><span class="line">    List&lt;ESResponseResult.categoryVo&gt; categoryVos = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    ParsedLongTerms categoryAgg = response.getAggregations().get(<span class="string">"category_agg"</span>);</span><br><span class="line">    <span class="keyword">for</span> (Terms.Bucket bucket : categoryAgg.getBuckets()) &#123;</span><br><span class="line">        ESResponseResult.categoryVo categoryVo = <span class="keyword">new</span> ESResponseResult.categoryVo();</span><br><span class="line">        <span class="comment">// 获取分类id</span></span><br><span class="line">        String keyAsString = bucket.getKeyAsString();</span><br><span class="line">        categoryVo.setCategoryId(Long.parseLong(keyAsString));</span><br><span class="line">        <span class="comment">// 获取分类名</span></span><br><span class="line">        ParsedStringTerms categoryNameAgg = bucket.getAggregations().get(<span class="string">"category_name_agg"</span>);</span><br><span class="line">        String categoryName = categoryNameAgg.getBuckets().get(<span class="number">0</span>).getKeyAsString();</span><br><span class="line">        categoryVo.setCategoryName(categoryName);</span><br><span class="line">        categoryVos.add(categoryVo);</span><br><span class="line">    &#125;</span><br><span class="line">    result.setCategorys(categoryVos);</span><br><span class="line">    <span class="comment">// 获取商品相关的所有属性信息</span></span><br><span class="line">    List&lt;ESResponseResult.AttrVo&gt; attrVos = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="comment">// 获取属性信息的聚合</span></span><br><span class="line">    ParsedNested attrsAgg = response.getAggregations().get(<span class="string">"attr_agg"</span>);</span><br><span class="line">    ParsedLongTerms attrIdAgg = attrsAgg.getAggregations().get(<span class="string">"attr_id_agg"</span>);</span><br><span class="line">    <span class="keyword">for</span> (Terms.Bucket bucket : attrIdAgg.getBuckets()) &#123;</span><br><span class="line">        ESResponseResult.AttrVo attrVo = <span class="keyword">new</span> ESResponseResult.AttrVo();</span><br><span class="line">        <span class="comment">// 获取属性ID值</span></span><br><span class="line">        <span class="keyword">long</span> attrId = bucket.getKeyAsNumber().longValue();</span><br><span class="line">        attrVo.setAttrId(attrId);</span><br><span class="line">        <span class="comment">// 获取属性的名字</span></span><br><span class="line">        ParsedStringTerms attrNameAgg = bucket.getAggregations().get(<span class="string">"attr_name_agg"</span>);</span><br><span class="line">        String attrName = attrNameAgg.getBuckets().get(<span class="number">0</span>).getKeyAsString();</span><br><span class="line">        attrVo.setAttrName(attrName);</span><br><span class="line">        <span class="comment">// 获取属性的值</span></span><br><span class="line">        ParsedStringTerms attrValueAgg = bucket.getAggregations().get(<span class="string">"attr_value_agg"</span>);</span><br><span class="line">        List&lt;String&gt; attrValues = attrValueAgg.getBuckets().stream().map(item -&gt; item.getKeyAsString()).collect(Collectors.toList());</span><br><span class="line">        attrVo.setAttrValue(attrValues);</span><br><span class="line">        attrVos.add(attrVo);</span><br><span class="line">    &#125;</span><br><span class="line">    result.setAttrs(attrVos);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 进行分页操作</span></span><br><span class="line">    result.setPageNum(param.getPageNum());</span><br><span class="line">    <span class="comment">// 获取总记录数</span></span><br><span class="line">    <span class="keyword">long</span> total = hits.getTotalHits().value;</span><br><span class="line">    result.setTotal(total);</span><br><span class="line">    <span class="comment">// 计算总页码</span></span><br><span class="line">    <span class="keyword">int</span> totalPages = (<span class="keyword">int</span>) total % SearchConstant.PAGE_SIZE == <span class="number">0</span> ?</span><br><span class="line">        (<span class="keyword">int</span>) total / SearchConstant.PAGE_SIZE : ((<span class="keyword">int</span>) total / SearchConstant.PAGE_SIZE + <span class="number">1</span>);</span><br><span class="line">    result.setTotalPages(totalPages);</span><br><span class="line">    List&lt;Integer&gt; pageNavs = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= totalPages; i++) &#123;</span><br><span class="line">        pageNavs.add(i);</span><br><span class="line">    &#125;</span><br><span class="line">    result.setPageNavs(pageNavs);</span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+        
+            <a href="/Blog/Cloud/ELK/ElasticSearch进阶/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">ElasticSearch进阶</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

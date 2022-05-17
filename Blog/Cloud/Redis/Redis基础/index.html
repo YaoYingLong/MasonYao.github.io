@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Redis基础 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Redis">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Redis是非关系型的键值对数据库，可根据键以O(1)时间复杂度取出或插入关联值，Redis数据是存在内存中，键值对中键可以是字符串、整型、浮点型等且键唯一。值的类型可以是string、hash、list、set、sorted set等。内置了复制、磁盘持久化、LUA脚本、事务、SSL、ACLs、客户端缓存、客户端代理等功能，通过哨兵模式和Cluster模式提供高可用。 Redis的速度非常的快，">
+<meta name="keywords" content="Redis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis基础">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/Redis/Redis基础/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Redis是非关系型的键值对数据库，可根据键以O(1)时间复杂度取出或插入关联值，Redis数据是存在内存中，键值对中键可以是字符串、整型、浮点型等且键唯一。值的类型可以是string、hash、list、set、sorted set等。内置了复制、磁盘持久化、LUA脚本、事务、SSL、ACLs、客户端缓存、客户端代理等功能，通过哨兵模式和Cluster模式提供高可用。 Redis的速度非常的快，">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/Redis%20epoll%20IO多路复用.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/Redis数据结构关系.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/sdshsr5.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/sdshsr8.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/sdshsr16.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/ziplist.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/quicklist.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/hash-ziplist.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/intset数据结构.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/Redis_Set操作.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/zset-ziplist.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/skiplist.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/geohash.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/混合持久化AOF文件结构.png">
+<meta property="og:updated_time" content="2022-03-27T10:23:13.134Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Redis基础">
+<meta name="twitter:description" content="Redis是非关系型的键值对数据库，可根据键以O(1)时间复杂度取出或插入关联值，Redis数据是存在内存中，键值对中键可以是字符串、整型、浮点型等且键唯一。值的类型可以是string、hash、list、set、sorted set等。内置了复制、磁盘持久化、LUA脚本、事务、SSL、ACLs、客户端缓存、客户端代理等功能，通过哨兵模式和Cluster模式提供高可用。 Redis的速度非常的快，">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Redis/Redis%20epoll%20IO多路复用.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/Redis/Redis基础" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/Redis/">Redis</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Redis/">Redis</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/Redis/Redis基础/">
+            <time datetime="2021-11-13T16:00:00.000Z" itemprop="datePublished">2021-11-14</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Redis基础
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>Redis是<strong>非关系型</strong>的<strong>键值对数据库</strong>，可根据键以<strong><code>O(1)</code></strong>时间复杂度<strong>取出</strong>或<strong>插入</strong>关联值，Redis数据是<strong>存在内存中</strong>，键值对中<strong>键</strong>可以是<strong>字符串</strong>、<strong>整型</strong>、<strong>浮点型</strong>等且<strong>键唯一</strong>。<strong>值</strong>的类型可以是<strong><code>string</code></strong>、<strong><code>hash</code></strong>、<strong><code>list</code></strong>、<strong><code>set</code></strong>、<strong><code>sorted set</code></strong>等。内置了<strong>复制、磁盘持久化、LUA脚本、事务、SSL、ACLs、客户端缓存、客户端代理</strong>等功能，通过<strong>哨兵模式</strong>和<strong><code>Cluster</code>模式</strong>提供高可用。</p>
+<p><code>Redis</code>的速度非常的快，<strong>单机</strong>的<code>Redis</code>就可以支撑<strong>每秒<code>10</code>几万的并发</strong>，相对于<code>MySQL</code>来说，性能是<code>MySQL</code>的几十倍。</p>
+<ol>
+<li><strong>完全基于内存操作</strong></li>
+<li><strong>C语言实现</strong>，<strong>优化过的数据结构</strong>，基于几种基础的数据结构，<code>Redis</code>做了大量的优化，性能极高</li>
+<li><strong>使用单线程，无上下文的切换成本</strong></li>
+<li>基于<strong>非阻塞的<code>IO</code>多路复用机制</strong></li>
+</ol>
+<p><strong><code>Redis</code>的单线程</strong>主要是指Redis的<strong>网络<code>IO</code></strong>和<strong>键值对读写</strong>是<strong>由一个线程来完成</strong>的，但Redis的其他功能如<strong>持久化</strong>、<strong>异步删除</strong>、<strong>集群数据同步</strong>等<strong>由额外线程执行</strong>。</p>
+<p><strong><code>Redis</code></strong>单线程之所以这么快，是由于<strong><code>Redis</code></strong>所有<strong>数据</strong>都在<strong>内存</strong>中，所有运算都是<strong>内存级别</strong>的运算，且单线程<strong>避免了多线程的切换</strong>性能损耗问题。正因为Redis是单线程，故需小心使用Redis指令，对于<strong>耗时的指令</strong>如<strong><code>keys</code></strong>，一定要谨慎使用，否则<strong>可能会导致<code>Redis</code>卡顿</strong>。 </p>
+<p>Redis单线程之所以能处理很高的并发的客户端链接，其是利用<strong><code>epoll</code></strong>来实现的<strong><code>IO</code>多路复用</strong>，将<strong>连接信息</strong>和<strong>事件</strong>放到<strong>队列</strong>中，<strong>依次放到文件事件分派器</strong>，<strong>事件分派器将事件分发给事件处理器</strong>。</p>
+<p><img src="../../../../../images/Redis/Redis epoll IO多路复用.png" alt="Redis epoll IO多路复用"></p>
+<p>虽然<code>6.0</code>后改用多线程，但并非是完全摒弃单线程，<code>redis</code>还是使用<strong>单线程模型来处理客户端的请求</strong>，只是使用<strong>多线程来处理数据的读写和协议解析</strong>，因为<code>redis</code>的<strong>性能瓶颈</strong>在于<strong>网络<code>IO</code></strong>而非CPU，使用多线程能提升<code>IO</code>读写的效率，从而整体提高<code>redis</code>的性能，<strong>执行命令还是使用单线程</strong>。</p>
+<h4 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h4><p><strong>计数器</strong>：可对String进行<strong>自增自减运算</strong>从而实现计数器功能，这种内存型数据库<strong>读写性能非常高</strong>，很适合存储频繁读写的计数量</p>
+<p><strong>分布式<code>ID</code>生成</strong>：利用自增特性，<strong>一次请求一个大一点的步长</strong>如<strong><code>incr 2000</code></strong>，缓存在本地使用，用完再请求</p>
+<p><strong>海量数据统计</strong>：通过位图<strong><code>bitmap</code></strong>存储是否参过某次活动，是否已读谋篇文章，用户是否为会员，<strong>日活统计</strong></p>
+<p><strong>Session共享</strong>：可统一存储多台应用服务器会话信息，一个用户可请求任意一个应用服务器，从而更容易实现高可用性以及可伸缩性</p>
+<p><strong>分布式队列、阻塞队列</strong>：List双向链表可通过<strong><code>lpush/rpush</code></strong>和<strong><code>rpop/lpop</code></strong>写入和读取消息，可通过使用<strong><code>brpop/blpop</code></strong>来实现阻塞队列</p>
+<p><strong>分布式锁实现</strong>：使用Redis自带的<strong><code>SETNX</code></strong>命令实现分布式锁</p>
+<p><strong>热点数据存储</strong>：最新评论，最新文章列表，使用list存储，ltrim取出热点数据，删除老数据</p>
+<p><strong>社交类需求</strong>：可通过Set<strong>交集</strong>实现<strong>共同好友</strong>等功能，可通过Set<strong>求差集</strong>进行<strong>好友推荐、文章推荐</strong></p>
+<p><strong>排行榜</strong>：<strong><code>sorted_set</code></strong>可实现有序性操作，从而实现排行榜等功能</p>
+<p><strong>延迟队列</strong>：通过<strong><code>sorted_set</code></strong>使用<strong>当前时间戳 + 需要延迟的时长</strong>做score，消息内容作为元素，调用zadd来生产消息，消费者使用<strong><code>zrangbyscore</code></strong>获取当前时间之前的数据做轮询处理。消费完再删除任务<strong><code>rem key member</code></strong></p>
+<h4 id="Redis安装"><a href="#Redis安装" class="headerlink" title="Redis安装"></a>Redis安装</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 安装gcc</span><br><span class="line">yum install gcc</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 把下载好的redis-5.0.3.tar.gz放在/usr/local文件夹下，并解压</span><br><span class="line">wget http://download.redis.io/releases/redis-5.0.3.tar.gz</span><br><span class="line">tar xzf redis-5.0.3.tar.gz</span><br><span class="line">cd redis-5.0.3</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 进入到解压好的redis-5.0.3目录下，进行编译与安装</span><br><span class="line">make</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 修改配置</span><br><span class="line">daemonize yes  # 后台启动</span><br><span class="line">protected-mode no  # 关闭保护模式，若开启只有本机才可访问redis</span><br><span class="line"><span class="meta">#</span> bind 127.0.0.1 绑定机器网卡ip，若有多块网卡可配多个ip，代表允许客户端通过机器哪些网卡ip去访问，内网一般可不配置bind，注释掉即可</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 启动服务</span><br><span class="line">src/redis-server redis.conf</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 验证启动是否成功 </span><br><span class="line">ps -ef | grep redis </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 进入redis客户端 </span><br><span class="line">src/redis-cli </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 退出客户端</span><br><span class="line">quit</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 退出redis服务</span><br><span class="line">pkill redis-server </span><br><span class="line">kill 进程号                       </span><br><span class="line">src/redis-cli shutdown </span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 查看redis支持的最大连接数，在redis.conf文件中可修改，默认maxclients 10000</span><br><span class="line">CONFIG GET maxclients</span><br></pre></td></tr></table></figure>
+<h4 id="Redis基本数据类型"><a href="#Redis基本数据类型" class="headerlink" title="Redis基本数据类型"></a>Redis基本数据类型</h4><p>Redis是基于<strong>数组</strong>和<strong>链表</strong>来存储海量数据的，通过对key进行<strong><code>hash</code>取模</strong>定位到数组下标，产生hash冲突则通过<strong>链表</strong>来存储冲突的数据，Redis有16个DB。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisDb</span> &#123;</span></span><br><span class="line">    dict *dict;                 <span class="comment">/* The keyspace for this DB 存储K-V数据*/</span></span><br><span class="line">    dict *expires;              <span class="comment">/* Timeout of keys with a timeout set 过期时间字典 */</span></span><br><span class="line">    dict *blocking_keys;        <span class="comment">/* Keys with clients waiting for data (BLPOP) 阻塞队列的处理*/</span></span><br><span class="line">    dict *ready_keys;           <span class="comment">/* Blocked keys that received a PUSH key跟客户端链接之间的关系*/</span></span><br><span class="line">    dict *watched_keys;         <span class="comment">/* WATCHED keys for MULTI/EXEC CAS */</span></span><br><span class="line">    <span class="keyword">int</span> id;                     <span class="comment">/* Database ID */</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> avg_ttl;          <span class="comment">/* Average TTL, just for stats */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> expires_cursor; <span class="comment">/* Cursor of the active expire cycle. */</span></span><br><span class="line">    <span class="built_in">list</span> *defrag_later;         <span class="comment">/* List of key names to attempt to defrag one by one, gradually. */</span></span><br><span class="line">&#125; redisDb;</span><br></pre></td></tr></table></figure>
+<p>Redis是<strong>非关系型</strong>的<strong>键值对数据库</strong>，可根据<strong>键以<code>O(1)</code>的时间复杂度取出或插入关联值</strong>，<strong>数据是基于内存的</strong>，键值对中<strong>键的类型</strong>可以是<strong>字符串</strong>、<strong>整型</strong>、<strong>浮点型</strong>等且<strong>键唯一</strong>，值的类型可以是<strong><code>string</code></strong>、<strong><code>hash</code></strong>、<strong><code>list</code></strong>、<strong><code>set</code></strong>、<strong><code>sorted set</code></strong>等。</p>
+<p>用于保存<strong>键值对</strong>的抽象数据结构，<code>redis</code>使用<code>hash</code>表作为底层实现，<strong>每个字典带有两个<code>hash</code>表</strong>，供<strong>平时使用</strong>和<code>rehash</code>时使用，<code>hash</code>表使用<strong>链地址法</strong>来<strong>解决键冲突</strong>，被分配到同一个索引位置的多个键值对会形成一个单向链表，在对<code>hash</code>表进行扩容或者缩容的时候，为了服务的可用性，<strong><code>rehash</code>的过程不是一次性完成的而是渐进式的</strong>。</p>
+<p>每个<strong><code>dict</code></strong>字典有两个<strong><code>dictht</code></strong>，是为了<strong>通过渐进式<code>rehash</code>提升扩容时的性能</strong>，若<strong>发生扩容</strong>会创建新的<strong><code>dictht</code></strong>且将旧的<strong><code>dictht</code></strong>数据向新的<strong><code>dictht</code></strong>拷贝，最终释放掉就的<strong><code>dictht</code></strong>，但<strong>数据量非常大的情况会非常耗时</strong>，而redis执行命令是单线程的，会导致<strong>整个性能降低</strong>，故redis使用了<strong>渐进式的<code>rehash</code></strong>，即扩容是会创建新的<strong><code>dictht</code></strong>，但<strong>不会一次全部将旧<code>dictht</code></strong>的数据搬运到<strong>新<code>dictht</code></strong>上，而是<strong>访问到某个key时才选择一部分搬运，当没有访问时也会通过事件轮询来搬数据</strong>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dict</span> &#123;</span> <span class="comment">// redis中的hashtable</span></span><br><span class="line">    dictType *type;   <span class="comment">// 类型</span></span><br><span class="line">    <span class="keyword">void</span> *privdata;</span><br><span class="line">    dictht ht[<span class="number">2</span>];<span class="comment">// ht[0] , ht[1] =null</span></span><br><span class="line">    <span class="keyword">long</span> rehashidx; <span class="comment">/* rehashing not in progress if rehashidx == -1 */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> iterators; <span class="comment">/* number of iterators currently running */</span></span><br><span class="line">&#125; dict;</span><br><span class="line"><span class="comment">/* This is our hash table structure. Every dictionary has two of this as we</span></span><br><span class="line"><span class="comment"> * implement incremental rehashing, for the old to the new table. */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictht</span> &#123;</span> <span class="comment">// hashtable数据结构，每个字典都有两个dictht，用于在旧表到新表时通过渐进式的rehash</span></span><br><span class="line">    dictEntry **table;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> size; <span class="comment">//  hashtable 容量</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> sizemask;  <span class="comment">// size -1</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> used;  <span class="comment">// hashtable 元素个数   used / size =1</span></span><br><span class="line">&#125; dictht;</span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictType</span> &#123;</span></span><br><span class="line">    <span class="keyword">uint64_t</span> (*hashFunction)(<span class="keyword">const</span> <span class="keyword">void</span> *key); <span class="comment">// 使用的hash函数封装在hashFunction</span></span><br><span class="line">    <span class="keyword">void</span> *(*keyDup)(<span class="keyword">void</span> *privdata, <span class="keyword">const</span> <span class="keyword">void</span> *key);</span><br><span class="line">    <span class="keyword">void</span> *(*valDup)(<span class="keyword">void</span> *privdata, <span class="keyword">const</span> <span class="keyword">void</span> *obj);</span><br><span class="line">    <span class="keyword">int</span> (*keyCompare)(<span class="keyword">void</span> *privdata, <span class="keyword">const</span> <span class="keyword">void</span> *key1, <span class="keyword">const</span> <span class="keyword">void</span> *key2); <span class="comment">// keyCompare类似equals方法</span></span><br><span class="line">    <span class="keyword">void</span> (*keyDestructor)(<span class="keyword">void</span> *privdata, <span class="keyword">void</span> *key);</span><br><span class="line">    <span class="keyword">void</span> (*valDestructor)(<span class="keyword">void</span> *privdata, <span class="keyword">void</span> *obj);</span><br><span class="line">&#125; dictType;</span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> &#123;</span></span><br><span class="line">    <span class="keyword">void</span> *key; 	<span class="comment">// string对象其实就是sds</span></span><br><span class="line">    <span class="keyword">union</span> &#123;		<span class="comment">// 用于存储值</span></span><br><span class="line">        <span class="keyword">void</span> *val;		<span class="comment">// 可能是string、list、hash等</span></span><br><span class="line">        <span class="keyword">uint64_t</span> u64;	<span class="comment">// 占8 byte</span></span><br><span class="line">        <span class="keyword">int64_t</span> s64;	<span class="comment">// 占8 byte</span></span><br><span class="line">        <span class="keyword">double</span> d;		<span class="comment">// 占8 byte</span></span><br><span class="line">    &#125; v;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">dictEntry</span> *<span class="title">next</span>;</span> <span class="comment">// 链表，用于解决hash冲突</span></span><br><span class="line">&#125; dictEntry;</span><br><span class="line"><span class="comment">//  redisObject对象: string, list, set, hash, zset</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisObject</span> &#123;</span><span class="comment">// 总共占用16个byte，缓存行为64byte, </span></span><br><span class="line">    <span class="keyword">unsigned</span> type:<span class="number">4</span>;		<span class="comment">//  4 bit: 表示数据类型：string, list, set, hash, zset</span></span><br><span class="line">    <span class="keyword">unsigned</span> encoding:<span class="number">4</span>;    <span class="comment">//  4 bit, 内存底层类型：int、row、embstr、quicklist、hashtable、ziplist、intset、skiplist</span></span><br><span class="line">    <span class="keyword">unsigned</span> lru:LRU_BITS;  <span class="comment">/* LRU time (relative to global lru_clock) or</span></span><br><span class="line"><span class="comment">                            * LFU data (least significant 8 bits frequency</span></span><br><span class="line"><span class="comment">                            * and most significant 16 bits access time).  24 bit </span></span><br><span class="line"><span class="comment">                            */</span></span><br><span class="line">    <span class="keyword">int</span> refcount;           <span class="comment">// 4 byte  用于引用计数法来管理内存</span></span><br><span class="line">    <span class="keyword">void</span> *ptr;              <span class="comment">// 8 byte  总空间:  4 bit + 4 bit + 24 bit + 4 byte + 8 byte = 16 byte  </span></span><br><span class="line">&#125; robj;</span><br></pre></td></tr></table></figure>
+<p><img src="../../../../../images/Redis/Redis数据结构关系.png" alt></p>
+<h3 id="对外提供的数据结构"><a href="#对外提供的数据结构" class="headerlink" title="对外提供的数据结构"></a>对外提供的数据结构</h3><p>基于基础的数据结构，<code>Redis</code>封装了自己的对象系统，包含<strong>字符串对象<code>string</code></strong>、<strong>列表对象<code>list</code></strong>、<strong>哈希对象<code>hash</code></strong>、<strong>集合对象<code>set</code></strong>、<strong>有序集合对象<code>zset</code></strong>，每种对象都用到了<strong>至少一种基础的数据结构</strong>。<code>Redis</code>通过<code>encoding</code>属性设置对象的<strong>编码形式</strong>来<strong>提升灵活性和效率</strong>，基于不同的场景<code>Redis</code>会自动做出优化。不同对象的编码如下：</p>
+<ol>
+<li>字符串对象<code>string</code>：<code>int</code>整数、<code>embstr</code>编码的简单动态字符串、<strong><code>raw</code>简单动态字符串</strong></li>
+<li>列表对象list：<code>ziplist</code>、<code>quicklist</code></li>
+<li>哈希对象<code>hash</code>：<code>ziplist</code>、<code>hashtable</code></li>
+<li>集合对象<code>set</code>：<code>intset</code>、<code>hashtable</code></li>
+<li>有序集合对象<code>zset</code>：<code>ziplist</code>、<code>skiplist</code></li>
+</ol>
+<h4 id="字符串对象string"><a href="#字符串对象string" class="headerlink" title="字符串对象string"></a>字符串对象string</h4><p>可用于单值缓存、对象缓存、<strong>分布式锁</strong>的实现、计数器、Web集群Session共享、分布式系统<strong>全局序列号生成</strong>，<strong>可批量生成提升性能</strong>。若<strong>大量数据储存成<code>string</code>可能导致频繁<code>rehash</code></strong>。</p>
+<p><code>Redis</code>没有直接使用C语言传统的字符串表示，而是自己实现的叫做<strong>简单动态字符串<code>SDS</code>的抽象类型</strong>。C语言的字符串<strong>不记录自身的长度信息</strong>，而<code>SDS</code>则<strong>保存了长度信息</strong>，这样将获取字符串长度的时间由<code>O(N)</code>降低到了<code>O(1)</code>，同时可<strong>避免缓冲区溢出</strong>和<strong>减少修改字符串长度</strong>时所需的<strong>内存重分配次数</strong>。</p>
+<p>Redis并没有直接使用C语言<strong><code>char</code>数组</strong>作为字符串的实现，而是自定义了一个<strong><code>simple dynamic string</code></strong>即<strong><code>SDS</code></strong>，且C语言作为字符串结束是通过<strong><code>\0</code></strong>作为<strong>字符串结束</strong>，在redis中可能会导致数据问题。</p>
+<p><strong>二进制安全的数据结构</strong>即自定义SDS防止<strong><code>\0</code></strong>导致数据丢失，提供了<strong>内存预分配机制避免频繁内存分配</strong>，在字符串末尾加上<strong><code>\0</code></strong>兼容C语言的函数库</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># 并不是每次都成倍扩容，当达到1M时不会再成倍扩容，而是每次加1M</span><br><span class="line">sds:</span><br><span class="line">  free: 0	# 剩余容量</span><br><span class="line">  len: 4	# 最大长度</span><br><span class="line">  char buf[]=&quot;test&quot; # 当需要append为test123时，使用(4 + 3) * 2 = 14</span><br><span class="line">sds: 	# 适用于append、setbit命令</span><br><span class="line">  free: 7	# 剩余容量，认为修改可能还会再次被修改，且只扩大不缩小</span><br><span class="line">  len: 14	# 最大长度	</span><br><span class="line">  char buf[]=&quot;test123&quot; -&gt; test123</span><br></pre></td></tr></table></figure>
+<p>这里Key长度为8即其本身占用<strong><code>8byte</code></strong>+<strong><code>\0</code></strong>占<strong><code>1byte</code></strong>，这里key明显使用的是<strong><code>sdshdr5</code></strong>，其数据结构本身额外占<strong><code>1byte</code></strong>，值是使用的<strong><code>sdshdr8</code></strong>，数据结构本身占<strong><code>3byte</code></strong>，数据长度为4即占<strong><code>5byte</code></strong>，<strong><code>redisObject</code></strong>数据结构本身占<strong><code>16byte</code></strong>，<strong><code>dictEntry</code></strong> 数据结构本身占<strong><code>24byte</code></strong>，故总共占<strong><code>8 + 1 + 1 + 3 + 5 + 16 + 24 = 58</code></strong>。<br><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">set sds_test aaaa</span><br><span class="line">memory usage sds_test	# 58，实际数据长度为4 + \0即5个byte</span><br><span class="line">debug object sds_test</span><br><span class="line">append sds_test b		# (1 + 5) * 2 = 12 增长了8</span><br><span class="line">memory usage sds_test	# 66 = 58 + 8</span><br></pre></td></tr></table></figure></p>
+<p>String在Redis中使用得非常多，<strong><code>redis 3.2</code>以前</strong>由于<strong><code>int</code></strong>是<strong><code>4</code>个字节</strong>可表示0到<strong><code>2^32 -1</code></strong>即42亿多数据，通常可能不用到这么大，在<strong><code>redis 3.2</code>之后</strong>对<strong><code>len</code></strong>和<strong><code>free</code></strong>进行了优化，增加了很多数据类。对于不同的范围使用不同的数据结构进行描述。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// redis 3.2以前，由于int是4个字节可表示0到2^32 -1即42亿多数据，通常可能不用到这么大</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sdshdr</span> &#123;</span></span><br><span class="line">    <span class="keyword">int</span> len;</span><br><span class="line">    <span class="keyword">int</span> <span class="built_in">free</span>;</span><br><span class="line">    <span class="keyword">char</span> buf[];</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">// redis 3.2之后，增加了很多数据类，len表示长度，alloc分配的空间，</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">char</span> *sds;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">sdshdr5</span> &#123;</span> <span class="comment">// 0 - 2 ^ 5 - 1</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> flags; <span class="comment">/* 3 lsb of type, and 5 msb of string length */</span></span><br><span class="line">    <span class="keyword">char</span> buf[];<span class="comment">// buf[0]: z:  0101001</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">sdshdr8</span> &#123;</span> <span class="comment">// 1个字节长度</span></span><br><span class="line">    <span class="keyword">uint8_t</span> len; <span class="comment">/* used  1byte*/</span></span><br><span class="line">    <span class="keyword">uint8_t</span> alloc; <span class="comment">/* excluding the header and null terminator  1byte*/</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> flags; <span class="comment">/* 3 lsb of type, 5 unused bits  1byte*/</span></span><br><span class="line">    <span class="keyword">char</span> buf[]; <span class="comment">// 由于会兼容c语言会加上\0占用一个byte</span></span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">sdshdr16</span> &#123;</span> <span class="comment">// 2个字节长度</span></span><br><span class="line">    <span class="keyword">uint16_t</span> len; <span class="comment">/* used */</span></span><br><span class="line">    <span class="keyword">uint16_t</span> alloc; <span class="comment">/* excluding the header and null terminator */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> flags; <span class="comment">/* 3 lsb of type, 5 unused bits */</span></span><br><span class="line">    <span class="keyword">char</span> buf[];</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">sdshdr32</span> &#123;</span> <span class="comment">// 4个字节长度</span></span><br><span class="line">    <span class="keyword">uint32_t</span> len; <span class="comment">/* used */</span></span><br><span class="line">    <span class="keyword">uint32_t</span> alloc; <span class="comment">/* excluding the header and null terminator */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> flags; <span class="comment">/* 3 lsb of type, 5 unused bits */</span></span><br><span class="line">    <span class="keyword">char</span> buf[];</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">sdshdr64</span> &#123;</span> <span class="comment">// 8个字节长度</span></span><br><span class="line">    <span class="keyword">uint64_t</span> len; <span class="comment">/* used */</span></span><br><span class="line">    <span class="keyword">uint64_t</span> alloc; <span class="comment">/* excluding the header and null terminator */</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span> flags; <span class="comment">/* 3 lsb of type, 5 unused bits */</span></span><br><span class="line">    <span class="keyword">char</span> buf[];</span><br><span class="line">&#125;;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SDS_TYPE_5  0	<span class="comment">// flags前三位表示的值，sdshdr5</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SDS_TYPE_8  1	<span class="comment">// flags前三位表示的值，sdshdr8</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SDS_TYPE_16 2	<span class="comment">// flags前三位表示的值，sdshdr16</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SDS_TYPE_32 3	<span class="comment">// flags前三位表示的值，sdshdr32</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> SDS_TYPE_64 4	<span class="comment">// flags前三位表示的值，sdshdr64</span></span></span><br></pre></td></tr></table></figure>
+<p>String类型在Redis中是<strong>非常紧凑</strong>的，flags用于<strong>表示数据类型</strong>，占<strong>一个字节</strong>即<strong><code>8</code>位</strong>，<strong><code>sdshdr5</code></strong>中<strong>前三位用于表示类型</strong>，后五位用于表示长度，这也是<strong><code>sdshdr5</code></strong>的由来。对于剩余的<strong><code>sdshdr8</code></strong>、<strong><code>sdshdr16</code></strong>、<strong><code>sdshdr32</code></strong>、<strong><code>sdshdr64</code></strong>等类型，flags前三位依然表示<strong>数据类型</strong>，<strong>后<code>5</code>位闲置未使用</strong>。</p>
+<p><img src="../../../../../images/Redis/sdshsr5.png" alt="sdshsr5"></p>
+<p><img src="../../../../../images/Redis/sdshsr8.png" alt="sdshsr8"></p>
+<p><img src="../../../../../images/Redis/sdshsr16.png" alt="sdshsr16"></p>
+<p>若是<strong><code>encoding</code></strong>编码为<strong><code>int</code></strong>，则<strong><code>*ptr</code></strong>直接用于存储数据，对于<strong><code>embstr</code></strong>编码类型，由于操作系统<strong>缓存行为<code>64byte</code></strong>，而<strong><code>redisObject</code></strong>对象占<strong><code>16byte</code></strong>，要利用缓存行的优化，还剩余<strong><code>48byte</code></strong>，对于<strong><code>sdshdr8</code></strong>类型的数据，<strong>结构占用<code>3</code>字节</strong>为了<strong>兼容<code>\0</code></strong>故总共占<strong><code>4</code>字节</strong>，还<strong>剩余<code>44</code>个字节可用</strong>，故若字符长度<strong>小于等于<code>44byte</code></strong>的数据，可<strong>利用操作系统缓存行特性</strong>，一次IO就获取到数据。<strong>长度超过<code>44</code></strong>则编码类型为<strong><code>row</code></strong>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">set intstr 55</span><br><span class="line">type intstr</span><br><span class="line">object encoding intstr</span><br><span class="line"></span><br><span class="line">set emb_str aaaa</span><br><span class="line">set emb_str aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</span><br><span class="line">set emb_str aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab</span><br><span class="line">object encoding emb_str</span><br></pre></td></tr></table></figure>
+<h4 id="列表对象list"><a href="#列表对象list" class="headerlink" title="列表对象list"></a>列表对象list</h4><p>list是一个<strong>按加入的时间顺序</strong>排序的有序数据结构，Redis采用双端链表<strong><code>quicklist</code></strong>和<strong><code>ziplist</code></strong>作为list的<strong>底层实现</strong>。可以通过设置每个<strong><code>ziplist</code></strong>的<strong>最大容量</strong>和<strong><code>quicklist</code></strong>的<strong>数据压缩范围</strong>提升数据存取效率。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">list-max-ziplist-size -2 # 单个ziplist节点最大能存储8kb，超过则进行分裂将数据存储在新的ziplist</span><br><span class="line">list-compress-depth 1	 # 0表示所有节点都不压缩，1表示头结点和尾节点不压缩其他节点压缩</span><br></pre></td></tr></table></figure>
+<h5 id="压缩列表ziplist"><a href="#压缩列表ziplist" class="headerlink" title="压缩列表ziplist"></a>压缩列表ziplist</h5><p><strong>压缩列表</strong>是为<strong>节约内存</strong>而开发的<strong>顺序性数据结构</strong>，可包含多个节点，<strong>每个节点</strong>可保存<strong>一个字节数组</strong>或<strong>整数值</strong>。<strong><code>zlbytes</code>能存储元素个数</strong>，<strong><code>zltail</code>尾节点索引位置</strong>即在ziplist中的便宜字节数，可以很方便找到最后一项数据，从而在ziplist尾端快速地执行push或pop操作，<strong><code>zllen</code>当前<code>ziplist</code>有多少个元素</strong>，<strong><code>zlend</code>标识ziplist最优一个字节即数据的结尾恒等于255</strong>。<strong><code>prerawlen</code></strong>前一个元素的数据长度，len表示entry中数据的长度，data即真实数据存储。</p>
+<p><img src="../../../../../images/Redis/ziplist.png" alt></p>
+<h5 id="quicklist"><a href="#quicklist" class="headerlink" title="quicklist"></a>quicklist</h5><p>是一个<strong>双向无环链表结构</strong>，很多<strong>发布订阅</strong>、<strong>慢查询</strong>、<strong>监视器</strong>功能都是使用到了链表来实现，每个链表的节点由一个<strong><code>listNode</code>结构</strong>来表示，每个节点都有指向<strong>前置节点</strong>和<strong>后置节点</strong>的指针，<strong>表头节点的前置和后置节点都指向<code>NULL</code></strong>。</p>
+<p><img src="../../../../../images/Redis/quicklist.png" alt></p>
+<p>可通过<strong><code>LPUSH + LPOP</code></strong>实现<strong><code>Stack</code>栈</strong>，<strong><code>LPUSH + RPOP</code></strong>实现<strong>Queue队列</strong>，<strong><code>LPUSH + BRPOP</code></strong>实现<strong>阻塞队列</strong>，可应用于类似<strong>微博、微信公众号消息流</strong>。</p>
+<h4 id="哈希对象hash"><a href="#哈希对象hash" class="headerlink" title="哈希对象hash"></a>哈希对象hash</h4><p>hash数据结构底层实现为一个<strong>字典</strong>，<strong>数据量较小</strong>时底层使用<strong><code>ziplist</code>存储</strong>，<strong>数据量较大</strong>时将改为<strong><code>HashTable</code>编码存储</strong>。<strong>同类数据归类整合储存方便数据管理</strong>，相比string操作<strong>消耗内存与<code>CPU</code>更小</strong>，<strong>更节省空间</strong>，但<strong>过期功能不能使用在<code>field</code>上</strong>只能用在key上，<strong>集群架构下不适合大规模使用</strong>。可应用于如<strong>电商购物车</strong>，用户id为key，商品id为field，商品数量为value。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hash-max-ziplist-entries 512 # 元素个数超过512，将改为HashTable编码</span><br><span class="line">hash-max-ziplist-value 64    # 单个元素大小超过64byte，将改为HashTable编码</span><br></pre></td></tr></table></figure>
+<p><img src="../../../../../images/Redis/hash-ziplist.png" alt></p>
+<p>可将<strong>同类型数据整合存储</strong>，方便数据管理，相比string操作<strong>消耗内存和CPU更小</strong>，但<strong>过期功能不能使用在field上</strong>，只能用在key上，<strong>集群架构下不适合大规模使用</strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">hset hash_test field1 value1</span><br><span class="line">hset hash_test field2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</span><br><span class="line">hset hash_test field2 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab</span><br><span class="line">object encoding hash_test</span><br></pre></td></tr></table></figure>
+<h4 id="集合对象set"><a href="#集合对象set" class="headerlink" title="集合对象set"></a>集合对象set</h4><p>set是<strong>无序的自动去重的</strong>集合数据结构，底层实现为一个<strong><code>value</code>为<code>null</code>的字典</strong>，当数据<strong>可用整型表示时</strong>，set集合将被<strong>编码为<code>intset</code>数据结构</strong>，当数据<strong>无法用整型表示</strong>时或<strong>元素个数大于<code>set-max-intset-entries</code>配置值</strong>时将使用<strong><code>HashTable</code>存储数据</strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set-max-intset-entries 512 # 存储元素超过512时，使用HashTable编码</span><br></pre></td></tr></table></figure>
+<h5 id="整数集合intset"><a href="#整数集合intset" class="headerlink" title="整数集合intset"></a>整数集合intset</h5><p>用于<strong>保存整数值</strong>的集合<strong>抽象数据结构</strong>，整数集合是一个<strong>有序的整型</strong>数据结构，整型集合在Redis中可保存<strong><code>int16_t</code></strong>，<strong><code>int32_t</code></strong>，<strong><code>int64_t</code></strong>类型的整型数据，<strong>底层实现为数组</strong>，且可保证集合中<strong>不会出现重复数据</strong>。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">intset</span> &#123;</span></span><br><span class="line">    <span class="keyword">uint32_t</span>  encoding;	<span class="comment">// 编码类型</span></span><br><span class="line">    <span class="keyword">uint32_t</span>  length;	<span class="comment">// 元素个数</span></span><br><span class="line">    <span class="keyword">int8_t</span>      contents[]; <span class="comment">// 元素存储</span></span><br><span class="line">&#125; intset; </span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INTSET_ENC_INT16 (sizeof(int16_t))</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INTSET_ENC_INT32 (sizeof(int32_t))</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INTSET_ENC_INT64 (sizeof(int64_t))</span></span><br></pre></td></tr></table></figure>
+<p><img src="../../../../../images/Redis/intset数据结构.png" alt></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sadd set_test 11 12 13</span><br><span class="line">type set_test</span><br><span class="line">sadd set_test aa</span><br><span class="line">smembers set_test</span><br><span class="line">object encoding set_test</span><br></pre></td></tr></table></figure>
+<p><img src="../../../../../images/Redis/Redis_Set操作.png" alt></p>
+<p><strong><code>SINTER set1 set2 set3</code></strong> 得到集合<strong><code>{c}</code></strong>，<strong><code>SUNION set1 set2 set3</code></strong>得到集合<strong><code>{a,b,c,d,e}</code></strong>，<strong><code>SDIFF set1 set2 set3</code></strong>得到集合<strong><code>{a}</code></strong></p>
+<p>可应用于类似<strong>抽奖小程序</strong>，<strong><code>SADD key {uid}</code></strong>加入抽奖集合，<strong><code>SMEMBERS key</code></strong>查看参与抽奖所有用户，<strong><code>SRANDMEMBER key [count]</code>或<code>SPOP key [count]</code></strong>抽取count名中奖者。</p>
+<p><strong>微信微博点赞、收藏、标签等功能</strong>，<strong><code>SADD like:{msgID} {userID}</code></strong>点赞，<strong><code>SREM like:{msgID} {userID}</code></strong>取消点赞，<strong><code>SISMEMBER like:{msgID} {userID}</code></strong>检查用户是否点过赞，<strong><code>SMEMBERS like:{msgID}</code></strong>获取点赞的用户列表，<strong><code>SCARD like:{msgID}</code></strong>获取点赞用户数 </p>
+<h4 id="有序集合对象zset"><a href="#有序集合对象zset" class="headerlink" title="有序集合对象zset"></a>有序集合对象zset</h4><p>zset是<strong>有序的自动去重的</strong>集合数据结构，<strong>底层实现为字典 + 跳表<code>skiplist</code></strong>，当<strong>数据比较少时</strong>，<strong>用<code>ziplist</code>编码结构存储</strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">zset-max-ziplist-entries 128 # 元素个数超过128，将用skiplist编码</span><br><span class="line">zset-max-ziplist-value 64    # 单个元素大小超过64byte，将用skiplist编码</span><br></pre></td></tr></table></figure>
+<p><img src="../../../../../images/Redis/zset-ziplist.png" alt="zset-ziplist"></p>
+<h5 id="跳跃表skiplist"><a href="#跳跃表skiplist" class="headerlink" title="跳跃表skiplist"></a>跳跃表skiplist</h5><p><strong>有序集合的底层实现之一</strong>，<code>redis</code>中实现<strong>有序集合键</strong>和<strong>集群节点的内部结构</strong>中都是使用跳跃表。<code>redis</code>跳跃表由<code>zskiplist</code>和<code>zskiplistNode</code>组成，<code>zskiplist</code>用于保存<strong>跳跃表信息</strong>（表头、表尾节点、长度等），<code>zskiplistNode</code>用于表示<strong>表跳跃节点</strong>，每个跳跃表的<strong>层高</strong>都是<code>1-32</code>的<strong>随机数</strong>，<strong>层级越高的层出现概率越低</strong>，随机层高大于当前的最大层高，则初始化新的层高，在同一个跳跃表中，多个节点可以包含相同的分值，但是每个节点的成员对象必须是唯一的，<strong>节点按照分值大小排序</strong>，如果<strong>分值相同，则按照成员对象的大小排序</strong>。</p>
+<p><img src="../../../../../images/Redis/skiplist.png" alt></p>
+<p>可应用于<strong>排行榜</strong>，如展示当日排行前十、七日搜索榜单计算、七日排行前十等</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">zadd zset_test 1 member1 2 member2</span><br><span class="line">object encoding zset_test</span><br><span class="line">zadd zset_test 1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</span><br><span class="line">zadd zset_test 1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab</span><br></pre></td></tr></table></figure>
+<p><strong>元素插入过程</strong>，首先通过<strong><code>zskiplist</code></strong>的<strong><code>header</code></strong>找到<strong>索引层</strong>，<strong><code>level</code></strong>记录<strong>最高层高</strong>，首先<strong>从最高层往下找</strong>到具体的层，然后判断当前数据<strong>分值</strong>是否大于<strong>当前层起始分值</strong>，若大于继续通过<strong><code>forward</code></strong>指针往下找，若<strong><code>forward</code></strong>指向<strong><code>null</code></strong>，则往<strong>下沉一层</strong>继续找。</p>
+<h4 id="GeoHash"><a href="#GeoHash" class="headerlink" title="GeoHash"></a>GeoHash</h4><p>geohash是一种地理位置编码方法，它将<strong>地理位置编码</strong>为一串<strong>简短</strong>的<strong>字母</strong>和<strong>数字</strong>，<strong>是一种分层的空间数据结构</strong>，将空间细分为网格形状的桶，是<strong><code>Z</code>顺序曲线</strong>的众多应用之一，通常是空间填充曲线。</p>
+<p><img src="../../../../../images/Redis/geohash.png" alt="geohash"></p>
+<p>通过GeoHash算法，可将<strong>经纬度的二维坐标变成一个可排序、可比较的字符串编码</strong>，在编码中<strong>每个字符代表一个区域</strong>，且<strong>前面的字符是后面字符的父区域</strong>。</p>
+<p>GeoHash利用<strong><code>Z</code>阶曲线</strong>进行编码，可<strong>将二维所有点转换成一阶曲线</strong>，地理位置坐标点通过编码转换成一维值，利用<strong>有序数据结构</strong>如<strong>B树</strong>、<strong><code>SkipList</code></strong>等均可进行范围搜索，因此利用<strong><code>GeoHash</code></strong>算法查找邻近点比较快。Z阶曲线虽然有<strong>局部保序性</strong>，但它也有<strong>突变性</strong>，在每个Z字母的拐角都可能出现顺序的突变。</p>
+<h4 id="BitMap"><a href="#BitMap" class="headerlink" title="BitMap"></a>BitMap</h4><p>基本思想是<strong>用一个<code>bit</code>位来标记某个元素对应的<code>Value</code></strong>，可大大节省存储空间，可用于<strong>快速排序</strong>、<strong>快速去重</strong>、<strong>快速查找</strong>、<strong>亿级日活统计</strong>等，在<strong>数据比较密集时才有优势</strong>。<strong>布隆过滤器</strong>就是使用的<strong><code>BitMap</code></strong>。可通过<strong>与操作</strong>做<strong>连续多少天活跃统计</strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">setbit key offset value # 设置bigmap下标位置offset的value，value只能为0或1</span><br><span class="line">getbit key offset 		# 获取bigmap下标位置offset的value</span><br><span class="line">bitop or after_key key1 key2 # 将key1 和 key2做按位或操作且将结果保存到 after_key中</span><br><span class="line">bitop and after_key key1 key2 # 将key1 和 key2做按位与操作且将结果保存到after_key中</span><br><span class="line">bitcount key # 统计key中位为1的个数</span><br></pre></td></tr></table></figure>
+<h3 id="Redis持久化"><a href="#Redis持久化" class="headerlink" title="Redis持久化"></a>Redis持久化</h3><h5 id="RDB快照"><a href="#RDB快照" class="headerlink" title="RDB快照"></a>RDB快照</h5><p><strong>默认</strong>情况下Redis将内存数据库<strong>快照</strong>保存在名字为<strong><code>dump.rdb</code></strong>的二进制文件中，可对Redis进行设置，让它在<strong><code>N</code>秒内数据集至少有<code>M</code>个改动</strong>这一条件被满足时， 自动保存一次数据集<strong>快照</strong>。如以下设置会让Redis在满足60秒内有至少有1000个键被改动时， 自动保存一次数据集，还可<strong>手动执行命令生成<code>RDB</code>快照</strong>，执行命令<strong><code>save</code></strong>或<strong><code>bgsave</code></strong>可生成<strong><code>dump.rdb</code></strong>文件，<strong>每次命令执行</strong>都会将<strong>所有<code>Redis</code>内存快照</strong>到一个<strong>新的<code>rdb</code>文件</strong>里，并<strong>覆盖原有<code>rdb</code>快照文件</strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> save 60 1000    // 关闭RDB只需要将所有的save保存策略注释掉即可</span><br></pre></td></tr></table></figure>
+<p>Redis借助操作系统提供的<strong>写时复制技术<code>Copy-On-Write, COW</code></strong>，在<strong>生成快照同时依然可正常处理写命令</strong>。<strong><code>bgsave</code>子进程由主线程<code>fork</code>生成</strong>，可<strong>共享主线程所有内存数据</strong>。bgsave子进程运行后，开始<strong>读取主线程内存数据</strong>，并把它们<strong>写入<code>RDB</code>文件</strong>。此时若主线程对这些数据也都是读操作，则主线程和bgsave子进程相互不影响。若主线程要<strong>修改</strong>一块数据，则这块数据就会<strong>被复制一份</strong>，<strong>生成该数据的副本</strong>。然后<strong><code>bgsave</code>子进程</strong>会把这个副本数据写入<strong><code>RDB</code>文件</strong>，这个过程中<strong>主线程仍可直接修改原来的数据</strong>。</p>
+<p><strong><code>save</code></strong>和<strong><code>bgsave</code></strong>命令的<strong><code>IO</code>类型</strong>一个是<strong>同步</strong>一个是<strong>异步</strong>，save会阻塞redis其他命令，bgsave不会阻塞，只是在<strong>生成子进程执行调用fork函数时会有短暂阻塞</strong>；它们时间复杂度都是<strong><code>O(n)</code></strong>，<strong><code>save</code>命令不会消耗额外内存</strong>，<strong><code>bgsave</code></strong>命令需要fork子进程需要消耗额外内存。</p>
+<h5 id="AOF"><a href="#AOF" class="headerlink" title="AOF"></a>AOF</h5><p>快照功能并不是非常耐久durable，若Redis因某些原因故障停机，服务器将<strong>丢失最近写入且仍未保存到快照</strong>中的数据。从1.1版本开始，Redis增加了一种完全耐久的持久化方式<strong><code>AOF</code>持久化</strong>，将<strong>修改的</strong>每一条<strong>指令</strong>记录进<strong><code>appendonly.aof</code></strong>文件中，先写入<strong><code>os cache</code></strong>，每隔一段时间<strong><code>fsync</code></strong>到<strong>磁盘</strong>，每执行<strong>增删改命令</strong>时就会被<strong><code>aof</code>文件</strong>记录。</p>
+<p>可通过<strong>修改配置文件</strong>来打开<strong><code>AOF</code></strong>功能以及设置<strong><code>fsync</code></strong>策略，<strong>默认并推荐</strong>的措施为<strong>每秒<code>fsync</code>一次</strong>， 这种fsync策略可<strong>兼顾速度和安全性</strong>，AOF文件中可能有很多无用指令，故AOF会定期根据<strong>内存的最新数据</strong>生成aof文件。也可以通过redis客户端执行命令<strong><code>bgrewriteaof</code>手动重写<code>AOF</code></strong>。AOF重写redis会fork出一个子进程去做与bgsave命令类似，不会对redis正常命令处理有太多影响。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">appendonly yes 		 # 打开AOF功能</span><br><span class="line">appendfsync always 	 # 每次有新命令追加到AOF文件时就执行一次fsync，非常慢也非常安全</span><br><span class="line">appendfsync everysec # 每秒fsync一次，足够快且在故障时只会丢失1秒钟的数据</span><br><span class="line">appendfsync no 		 # 从不fsync，将数据交给操作系统来处理。更快，也更不安全的选择</span><br><span class="line">auto-aof-rewrite-min-size 64mb  # aof文件至少达到64M才会自动重写，文件太小恢复速度本来就很快，重写意义不大</span><br><span class="line">auto-aof-rewrite-percentage 100 # aof文件自上一次重写后文件大小增长了100%则再次触发重写</span><br></pre></td></tr></table></figure>
+<p><strong><code>RDB</code>快照</strong>和<strong><code>AOF</code></strong>两种持久化策略生产环境<strong>可以都启用</strong>，redis启动时若既有<strong><code>RDB</code></strong>文件又有<strong><code>AOF</code></strong>文件则<strong>优先选择<code>aof</code>文件恢复数据</strong>，因为AOF一般来说<strong>数据更全一点</strong>。</p>
+<table>
+<thead>
+<tr>
+<th><strong>命令</strong></th>
+<th><strong>RDB</strong></th>
+<th><strong>AOF</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>启动优先级</td>
+<td>低</td>
+<td>高</td>
+</tr>
+<tr>
+<td>体积</td>
+<td>小</td>
+<td>大</td>
+</tr>
+<tr>
+<td>恢复速度</td>
+<td>快</td>
+<td>慢</td>
+</tr>
+<tr>
+<td>数据安全性</td>
+<td>容易丢数据</td>
+<td>根据策略决定</td>
+</tr>
+</tbody>
+</table>
+<h5 id="混合持久化"><a href="#混合持久化" class="headerlink" title="混合持久化"></a>混合持久化</h5><p>重启Redis时，很少使用RDB来恢复内存状态，因为<strong><code>RDB</code>会丢失大量数据</strong>，<strong>通常使用<code>AOF</code>日志重放</strong>，但重放AOF日志性能相对RDB来说要<strong>慢</strong>很多，这样在Redis实例很大的情况下，启动需要花费很长的时间。 Redis 4.0为了解决该问题引入了<strong>混合持久化</strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">aof-use-rdb-preamble yes # 开启混合持久化，注意必须先开启aof</span><br></pre></td></tr></table></figure>
+<p>若开启了混合持久化，<strong><code>AOF</code>在重写时</strong>不再是单纯将内存数据转换为RESP命令写入AOF文件，而是将<strong>重写这一刻之前的内存做<code>RDB</code>快照</strong>处理，且将<strong><code>RDB</code>快照</strong>内容和<strong>增量的<code>AOF</code>修改</strong>内存数据的命令<strong>存在一起</strong>，都<strong>写入新的<code>AOF</code>文</strong>件，<strong>新的文件</strong>一开始不叫<strong><code>appendonly.aof</code></strong>，等到<strong>重写完新的<code>AOF</code>文件才会进行改名</strong>，<strong>覆盖原有的<code>AOF</code>文件</strong>，完成新旧两个AOF文件的替换。</p>
+<p>混合模式下Redis重启时，可<strong>先加载<code>RDB</code>内容</strong>，然后<strong>再重放增量<code>AOF</code>日志</strong>就可以完全替代之前的AOF全量文件重放，因此重启效率大幅得到提升。</p>
+<p><img src="../../../../../images/Redis/混合持久化AOF文件结构.png" alt="混合持久化AOF文件结构"></p>
+<h3 id="Redis存储数据序列化"><a href="#Redis存储数据序列化" class="headerlink" title="Redis存储数据序列化"></a>Redis存储数据序列化</h3><p><strong><code>StringRedisTemplate</code></strong>继承自<strong><code>RedisTemplate</code></strong>一般用来<strong>存储字符串</strong>，<strong>默认</strong>序列化机制为<strong><code>StringRedisSerializer</code></strong>。若需<strong>存储对象</strong>一般用<strong><code>RedisTemplate</code></strong>，其底层用序列化机制是<strong><code>JdkSerializationRedisSerializer</code></strong>，这种存储对象要求对象<strong>实现<code>Serializable</code>接口</strong>，底层存的是<strong>二进制的序列化数组</strong>，不便在redis中查看，故一般用<strong><code>Jackson2JsonRedisSerializer</code></strong>序列化机制，其能将对象转成<strong><code>JSON</code></strong>存储，且<strong>不需要对象实现<code>Serializable</code>接口</strong>，且方便在redis中查看。若无需在redis中查看数据且<strong>对性能要求较高</strong>，可以采用<strong><code>protobuf</code></strong>序列化。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">RedisTemplate&lt;Object, Object&gt; template = <span class="keyword">new</span> RedisTemplate&lt;&gt;();</span><br><span class="line">Jackson2JsonRedisSerializer&lt;Object&gt; jsonRedisSerializer = <span class="keyword">new</span> Jackson2JsonRedisSerializer&lt;Object&gt;(Object<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line"><span class="comment">// value的序列化采用jsonRedisSerializer</span></span><br><span class="line">template.setValueSerializer(jsonRedisSerializer);</span><br><span class="line">template.setHashValueSerializer(jsonRedisSerializer);</span><br><span class="line"><span class="comment">// key的序列化采用StringRedisSerializer</span></span><br><span class="line">template.setKeySerializer(<span class="keyword">new</span> StringRedisSerializer());</span><br><span class="line">template.setHashKeySerializer(<span class="keyword">new</span> StringRedisSerializer());</span><br></pre></td></tr></table></figure>
+<h3 id="Redis备份策略"><a href="#Redis备份策略" class="headerlink" title="Redis备份策略"></a>Redis备份策略</h3><p>写<strong><code>crontab</code>定时调度脚本</strong>，每小时都copy一份rdb或aof的备份到一个目录中去，仅仅保留最近48小时的备份</p>
+<p><strong>每天</strong>都保留一份当日的数据备份到一个目录中去，可以保留<strong>最近1个月</strong>的备份，每次copy备份的时候，都<strong>把太旧的备份删除</strong></p>
+<p>每天晚上将当前机器上的备份<strong>复制一份到其他机器上</strong>，<strong>以防机器损坏</strong></p>
+<h3 id="RedisTemplate方法与命令对应关系"><a href="#RedisTemplate方法与命令对应关系" class="headerlink" title="RedisTemplate方法与命令对应关系"></a>RedisTemplate方法与命令对应关系</h3><h5 id="String类型"><a href="#String类型" class="headerlink" title="String类型"></a>String类型</h5><table>
+<thead>
+<tr>
+<th>Redis命令</th>
+<th>RedisTemplate方法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>set key value</td>
+<td>rt.opsForValue().set(“key”, “value”)</td>
+<td>存入字符串键值对</td>
+</tr>
+<tr>
+<td>get key</td>
+<td>rt.opsForValue().get(“key”)</td>
+<td>获取一个字符串键值</td>
+</tr>
+<tr>
+<td>del key</td>
+<td>rt.delete(“key”)</td>
+<td>删除一个键</td>
+</tr>
+<tr>
+<td>strlen key</td>
+<td>rt.opsForValue().size(“key”)</td>
+<td></td>
+</tr>
+<tr>
+<td>getset key value</td>
+<td>rt.opsForValue().getAndSet(“key”, “value”)</td>
+<td></td>
+</tr>
+<tr>
+<td>getrange key start end</td>
+<td>rt.opsForValue().get(“key”, start, end)</td>
+<td></td>
+</tr>
+<tr>
+<td>append key value</td>
+<td>rt.opsForValue().append(“key”, “value”)</td>
+</tr>
+</tbody>
+</table>
+<h5 id="Hash类型"><a href="#Hash类型" class="headerlink" title="Hash类型"></a>Hash类型</h5><table>
+<thead>
+<tr>
+<th>Redis命令</th>
+<th>RedisTemplate方法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>hmset key field1 value1 field2 value2…</td>
+<td>rt.opsForHash().putAll(“key”, map)</td>
+<td>在一个哈希表key中<br>存储多个键值对</td>
+</tr>
+<tr>
+<td>hset key field value</td>
+<td>rt.opsForHash().put(“key”,”field”,”value”)</td>
+<td></td>
+</tr>
+<tr>
+<td>hexists key field</td>
+<td>rt.opsForHash().hasKey(“key”,”field”)</td>
+<td></td>
+</tr>
+<tr>
+<td>hgetall key</td>
+<td>rt.opsForHash().entries(“key”)</td>
+<td>返回Map对象</td>
+</tr>
+<tr>
+<td>hvals key</td>
+<td>rt.opsForHash().values(“key”)</td>
+<td>返回List对象</td>
+</tr>
+<tr>
+<td>hkeys key</td>
+<td>rt.opsForHash().keys(“key”)</td>
+<td>返回List对象</td>
+</tr>
+<tr>
+<td>hmget key field1 field2…</td>
+<td>rt.opsForHash().multiGet(“key”, keyList)</td>
+<td></td>
+</tr>
+<tr>
+<td>hsetnx key field value</td>
+<td>rt.opsForHash().putIfAbsent(“key”, “field”, “value”</td>
+<td></td>
+</tr>
+<tr>
+<td>hdel key field1 field2</td>
+<td>rt.opsForHash().delete(“key”, “field1”, “field2”)</td>
+<td></td>
+</tr>
+<tr>
+<td>hget key field</td>
+<td>rt.opsForHash().get(“key”, “field”)</td>
+</tr>
+</tbody>
+</table>
+<h5 id="List类型"><a href="#List类型" class="headerlink" title="List类型"></a>List类型</h5><table>
+<thead>
+<tr>
+<th>Redis命令</th>
+<th>RedisTemplate方法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lpush list node1 node2 node3…</td>
+<td>rt.opsForList().leftPush(“list”,”node”)<br>rt.opsForList().leftPushAll(“list”, list)</td>
+<td></td>
+</tr>
+<tr>
+<td>rpush list node1 node2 node3…</td>
+<td>rt.opsForList().rightPush(“list”,”node”)<br>rt.opsForList().rightPushAll(“list”,list)</td>
+<td></td>
+</tr>
+<tr>
+<td>lindex key index</td>
+<td>rt.opsForList().index(“list”, index)</td>
+<td></td>
+</tr>
+<tr>
+<td>llen key</td>
+<td>rt.opsForList().size(“key”)</td>
+<td></td>
+</tr>
+<tr>
+<td>lpop key</td>
+<td>rt.opsForList().leftPop(“key”)</td>
+<td></td>
+</tr>
+<tr>
+<td>rpop key</td>
+<td>rt.opsForList().rightPop(“key”)</td>
+<td></td>
+</tr>
+<tr>
+<td>lpushx list node</td>
+<td>rt.opsForList().leftPushIfPresent(“list”,”node”)</td>
+<td></td>
+</tr>
+<tr>
+<td>rpushx list node</td>
+<td>rt.opsForList().rightPushIfPresent(“list”,”node”)</td>
+<td></td>
+</tr>
+<tr>
+<td>lrange list start end</td>
+<td>rt.opsForList().range(“list”,start,end)</td>
+<td></td>
+</tr>
+<tr>
+<td>lrem list count value</td>
+<td>rt.opsForList().remove(“list”,count,”value”)</td>
+<td></td>
+</tr>
+<tr>
+<td>lset key index value</td>
+<td>rt.opsForList().set(“list”,index,”value”)</td>
+</tr>
+</tbody>
+</table>
+<h5 id="Set类型"><a href="#Set类型" class="headerlink" title="Set类型"></a>Set类型</h5><table>
+<thead>
+<tr>
+<th>Redis命令</th>
+<th>RedisTemplate方法</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sadd key member1 member2…</td>
+<td>rt.boundSetOps(“key”).add(“member1”,”member2”,…)<br>rt.opsForSet().add(“key”, set)</td>
+<td></td>
+</tr>
+<tr>
+<td>scard key</td>
+<td>rt.opsForSet().size(“key”)</td>
+<td></td>
+</tr>
+<tr>
+<td>sidff key1 key2</td>
+<td>rt.opsForSet().difference(“key1”, “key2”)</td>
+<td></td>
+</tr>
+<tr>
+<td>sinter key1 key2</td>
+<td>rt.opsForSet().intersect(“key1”, “key2”)</td>
+<td></td>
+</tr>
+<tr>
+<td>sunion key1 key2</td>
+<td>rt.opsForSet().union(“key1”, “key2”)</td>
+<td></td>
+</tr>
+<tr>
+<td>sdiffstore des key1 key2</td>
+<td>rt.opsForSet().differenceAndStore(“key1”, “key2”, “des”)</td>
+<td></td>
+</tr>
+<tr>
+<td>sinter des key1 key2</td>
+<td>rt.opsForSet().intersectAndStore(“key1”, “key2”, “des”)</td>
+<td></td>
+</tr>
+<tr>
+<td>sunionstore des key1 key2</td>
+<td>rt.opsForSet().unionAndStore(“key1”, “key2”, “des”)</td>
+<td></td>
+</tr>
+<tr>
+<td>sismember key member</td>
+<td>rt.opsForSet().isMember(“key”, “member”)</td>
+<td></td>
+</tr>
+<tr>
+<td>smembers key</td>
+<td>rt.opsForSet().members(“key”)</td>
+<td></td>
+</tr>
+<tr>
+<td>spop key</td>
+<td>rt.opsForSet().pop(“key”)</td>
+<td></td>
+</tr>
+<tr>
+<td>srandmember key count</td>
+<td>rt.opsForSet().randomMember(“key”, count)</td>
+<td></td>
+</tr>
+<tr>
+<td>srem key member1 member2…</td>
+<td>rt.opsForSet().remove(“key”, “member1”, “member2”, …)</td>
+</tr>
+</tbody>
+</table>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/Redis/Redis集群架构/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        Redis集群架构
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/Feign集成原理/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Feign集成原理</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

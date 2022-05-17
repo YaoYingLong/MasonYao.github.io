@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        分布式事务解决方案 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="分布式事务">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="大多数场景下应用都只需要操作单一数据库，该情况下的事务称之为本地事务(Local Transaction)。本地事务的ACID特性是数据库直接提供支持。在JDBC编程中通过java.sql.Connection对象来开启、关闭或提交事务。 12345678910Connection conn = ... ; 	//获取数据库连接conn.setAutoCommit(false); 	//开启事务t">
+<meta name="keywords" content="分布式事务">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式事务解决方案">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/分布式事务解决方案/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="大多数场景下应用都只需要操作单一数据库，该情况下的事务称之为本地事务(Local Transaction)。本地事务的ACID特性是数据库直接提供支持。在JDBC编程中通过java.sql.Connection对象来开启、关闭或提交事务。 12345678910Connection conn = ... ; 	//获取数据库连接conn.setAutoCommit(false); 	//开启事务t">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/分布式事务XA模型.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/两阶段提交协议一.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/常见分布式事务解决方案.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/TransactionEssentials.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Seata/分布式事务生命周期.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Seata/Seata分布式事务整体执行流程.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Seata/Seata分布式事务第一阶段.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Seata/Seata分布式事务第二阶段回滚.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Seata/Seata分布式事务第二阶段提交.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/两阶段提交TCC%20vs%20XA.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/TCC分布式事务-空回滚.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/TCC分布式事务-悬挂.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/TCC分布式事务-幂等.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/扣钱基础场景.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/扣钱场景一.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/扣钱场景二.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/用户下单场景.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/柔性事务-最大努力通知.png">
+<meta property="og:updated_time" content="2022-02-11T13:11:28.069Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="分布式事务解决方案">
+<meta name="twitter:description" content="大多数场景下应用都只需要操作单一数据库，该情况下的事务称之为本地事务(Local Transaction)。本地事务的ACID特性是数据库直接提供支持。在JDBC编程中通过java.sql.Connection对象来开启、关闭或提交事务。 12345678910Connection conn = ... ; 	//获取数据库连接conn.setAutoCommit(false); 	//开启事务t">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Cloud/秒杀/分布式事务XA模型.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/分布式事务解决方案" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/分布式事务/">分布式事务</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/分布式事务解决方案/">
+            <time datetime="2022-02-08T16:00:00.000Z" itemprop="datePublished">2022-02-09</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            分布式事务解决方案
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>大多数场景下应用都只需要操作单一数据库，该情况下的事务称之为<strong>本地事务</strong>(Local Transaction)。<strong>本地事务的ACID特性是数据库直接提供支持</strong>。在JDBC编程中通过<strong><code>java.sql.Connection</code></strong>对象来<strong>开启</strong>、<strong>关闭</strong>或<strong>提交</strong>事务。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Connection conn = ... ; 	<span class="comment">//获取数据库连接</span></span><br><span class="line">conn.setAutoCommit(<span class="keyword">false</span>); 	<span class="comment">//开启事务</span></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// 执行增删改查sql</span></span><br><span class="line">    conn.commit(); 		<span class="comment">// 提交事务</span></span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    conn.rollback();	<span class="comment">// 事务回滚</span></span><br><span class="line">&#125; <span class="keyword">finally</span>&#123;</span><br><span class="line">    conn.close();		<span class="comment">// 关闭链接</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>绝大部分公司都进行了<strong>数据库拆分</strong>和<strong>服务化</strong>，完成某一个业务功能可能需要横跨多个服务，操作多个数据库，<strong>需要操作的资源位于多个资源服务器上</strong>，<strong>分布式事务</strong>就是为了保证<strong>不同资源服务器</strong>的<strong>数据一致性</strong>。典型的分布式事务场景：<strong>垮库事务</strong>、<strong>分库分表</strong>、<strong>服务化</strong>。</p>
+<h3 id="DTP模型"><a href="#DTP模型" class="headerlink" title="DTP模型"></a>DTP模型</h3><p>构成DTP模型的5个基本元素：</p>
+<ul>
+<li><strong><code>AP</code>应用程序Application Program</strong>：用于<strong>定义事务边界</strong>即定义事务的开始和结束，并在事务边界内对资源进行操作</li>
+<li><strong><code>RM</code>资源管理器Resource Manager</strong>：如<strong>数据库</strong>、<strong>文件系统</strong>等，并提供访问资源的方式</li>
+<li><strong><code>TM</code>事务管理器Transaction Manager</strong>：负责分配事务唯一标识，监控事务的执行进度，并负责事务的提交、回滚等</li>
+<li><strong><code>CRM</code>通信资源管理器Communication Resource Manager</strong>：控制一个TM域内或者跨TM域的<strong>分布式应用之间的通信</strong></li>
+<li><strong><code>CP</code>通信协议Communication Protocol</strong>：提供CRM提供的分布式应用节点之间的<strong>底层通信服务</strong></li>
+</ul>
+<h3 id="XA规范"><a href="#XA规范" class="headerlink" title="XA规范"></a>XA规范</h3><p>在DTP本地模型实例中，由<strong><code>AP</code>应用程序</strong>、<strong><code>RMs</code>资源管理器</strong>和<strong><code>TM</code>事务管理器</strong>组成，不需要其他元素，AP、RM和TM之间彼此都需要进行交互。XA规范主要作用是定义了<strong><code>RM-TM</code>的交互接口</strong>，还<strong>对两阶段提交协议进行了优化</strong>。</p>
+<p><img src="../../../../images/Cloud/秒杀/分布式事务XA模型.png" alt></p>
+<p><strong>两阶段协议</strong>是在<strong><code>OSI TP</code></strong>标准中提出的，在DTP参考模型中，指定了<strong>全局事务</strong>的提交要使用<strong>两阶段提交协议</strong>；而XA规范只是定义了<strong>两阶段提交协议中需要使用到的接口</strong>，也就是上述提到的<strong><code>RM-TM</code>交互的接口</strong>。</p>
+<h4 id="两阶段提交协议"><a href="#两阶段提交协议" class="headerlink" title="两阶段提交协议"></a>两阶段提交协议</h4><p><strong>两阶段提交协议</strong>不是在XA规范中提出，但XA规范对其进行了优化，<strong>将提交过程划分为两个阶段</strong>。</p>
+<p><strong>第一阶段</strong>：<strong>TM通知各个RM准备提交它们的事务分支</strong>；若RM判断自己进行的工作<strong>可以被提交</strong>，则<strong>对工作内容进行持久化</strong>，再<strong>给TM肯定答复</strong>；若<strong>发生了其他情况</strong>则给TM的都是<strong>否定答复</strong>。在发送了否定答复并回滚了工作后，RM就可以丢弃该事务分支信息。</p>
+<p><strong>第二阶段</strong>：<strong>TM根据第一阶段各个RM prepare的结果，决定是提交还是回滚事务</strong>；若<strong>所有<code>RM</code>都<code>prepare</code>成功</strong>，则TM通知所有RM进行提交；若<strong>有<code>RM prepare</code>失败</strong>则TM通知所有RM<strong>回滚事务分支</strong>。</p>
+<p><img src="../../../../images/Cloud/秒杀/两阶段提交协议一.png" alt></p>
+<p>二阶段提交看起来确实能够提供原子性的操作，但二阶段提交还是有几个缺点：</p>
+<p><strong>同步阻塞问题</strong>：两阶段提交方案下<strong>全局事务的ACID特性是依赖于RM的</strong>，一个<strong>全局事务</strong>内部包含了<strong>多个独立的事务分支</strong>，这一组事务分支要不都成功要不都失败，<strong>各个事务分支的ACID特性共同构成了全局事务的ACID特性</strong>。<strong>可重复读隔离级别不足以保证分布式事务一致性</strong>，若使用MySQL来支持XA分布式事务最好将事务隔离级别设置为<strong><code>SERIALIZABLE</code></strong>，而<strong><code>SERIALIZABLE</code></strong>是四个事务隔离级别中最高且执行效率最低一个级别。</p>
+<p><strong>单点故障</strong>：由于协调者的重要性，一旦<strong>协调者TM发生故障</strong>，参与者RM会一直阻塞下去。尤其在第二阶段，协调者发生故障，所有参与者还都处于锁定事务资源状态中，而无法继续完成事务操作。若协调者挂掉，可重新选举一个协调者，但无法解决因为协调者宕机导致的参与者处于阻塞状态的问题</p>
+<p><strong>数据不一致</strong>：在第二阶段中当<strong>协调者</strong>向<strong>参与者</strong>发送commit请求之后，发生了<strong>局部网络异常</strong>或在发送commit请求过程中<strong>协调者发生故障</strong>，会导致只有一部分参与者接受到了commit请求，而在这部分参与者接到commit请求之后就会执行commit操作，但是其他部分未接到commit请求的机器则无法执行事务提交。于是整个分布式系统便出现了数据不一致性的现象。</p>
+<hr>
+<p><img src="../../../../images/Cloud/秒杀/常见分布式事务解决方案.png" alt="常见分布式事务解决方案"></p>
+<h3 id="JTA-XA规范实现"><a href="#JTA-XA规范实现" class="headerlink" title="JTA/XA规范实现"></a>JTA/XA规范实现</h3><p>针对实现了JDBC规范中规定的实现<strong><code>XADataSource</code></strong>接口的数据库连接池，典型的<strong><code>XADataSource</code></strong>实现包括：</p>
+<ul>
+<li>MySQL官方提供的<strong><code>com.mysql.jdbc.jdbc2.optional.MysqlXADataSource</code></strong></li>
+<li>阿里巴巴开源的druid连接池，对应的实现类为<strong><code>com.alibaba.druid.pool.xa.DruidXADataSource</code></strong></li>
+<li>tomcat-jdbc连接池提供的<strong><code>org.apache.tomcat.jdbc.pool.XADataSource</code></strong></li>
+</ul>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- MySQL JDBC实现了XA规范 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>mysql<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>mysql-connector-java<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>5.1.39<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// true表示打印XA语句,，用于调试</span></span><br><span class="line"><span class="keyword">boolean</span> logXaCommands = <span class="keyword">true</span>;</span><br><span class="line"><span class="comment">// 获得资源管理器操作接口实例 RM1</span></span><br><span class="line">Connection conn1 = DriverManager.getConnection(<span class="string">"jdbc:mysql://localhost:3306/db_user"</span>, <span class="string">"root"</span>, <span class="string">"root"</span>);</span><br><span class="line">XAConnection xaConn1 = <span class="keyword">new</span> MysqlXAConnection((com.mysql.jdbc.Connection) conn1, logXaCommands);</span><br><span class="line">XAResource rm1 = xaConn1.getXAResource();</span><br><span class="line"><span class="comment">// 获得资源管理器操作接口实例 RM2</span></span><br><span class="line">Connection conn2 = DriverManager.getConnection(<span class="string">"jdbc:mysql://localhost:3306/db_account"</span>, <span class="string">"root"</span>, <span class="string">"root"</span>);</span><br><span class="line">XAConnection xaConn2 = <span class="keyword">new</span> MysqlXAConnection((com.mysql.jdbc.Connection) conn2, logXaCommands);</span><br><span class="line">XAResource rm2 = xaConn2.getXAResource();</span><br><span class="line"><span class="comment">// AP请求TM执行一个分布式事务，TM生成全局事务id</span></span><br><span class="line"><span class="keyword">byte</span>[] gtrid = <span class="string">"g12345"</span>.getBytes();</span><br><span class="line"><span class="keyword">int</span> formatId = <span class="number">1</span>;</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// ==============分别执行RM1和RM2上的事务分支====================</span></span><br><span class="line">    <span class="comment">// TM生成rm1上的事务分支id</span></span><br><span class="line">    <span class="keyword">byte</span>[] bqual1 = <span class="string">"b00001"</span>.getBytes();</span><br><span class="line">    Xid xid1 = <span class="keyword">new</span> MysqlXid(gtrid, bqual1, formatId);</span><br><span class="line">    <span class="comment">// 执行rm1上的事务分支</span></span><br><span class="line">    rm1.start(xid1, XAResource.TMNOFLAGS);<span class="comment">// One of TMNOFLAGS, TMJOIN, or TMRESUME.</span></span><br><span class="line">    PreparedStatement ps1 = conn1.prepareStatement(<span class="string">"INSERT into user(name) VALUES ('Eleven')"</span>);</span><br><span class="line">    ps1.execute();</span><br><span class="line">    rm1.end(xid1, XAResource.TMSUCCESS);</span><br><span class="line">    <span class="comment">// TM生成rm2上的事务分支id</span></span><br><span class="line">    <span class="keyword">byte</span>[] bqual2 = <span class="string">"b00002"</span>.getBytes();</span><br><span class="line">    Xid xid2 = <span class="keyword">new</span> MysqlXid(gtrid, bqual2, formatId);</span><br><span class="line">    <span class="comment">// 执行rm2上的事务分支</span></span><br><span class="line">    rm2.start(xid2, XAResource.TMNOFLAGS);</span><br><span class="line">    PreparedStatement ps2 = conn2.prepareStatement(<span class="string">"INSERT into account(user_id, money) VALUES (1, 10000000)"</span>);</span><br><span class="line">    ps2.execute();</span><br><span class="line">    rm2.end(xid2, XAResource.TMSUCCESS);</span><br><span class="line">    <span class="comment">// ===================两阶段提交================================</span></span><br><span class="line">    <span class="comment">// phase1：询问所有的RM 准备提交事务分支</span></span><br><span class="line">    <span class="keyword">int</span> rm1_prepare = rm1.prepare(xid1);</span><br><span class="line">    <span class="keyword">int</span> rm2_prepare = rm2.prepare(xid2);</span><br><span class="line">    <span class="comment">// phase2：提交所有事务分支</span></span><br><span class="line">    <span class="keyword">boolean</span> onePhase = <span class="keyword">false</span>;</span><br><span class="line">    <span class="comment">//TM判断有2个事务分支，所以不能优化为一阶段提交</span></span><br><span class="line">    <span class="keyword">if</span> (rm1_prepare == XAResource.XA_OK &amp;&amp; rm2_prepare == XAResource.XA_OK) &#123;</span><br><span class="line">        <span class="comment">// 所有事务分支都prepare成功，提交所有事务分支</span></span><br><span class="line">        rm1.commit(xid1, onePhase);</span><br><span class="line">        rm2.commit(xid2, onePhase);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;<span class="comment">// 如果有事务分支没有成功，则回滚</span></span><br><span class="line">        rm1.rollback(xid1);</span><br><span class="line">        rm2.rollback(xid2);</span><br><span class="line">    &#125;</span><br><span class="line">&#125; <span class="keyword">catch</span> (XAException e) &#123; <span class="comment">// 如果出现异常，也要进行回滚</span></span><br><span class="line">    e.printStackTrace();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>开源框架<strong><code>Atomikos</code></strong>：<strong><code>TransactionEssentials</code></strong>开源的免费产品，<strong><code>ExtremeTransactions</code></strong>上商业版需要收费。</p>
+<p><img src="../../../../images/Cloud/秒杀/TransactionEssentials.png" alt></p>
+<p>TransactionEssentials实现了<strong><code>JTA/XA</code></strong>规范中的<strong>事务管理器</strong>应该实现的相关接口，如<strong><code>UserTransaction</code></strong>实现了<strong><code>com.atomikos.icatch.jta.UserTransactionImp</code></strong>，用户只需要直接操作该类，<strong><code>TransactionManager</code></strong>实现了<strong><code>com.atomikos.icatch.jta.UserTransactionManager</code></strong>，<strong><code>Transaction</code></strong>实现了com.atomikos.icatch.jta.TransactionImp。</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- JTA规范扩展包 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>javax.transaction<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jta<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- atomikos JTA/XA全局事务 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.atomikos<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>transactions-jdbc<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.0.6<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> AtomikosDataSourceBean <span class="title">createAtomikosDataSourceBean</span><span class="params">(String dbName)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 连接池基本属性</span></span><br><span class="line">    Properties p = <span class="keyword">new</span> Properties();</span><br><span class="line">    p.setProperty(<span class="string">"url"</span>, <span class="string">"jdbc:mysql://localhost:3306/"</span> + dbName);</span><br><span class="line">    p.setProperty(<span class="string">"user"</span>, <span class="string">"root"</span>);</span><br><span class="line">    p.setProperty(<span class="string">"password"</span>, <span class="string">"root"</span>);</span><br><span class="line">    <span class="comment">// 使用AtomikosDataSourceBean封装com.mysql.jdbc.jdbc2.optional.MysqlXADataSource</span></span><br><span class="line">    AtomikosDataSourceBean ds = <span class="keyword">new</span> AtomikosDataSourceBean();</span><br><span class="line">    <span class="comment">// 设置resourceName 唯一</span></span><br><span class="line">    ds.setUniqueResourceName(dbName);</span><br><span class="line">    ds.setXaDataSourceClassName(<span class="string">"com.mysql.jdbc.jdbc2.optional.MysqlXADataSource"</span>);</span><br><span class="line">    ds.setXaProperties(p);</span><br><span class="line">    <span class="keyword">return</span> ds;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    AtomikosDataSourceBean ds1 = createAtomikosDataSourceBean(<span class="string">"db_user"</span>);</span><br><span class="line">    AtomikosDataSourceBean ds2 = createAtomikosDataSourceBean(<span class="string">"db_account"</span>);</span><br><span class="line">    Connection conn1 = <span class="keyword">null</span>;</span><br><span class="line">    Connection conn2 = <span class="keyword">null</span>;</span><br><span class="line">    PreparedStatement ps1 = <span class="keyword">null</span>;</span><br><span class="line">    PreparedStatement ps2 = <span class="keyword">null</span>;</span><br><span class="line">    UserTransaction userTransaction = <span class="keyword">new</span> UserTransactionImp();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// 开启事务</span></span><br><span class="line">        userTransaction.begin();</span><br><span class="line">        <span class="comment">// 执行db1上的sql</span></span><br><span class="line">        conn1 = ds1.getConnection();</span><br><span class="line">        ps1 = conn1.prepareStatement(<span class="string">"INSERT into user(name) VALUES (?)"</span>, Statement.RETURN_GENERATED_KEYS);</span><br><span class="line">        ps1.setString(<span class="number">1</span>, <span class="string">"Eleven"</span>);</span><br><span class="line">        ps1.executeUpdate();</span><br><span class="line">        ResultSet generatedKeys = ps1.getGeneratedKeys();</span><br><span class="line">        <span class="keyword">int</span> userId = -<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">while</span> (generatedKeys.next()) &#123;</span><br><span class="line">            <span class="comment">// 获得自动生成的userId</span></span><br><span class="line">            userId = generatedKeys.getInt(<span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 模拟异常 ，直接进入catch代码块，2个都不会提交</span></span><br><span class="line">        <span class="comment">// int i=1/0;</span></span><br><span class="line">        <span class="comment">// 执行db2上的sql</span></span><br><span class="line">        conn2 = ds2.getConnection();</span><br><span class="line">        ps2 = conn2.prepareStatement(<span class="string">"INSERT into account(user_id,money) VALUES (?,?)"</span>);</span><br><span class="line">        ps2.setInt(<span class="number">1</span>, userId);</span><br><span class="line">        ps2.setDouble(<span class="number">2</span>, <span class="number">10000000</span>);</span><br><span class="line">        ps2.executeUpdate();</span><br><span class="line">        <span class="comment">// 两阶段提交</span></span><br><span class="line">        userTransaction.commit();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">            userTransaction.rollback();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (SystemException e1) &#123;</span><br><span class="line">            e1.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ps1.close();</span><br><span class="line">            ps2.close();</span><br><span class="line">            conn1.close();</span><br><span class="line">            conn2.close();</span><br><span class="line">            ds1.close();</span><br><span class="line">            ds2.close();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception ignore) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Seata-AT模式"><a href="#Seata-AT模式" class="headerlink" title="Seata AT模式"></a>Seata AT模式</h3><p>Seata相比与其它分布式事务框架有以下几个<strong>优势</strong>:</p>
+<ul>
+<li><strong>应用层基于SQL解析实现了自动补偿</strong>，从而最大程度的<strong>降低业务侵入性</strong></li>
+<li>将分布式事务中<strong>TC事务协调者独立部署</strong>，负责事务的注册、回滚</li>
+<li>通过<strong>全局锁</strong>实现了<strong>写隔离</strong>与<strong>读隔离</strong></li>
+</ul>
+<p>Seata提供了<strong><code>AT</code></strong>、<strong><code>TCC</code></strong>、<strong><code>SAGA</code></strong>和<strong><code>XA</code></strong>事务模式，AT模式是Seata首推模式，Seata有<strong><code>TC</code>事务协调者</strong>、<strong><code>TM</code>事务管理器</strong>、<strong><code>RM</code>资源管理器</strong>三大角色，<strong><code>TC</code>为单独部署的<code>Server</code>服务端，<code>TM</code>和<code>RM</code>为嵌入到应用中的Client客户端</strong></p>
+<ul>
+<li><strong><code>TC</code>事务协调者</strong>：维护全局和分支事务的状态驱动全局事务提交或回滚</li>
+<li><strong><code>TM</code>事务管理器</strong>：<strong>定义全局事务的范围</strong>开始全局事务、提交或回滚全局事务</li>
+<li><strong><code>RM</code>资源管理器</strong>：管理分支事务处理的资源，与TC交谈以注册分支事务和报告分支事务状态，并驱动分支事务提交或回滚</li>
+</ul>
+<p><img src="../../../../../images/Seata/分布式事务生命周期.png" alt="Seata分布式事务生命周期"></p>
+<p>TM请求TC开启一个全局事务，TC会生成一个XID作为该全局事务的编号，<strong><code>XID</code>会在微服务的调用链路中传播</strong>，保证将多个微服务的子事务关联在一起；<strong>RM请求TC将本地事务注册为全局事务的分支事务</strong>，<strong>通过全局事务的XID进行关联</strong>；TM请求TC告诉XID对应的全局事务是进行提交还是回滚；TC驱动RM们将XID对应的自己的本地事务进行提交还是回滚。</p>
+<p><img src="../../../../../images/Seata/Seata分布式事务整体执行流程.png" alt></p>
+<p>AT模式的核心是<strong>对业务无侵入</strong>，是一种<strong>改进后的两阶段提交</strong>，前提是<strong>基于支持本地<code>ACID</code>事务的关系型数据库</strong>，<strong><code>Java</code>应用通过<code>JDBC</code>访问数据库</strong>。通过两阶段提交：</p>
+<ul>
+<li><strong>一阶段</strong>：<strong>业务数据</strong>和<strong>回滚日志记录</strong>在<strong>同一个本地事务中提交</strong>，释放本地锁和连接资源，本地事务提交前，需确保先拿到<strong>全局锁</strong>，否则不能提交本地事务，且拿全局锁的尝试被限制在一定范围内，超出范围将放弃，并回滚本地事务释放本地锁</li>
+<li><strong>二阶段</strong>：<strong>提交异步化</strong>非常快速地完成，回滚通过一阶段的<strong>回滚日志进行反向补偿</strong></li>
+</ul>
+<p><img src="../../../../../images/Seata/Seata分布式事务第一阶段.png" alt="第一阶段"></p>
+<p><strong>一阶段</strong>会<strong>解析<code>SQL</code>类型</strong>是更新删除还是新增、<strong>表名</strong>、<strong>条件</strong>等相关信息，根据解析得到的条件信息，生成查询语句定位数据生成<strong>前置镜像</strong>，然后执行业务SQL，根据前镜像的结果，通过<strong>主键</strong>定位数据得到<strong>后置镜像</strong>，把<strong>前置镜像</strong>和<strong>后置镜像</strong>数据以及<strong>业务<code>SQL</code></strong>相关的信息组成一条<strong>回滚日志记录</strong>，插入到<strong><code>UNDO_LOG</code></strong>表中。提交前向TC注册分支申请目标表中，对应主键值的记录的<strong>全局锁</strong>，业务数据的更新和前面步骤中生成的<strong><code>UNDO LOG</code></strong>一并提交，将本地事务提交的结果上报给TC。</p>
+<p><img src="../../../../../images/Seata/Seata分布式事务第二阶段回滚.png" alt="第二阶段回滚"></p>
+<p>二阶段回滚，收到TC分支回滚请求，开启一个本地事务，通过XID和Branch ID查找到相应的UNDO LOG记录，拿 UNDO LOG中的后镜与当前数据进行比较，若有<strong>不同</strong>说明数据<strong>被当前全局事务之外的动作做了修改</strong>。该情况需要<strong>根据配置策略来做处理</strong>，根据UNDO LOG中前镜像和业务SQL相关信息生成并执行回滚的语句，提交本地事务并把本地事务的执行结果即<strong>分支事务回滚结果上报给TC事务协调者</strong>。</p>
+<p><img src="../../../../../images/Seata/Seata分布式事务第二阶段提交.png" alt="第二阶段提交"></p>
+<p>二阶段提交，即<strong>分布式事务操作成功</strong>，<strong><code>TC</code>通知<code>RM</code>异步删除<code>undolog</code></strong>，收到TC分支提交请求，把请求放入一个异步任务队列中，马上返回提交成功结果给TC，<strong>异步任务阶段的分支提交请求</strong>将异步和批量地<strong>删除相应<code>UNDO LOG</code>记录</strong>。</p>
+<p>Seata AT模式存在的问题：</p>
+<ul>
+<li><strong>性能损耗</strong>：一条Update的SQL需要与TC通讯获取全局事务xid、before image解析SQL查询一次数据库、after image查询一次数据库、insert undo log写一次数据库、before commit与TC通讯判断锁冲突，这些操作都需要<strong>同步远程通讯RPC</strong>，且undo log写入时blob字段插入性能也不高。每条写SQL都会增加这么多开销，粗略估计会增加5倍响应时间</li>
+<li><strong>性价比</strong>：为了进行自动补偿，需要对所有交易生成前后镜像并持久化，在实际业务场景下<strong>分布式事务失败需要回滚的有多少比率</strong>，按照二八原则预估，为了20%的交易回滚，需要将80%的成功交易的响应时间增加5倍，这样的代价相比于让应用开发一个补偿交易是否是值得</li>
+<li><strong>全局锁</strong>：相比XA，Seata虽然在<strong>一阶段成功后会释放数据库锁</strong>，但<strong>一阶段在commit前全局锁的判定也拉长了对数据锁的占有时间</strong>，这个开销比XA的prepare低多少需要根据实际业务场景进行测试。全局锁的引入实现了隔离性，但带来的问题就是阻塞，降低并发性，<strong>尤其是热点数据</strong>，这个问题会更加严重。</li>
+<li><strong>回滚锁释放时间</strong>：Seata在回滚时，需要先删除各节点的undo log，然后才能释放TC内存中的锁，所以若第二阶段是回滚，释放锁的时间会更长</li>
+<li><strong>死锁问题</strong>：Seata的引入全局锁<strong>会额外增加死锁风险</strong>，若出现死锁会不断进行重试，最后靠等待全局锁超时，这种方式并不优雅，也延长了对数据库锁的占有时间</li>
+</ul>
+<h3 id="柔性事务TCC"><a href="#柔性事务TCC" class="headerlink" title="柔性事务TCC"></a>柔性事务TCC</h3><p>TCC是比较常用的一种<strong>柔性事务方案</strong>。开源的TCC框架：<strong><code>Tcc-Transaction</code></strong>、<strong><code>Hmily</code></strong>、<strong><code>ByteTCC</code></strong>、<strong><code>EasyTransaction</code></strong>、<strong><code>Seata TCC</code></strong>。</p>
+<p><img src="../../../../images/Cloud/秒杀/两阶段提交TCC vs XA.png" alt></p>
+<p>TCC两阶段提交与XA两阶段提交的区别是：<strong>XA是资源层面的分布式事务，强一致性，在两阶段提交的整个过程中，一直会持有资源的锁，TCC是业务层面的分布式事务，最终一致性，不会一直持有资源的锁</strong>。</p>
+<p><strong>TCC事务的优点</strong>是<strong>有效了的避免了XA两阶段提交占用资源锁时间过长导致的性能底下的问题</strong>。相对于AT模式，TCC模式<strong>对业务代码有一定的侵入性</strong>，但TCC模式无AT模式的全局行锁，TCC性能会比AT模式高很多。</p>
+<p><strong>TCC事务的缺点</strong>是主业务服务和从业务服务都需要进行改造，从业务方改造成本更高。原来只需要提供一个接口，现在需要改造成<strong><code>try</code></strong>、<strong><code>confirm</code></strong>、<strong><code>canel</code></strong>三个接口开发成本高。</p>
+<h4 id="空回滚"><a href="#空回滚" class="headerlink" title="空回滚"></a>空回滚</h4><p>在没有调用TCC资源Try方法的情况下，调用了二阶段的Cancel方法，<strong>Cancel方法需要识别出这是一个空回滚</strong>，<strong>然后直接返回成功</strong>，空回滚出现的原因是<strong><code>Try</code>超时丢包</strong>，<strong>分布式事务回滚触发<code>Cancel</code>，出现未收到<code>Try</code>，收到<code>Cancel</code>的情况</strong>。</p>
+<p><img src="../../../../images/Cloud/秒杀/TCC分布式事务-空回滚.png" alt></p>
+<h4 id="悬挂"><a href="#悬挂" class="headerlink" title="悬挂"></a>悬挂</h4><p><strong>悬挂</strong>即<strong><code>Cancel</code>比<code>Try</code>先执行</strong>，要运行空回滚，但<strong>要拒绝空回滚之后的Try操作</strong>，悬挂出现的原因是<strong>Try超时拥堵</strong>，<strong>分布式事务回滚触发<code>Cancel</code>，之后拥堵的<code>Try</code>到达</strong>。</p>
+<p><img src="../../../../images/Cloud/秒杀/TCC分布式事务-悬挂.png" alt></p>
+<h4 id="幂等控制"><a href="#幂等控制" class="headerlink" title="幂等控制"></a>幂等控制</h4><p>Try，Confirm，Cancel都需要保证幂等性，因为<strong>网络抖动</strong>或<strong>拥堵</strong>可能会超时，<strong>事务管理器</strong>会对资源进行<strong>重试</strong>操作，所以很可能一个业务操作会被重复调用，为了不因为重复调用而多次占用资源，需要对服务设计时进行幂等控制，通常可用<strong>事务<code>xid</code></strong>或<strong>业务主键</strong>判重来控制。</p>
+<p><img src="../../../../images/Cloud/秒杀/TCC分布式事务-幂等.png" alt></p>
+<h3 id="TCC设计注意事项"><a href="#TCC设计注意事项" class="headerlink" title="TCC设计注意事项"></a>TCC设计注意事项</h3><p>以扣钱场景为例，场景为A转账30元给B，A和B账户在不同的服务。在微服务架构下，很有可能出现<strong>网络超时</strong>、<strong>重发</strong>，<strong>机器宕机</strong>等一系列的异常，出现<strong>空回滚</strong>、<strong>幂等</strong>、<strong>悬挂</strong>的问题。</p>
+<p><img src="../../../../images/Cloud/秒杀/扣钱基础场景.png" alt></p>
+<p>对于以下示例，都是<strong>先执行账户A的try方法</strong>，从而执行账户B的try方法，若成功则<strong>执行账户A的<code>confirm</code>方法</strong>，<strong>然后执行账户B的<code>confirm</code>方法</strong>，若失败则<strong>执行账户A的<code>concel</code>方法</strong>，然后再<strong>执行账户B的<code>cancel</code>方法</strong>。</p>
+<h4 id="方案A"><a href="#方案A" class="headerlink" title="方案A"></a>方案A</h4><p>方案C优于方案B优于方案A</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># 账户A</span><br><span class="line">try： </span><br><span class="line">    检查余额是否够30元      </span><br><span class="line">    扣减30元</span><br><span class="line">confirm：</span><br><span class="line">    空</span><br><span class="line">cancel： </span><br><span class="line">    增加30元</span><br><span class="line"># 账户B</span><br><span class="line">try：</span><br><span class="line">    增加30元        </span><br><span class="line">confirm：</span><br><span class="line">    空        </span><br><span class="line">cancel： </span><br><span class="line">    减少30元</span><br></pre></td></tr></table></figure>
+<h4 id="方案B"><a href="#方案B" class="headerlink" title="方案B"></a>方案B</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># 账户A</span><br><span class="line">try： </span><br><span class="line">    检查余额是否够30元</span><br><span class="line">    扣减30元</span><br><span class="line">confirm： </span><br><span class="line">    空        </span><br><span class="line">cancel： </span><br><span class="line">    增加30元</span><br><span class="line"># 账户B</span><br><span class="line">try： </span><br><span class="line">    空        </span><br><span class="line">confirm： </span><br><span class="line">    增加30元        </span><br><span class="line">cancel： </span><br><span class="line">    空</span><br></pre></td></tr></table></figure>
+<h4 id="方案C"><a href="#方案C" class="headerlink" title="方案C"></a>方案C</h4><p>需要创建<strong><code>local_transaction_log</code></strong>日志表用于<strong>幂等性</strong>、<strong>空回滚</strong>、<strong><code>try</code>悬挂处理</strong>时校验</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"># 账户A</span><br><span class="line">try： </span><br><span class="line">    try幂等校验      </span><br><span class="line">    try悬挂处理      </span><br><span class="line">    检查余额是否够30元      </span><br><span class="line">    扣减30元        </span><br><span class="line">confirm： </span><br><span class="line">    空        </span><br><span class="line">cancel：</span><br><span class="line">    cancel幂等校验</span><br><span class="line">    cancel空回滚处理</span><br><span class="line">    增加可用余额30元</span><br><span class="line"># 账户B</span><br><span class="line">try：</span><br><span class="line">    空</span><br><span class="line">confirm： </span><br><span class="line">    confirm幂等校验      </span><br><span class="line">    正式增加30元</span><br><span class="line">cancel： </span><br><span class="line">    空</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="meta">@Slf</span>4j</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountServiceImpl</span> <span class="keyword">implements</span> <span class="title">AccountService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    AccountMapper accountMapper;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    Bank2FeignClient bank2FeignClient;</span><br><span class="line">    <span class="comment">// try方法执行逻辑：try幂等校验，try悬挂处理，检查余额是否足够扣减，扣减金额</span></span><br><span class="line">    <span class="comment">// 只要标记@Hmily就是try方法，在注解中指定confirm、cancel两个方法的名字</span></span><br><span class="line">    <span class="meta">@Transactional</span>(timeout = <span class="number">60</span>)</span><br><span class="line">    <span class="meta">@Hmily</span>(confirmMethod = <span class="string">"commit"</span>, cancelMethod = <span class="string">"rollback"</span>)</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">transfer</span><span class="params">(String fromAccountNo, String toAccountNo, Double amount)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 获取全局事务id</span></span><br><span class="line">        String transId = HmilyTransactionContextLocal.getInstance().get().getTransId();</span><br><span class="line">        log.info(<span class="string">"bank1 try begin 开始执行...xid:&#123;&#125;"</span>, transId);</span><br><span class="line">        <span class="comment">// 幂等判断 判断local_transaction_log表中是否有try日志记录，如果有则不再执行</span></span><br><span class="line">        <span class="keyword">if</span> (accountMapper.isExistTransactionLogByType(transId, TransactionEnum.TRY.getValue()) &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            log.info(<span class="string">"bank1 try 已经执行，无需重复执行,xid:&#123;&#125;"</span>, transId);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// try悬挂处理，如果cancel、confirm有一个已经执行了，try不再执行</span></span><br><span class="line">        <span class="keyword">if</span> (accountMapper.isExistTransactionLogByType(transId, TransactionEnum.CONFIRM.getValue()) &gt; <span class="number">0</span></span><br><span class="line">                || accountMapper.isExistTransactionLogByType(transId, TransactionEnum.CANCEL.getValue()) &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            log.info(<span class="string">"bank1 try悬挂处理  cancel或confirm已经执行，不允许执行try,xid:&#123;&#125;"</span>, transId);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 扣减金额</span></span><br><span class="line">        <span class="keyword">if</span> (accountMapper.subtractAccountBalance(fromAccountNo, amount) &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// 扣减失败</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"bank1 try 扣减金额失败,xid:"</span> + transId);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 插入try执行记录,用于幂等判断</span></span><br><span class="line">        accountMapper.addTransactionLog(transId, TransactionEnum.TRY.getValue());</span><br><span class="line">        <span class="comment">// 转账,远程调用bank2</span></span><br><span class="line">        <span class="keyword">if</span> (!bank2FeignClient.transferTo(toAccountNo, amount)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"bank1 远程调用bank2微服务失败,xid:"</span> + transId);</span><br><span class="line">        &#125;</span><br><span class="line">        log.info(<span class="string">"bank2 request end 结束执行...xid:&#123;&#125;"</span>, transId);</span><br><span class="line">        <span class="keyword">if</span> (amount == <span class="number">20</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"人为制造异常,xid:"</span> + transId);</span><br><span class="line">        &#125;</span><br><span class="line">        log.info(<span class="string">"bank1 try end 结束执行...xid:&#123;&#125;"</span>, transId);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Transactional</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">commit</span><span class="params">(String fromAccountNo, String toAccountNo, Double amount)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 获取全局事务id</span></span><br><span class="line">        String transId = HmilyTransactionContextLocal.getInstance().get().getTransId();</span><br><span class="line">        log.info(<span class="string">"bank1 confirm begin 开始执行...xid:&#123;&#125;,accountNo:&#123;&#125;,amount:&#123;&#125;"</span>, transId, fromAccountNo, amount);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// cancel方法执行逻辑： 1.cancel幂等校验 2.cancel空回滚处理 3.增加可用余额</span></span><br><span class="line">    <span class="meta">@Transactional</span>(timeout = <span class="number">60</span>)</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">rollback</span><span class="params">(String fromAccountNo, String toAccountNo, Double amount)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 获取全局事务id</span></span><br><span class="line">        String transId = HmilyTransactionContextLocal.getInstance().get().getTransId();</span><br><span class="line">        log.info(<span class="string">"bank1 cancel begin 开始执行...xid:&#123;&#125;"</span>, transId);</span><br><span class="line">        <span class="comment">// cancel幂等校验</span></span><br><span class="line">        <span class="keyword">if</span> (accountMapper.isExistTransactionLogByType(transId, TransactionEnum.CANCEL.getValue()) &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            log.info(<span class="string">"bank1 cancel 已经执行，无需重复执行,xid:&#123;&#125;"</span>, transId);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// cancel空回滚处理，如果try没有执行，cancel不允许执行</span></span><br><span class="line">        <span class="keyword">if</span> (accountMapper.isExistTransactionLogByType(transId, TransactionEnum.TRY.getValue()) &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">            log.info(<span class="string">"bank1 空回滚处理，try没有执行，不允许cancel执行,xid:&#123;&#125;"</span>, transId);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 增加可用余额</span></span><br><span class="line">        accountMapper.addAccountBalance(fromAccountNo, amount);</span><br><span class="line">        <span class="comment">//插入一条cancel的执行记录</span></span><br><span class="line">        accountMapper.addTransactionLog(transId, TransactionEnum.CANCEL.getValue());</span><br><span class="line">        log.info(<span class="string">"bank1 cancel end 结束执行...xid:&#123;&#125;"</span>, transId);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面的设计并不能进行并发控制，即隔离性的保证，对业务模型进行优化，<strong>在业务模型中增加冻结金额字段</strong>，用来表示<strong>账户有多少金额处以冻结状态</strong>。</p>
+<p><img src="../../../../images/Cloud/秒杀/扣钱场景一.png" alt></p>
+<p><img src="../../../../images/Cloud/秒杀/扣钱场景二.png" alt></p>
+<p>对于<strong>用户下单场景</strong>，整个业务逻辑由仓储服务、订单服务、帐户服务三个微服务构成，分别完成对给定的商品扣除库存数量、根据采购需求创建订单、从用户帐户中扣除余额。</p>
+<p><img src="../../../../images/Cloud/秒杀/用户下单场景.png" alt></p>
+<hr>
+<h3 id="柔性事务：可靠消息最终一致性方案实现"><a href="#柔性事务：可靠消息最终一致性方案实现" class="headerlink" title="柔性事务：可靠消息最终一致性方案实现"></a>柔性事务：可靠消息最终一致性方案实现</h3><h4 id="本地消息表方案"><a href="#本地消息表方案" class="headerlink" title="本地消息表方案"></a>本地消息表方案</h4><p>本地消息表这个方案最初是eBay提出的，此方案的核心是通过<strong>本地事务</strong>保证数据业务操作和消息的<strong>一致性</strong>，然后通过<strong>定时任务</strong>将消息发送至消息中间件，待确认消息发送给消费方成功再将消息删除。</p>
+<h4 id="Rocketmq事务消息实现"><a href="#Rocketmq事务消息实现" class="headerlink" title="Rocketmq事务消息实现"></a>Rocketmq事务消息实现</h4><hr>
+<h3 id="柔性事务：最大努力通知"><a href="#柔性事务：最大努力通知" class="headerlink" title="柔性事务：最大努力通知"></a>柔性事务：最大努力通知</h3><p><strong>最大努力通知型</strong>是最简单的一种柔性事务，是分布式事务中对一致性<strong>要求最低</strong>的一种，适用于一些<strong>最终一致性时间敏感度低</strong>的业务，且<strong>被动方处理结果不影响主动方的处理结果</strong>，典型的使用场景：<strong>银行通知</strong>、<strong>商户通知</strong>等。最大努力通知型的实现方案，一般符合以下特点，且需要实现<strong>消息重复通知机制</strong>、<strong>息校对机制</strong>：</p>
+<ul>
+<li><strong>不可靠消息</strong>：业务活动主动方，在完成业务处理之后，向业务活动的被动方发送消息，直到通知N次后不再通知，允许消息丢失</li>
+<li><strong>定期校对</strong>：业务活动的被动方，根据定时策略，向业务活动主动方查询，主动方提供查询接口，恢复丢失的业务消息</li>
+</ul>
+<p><img src="../../../../images/Cloud/秒杀/柔性事务-最大努力通知.png" alt></p>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        HTTP&amp;TCP&amp;UDP协议
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/Canal基础/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Canal基础</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

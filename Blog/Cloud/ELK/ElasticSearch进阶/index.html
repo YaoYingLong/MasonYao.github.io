@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        ElasticSearch进阶 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="ElasticSearch">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="分值计算首先根据用户query条件，过滤出包含指定term的doc，Field-length norm即field长度越长相关度越弱。 123query &quot;hello world&quot; --&amp;gt;  hello / world / hello &amp;amp; worldbool --&amp;gt; must/must not/should --&amp;gt; 过滤 --&amp;gt; 包含 / 不包含 / 可能包含doc">
+<meta name="keywords" content="ElasticSearch">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ElasticSearch进阶">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/ELK/ElasticSearch进阶/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="分值计算首先根据用户query条件，过滤出包含指定term的doc，Field-length norm即field长度越长相关度越弱。 123query &quot;hello world&quot; --&amp;gt;  hello / world / hello &amp;amp; worldbool --&amp;gt; must/must not/should --&amp;gt; 过滤 --&amp;gt; 包含 / 不包含 / 可能包含doc">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/DB/ES/向量空间模型.png">
+<meta property="og:updated_time" content="2021-12-27T11:45:52.099Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="ElasticSearch进阶">
+<meta name="twitter:description" content="分值计算首先根据用户query条件，过滤出包含指定term的doc，Field-length norm即field长度越长相关度越弱。 123query &quot;hello world&quot; --&amp;gt;  hello / world / hello &amp;amp; worldbool --&amp;gt; must/must not/should --&amp;gt; 过滤 --&amp;gt; 包含 / 不包含 / 可能包含doc">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/DB/ES/向量空间模型.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/ELK/ElasticSearch进阶" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/ELK/">ELK</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/ElasticSearch/">ElasticSearch</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/ELK/ElasticSearch进阶/">
+            <time datetime="2021-12-25T16:00:00.000Z" itemprop="datePublished">2021-12-26</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            ElasticSearch进阶
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <h4 id="分值计算"><a href="#分值计算" class="headerlink" title="分值计算"></a>分值计算</h4><p>首先根据用户<strong><code>query</code>条件</strong>，过滤出包含指定<strong><code>term</code></strong>的doc，<strong><code>Field-length norm</code></strong>即<strong>field长度越长相关度越弱</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">query <span class="string">"hello world"</span> --&gt;  hello / world / hello &amp; world</span><br><span class="line">bool --&gt; must/must not/should --&gt; 过滤 --&gt; 包含 / 不包含 / 可能包含</span><br><span class="line">doc --&gt; 不打分数 --&gt; 正或反 <span class="keyword">true</span> or <span class="keyword">false</span> --&gt; 为了减少后续要计算的doc的数量，提升性能</span><br></pre></td></tr></table></figure>
+<p><strong><code>relevance score</code>算法</strong>：计算出一个<strong>索引中文本</strong>与<strong>搜索文本</strong>之间<strong>关联匹配程度</strong>，ES使用<strong><code>term frequency/inverse document frequency</code>算法</strong>简称为<strong><code>TF/IDF</code></strong>算法。<strong><code>Term frequency</code></strong>即<strong>搜索文本</strong>中<strong>各个词条</strong>在<strong><code>field</code></strong>文本中<strong>出现次数</strong>，<strong>次数越多越相关</strong>。<strong>Inverse document frequency</strong>即<strong>搜索文本</strong>中<strong>各个词条</strong>在<strong>整个索引所有文档</strong>中<strong>出现次数</strong>，<strong>出现次数越多越不相关</strong>。</p>
+<h4 id="向量空间模型"><a href="#向量空间模型" class="headerlink" title="向量空间模型"></a>向量空间模型</h4><p><strong><code>vector space model</code></strong>向量空间模型，多个term对一个doc的总分数，es会根据<strong>查询字符串</strong>在所有doc中的评分情况，计算出一个<strong><code>query vector</code></strong>即<strong><code>query</code>向量</strong>，会给每一个doc，拿每个term计算出一个分数来。每个<code>doc vector</code>计算出对<strong><code>query vector</code></strong>的<strong>弧度</strong>，最后基于该弧度给出一个doc相对于query中多个term的总分数，<strong>弧度越大分数越低</strong>，<strong>弧度越小分数越高</strong>。若是多个term，那么就是线性代数来计算，无法用图表示。</p>
+<p><img src="../../../../../images/DB/ES/向量空间模型.png" alt></p>
+<p>若查询条件字符串为<code>hello world</code>，hello这个term，给的基于所有doc的一个评分就是3，world这个term，给的基于所有doc的一个评分就是6，则<strong><code>query</code>向量</strong>为<strong><code>[3, 6]</code></strong>，若3个doc一个包含hello，一个包含world，一个包含hello和world，doc向量分别为[3, 0]、[0, 6]、[3, 6]。</p>
+<h4 id="分词器工作流程"><a href="#分词器工作流程" class="headerlink" title="分词器工作流程"></a>分词器工作流程</h4><p>首先进行<strong><code>normalization</code>切分词语</strong>，将<strong>目标文本</strong>拆分成单个单词，同时对每个单词进行<strong><code>normalization</code>时态转换单复数转换</strong>、<strong>分词器<code>recall</code></strong>、<strong>搜索时召回率</strong>、增加<strong>能搜索到的结果的数量</strong>。<strong>分词器</strong>将文本进行各种处理，最后<strong>处理好的结果</strong>才会用来<strong>建立倒排索引</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">character filter：在一段文本进行分词之前，先进行预处理，如过滤html标签（&lt;span&gt;hello&lt;span&gt; --&gt; hello），&amp; --&gt; and (I&amp;you --&gt; I and you)</span><br><span class="line">tokenizer：分词，hello you and me --&gt; hello, you, and, me</span><br><span class="line">token filter：lowercase，stop word，synonymom，liked --&gt; like，Tom --&gt; tom，a/the/an --&gt; 干掉，small --&gt; little</span><br></pre></td></tr></table></figure>
+<p>对于默认的<strong><code>standard</code>分词器</strong>：</p>
+<ul>
+<li><strong><code>standard tokenizer</code></strong>：以单词边界进行切分</li>
+<li><strong><code>standard token filter</code></strong>：什么都不做</li>
+<li><strong><code>lowercase token filter</code></strong>：将所有字母<strong>转换为小写</strong></li>
+<li><strong><code>stop token filer</code></strong>：默认被禁用，移除停用词，比如a the it等等<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">POST _analyze</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"analyzer"</span>: <span class="string">"standard"</span>,</span><br><span class="line">  <span class="string">"text"</span>: <span class="string">"Set the shape to semi-transparent by calling set_trans(5)"</span></span><br><span class="line">&#125;</span><br><span class="line">PUT /my_index</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"settings"</span>: &#123;</span><br><span class="line">    <span class="string">"analysis"</span>: &#123;</span><br><span class="line">      <span class="string">"analyzer"</span>: &#123;</span><br><span class="line">        <span class="string">"es_std"</span>: &#123;</span><br><span class="line">          <span class="string">"type"</span>: <span class="string">"standard"</span>,</span><br><span class="line">          <span class="string">"stopwords"</span>: <span class="string">"_english_"</span> <span class="comment">// 启用english停用词token filter</span></span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /my_index/_analyze</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"analyzer"</span>: <span class="string">"standard"</span>, </span><br><span class="line">  <span class="string">"text"</span>: <span class="string">"a dog is in the house"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /my_index/_analyze</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"analyzer"</span>: <span class="string">"es_std"</span>,</span><br><span class="line">  <span class="string">"text"</span>:<span class="string">"a dog is in the house"</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">PUT /my_index <span class="comment">// 定制化分词器</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"settings"</span>: &#123;</span><br><span class="line">    <span class="string">"analysis"</span>: &#123;</span><br><span class="line">      <span class="string">"char_filter"</span>: &#123;<span class="string">"&amp;_to_and"</span>: &#123;<span class="string">"type"</span>: <span class="string">"mapping"</span>,<span class="string">"mappings"</span>: [<span class="string">"&amp;=&gt; and"</span>]&#125;&#125;,</span><br><span class="line">      <span class="string">"filter"</span>: &#123;<span class="string">"my_stopwords"</span>: &#123;<span class="string">"type"</span>: <span class="string">"stop"</span>,<span class="string">"stopwords"</span>: [<span class="string">"the"</span>,<span class="string">"a"</span>]&#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"analyzer"</span>: &#123;</span><br><span class="line">        <span class="string">"my_analyzer"</span>: &#123;<span class="string">"type"</span>: <span class="string">"custom"</span>,<span class="string">"char_filter"</span>: [<span class="string">"html_strip"</span>,<span class="string">"&amp;_to_and"</span>],<span class="string">"tokenizer"</span>: <span class="string">"standard"</span>,<span class="string">"filter"</span>: [<span class="string">"lowercase"</span>,<span class="string">"my_stopwords"</span>]&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /my_index/_analyze</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"text"</span>: <span class="string">"tom&amp;jerry are a friend in the house, &lt;a&gt;, HAHA!!"</span>,</span><br><span class="line">  <span class="string">"analyzer"</span>: <span class="string">"my_analyzer"</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="IK分词器"><a href="#IK分词器" class="headerlink" title="IK分词器"></a>IK分词器</h4><p><a href="https://github.com/medcl/elasticsearch-analysis-ik/tree" rel="external nofollow noopener noreferrer" target="_blank">IK分词器</a><strong>配置文件地址</strong>为<strong><code>es/plugins/ik/config</code></strong>，ik原生最重要的是<strong><code>main.dic</code></strong>和<strong><code>stopword.dic</code></strong>两个配置文件</p>
+<ul>
+<li><strong><code>IKAnalyzer.cfg.xml</code></strong>：用来<strong>配置自定义词库</strong></li>
+<li><strong><code>main.dic</code></strong>：ik原生<strong>内置中文词库</strong>，总共有27万多条，<strong>会按照该文件中的词语去分词</strong></li>
+<li><strong><code>quantifier.dic</code></strong>：<strong>单位</strong>相关的词</li>
+<li><strong><code>suffix.dic</code></strong>：<strong>后缀</strong>相关的词</li>
+<li><strong><code>surname.dic</code></strong>：中国<strong>姓氏</strong></li>
+<li><strong><code>stopword.dic</code></strong>：<strong>英文停用词</strong>，停用词会在<strong>分词时被干掉</strong>，<strong>不会建立在倒排索引中</strong></li>
+</ul>
+<p>可通过在<strong><code>IKAnalyzer.cfg.xml</code></strong>配置文件中通过修改<strong><code>&lt;entry key=&quot;ext_dict&quot;&gt;&lt;/entry&gt;</code></strong>配置内容<strong>扩展自己的词库</strong>，<strong>需重启<code>es</code>才能生效</strong>，还可以通过修改<strong><code>&lt;entry key=&quot;ext_stopwords&quot;&gt;&lt;/entry&gt;</code></strong>配置<strong>扩展停用词</strong>。</p>
+<p>每次在es扩展词典中，手动添加新词语，添加完都要重启es才能生效，非常麻烦，且es是分布式的，可能有数百个节点，不能每次都一个一个节点上面去修改。<strong><code>IKAnalyzer.cfg.xml</code></strong>配置文件中可通过<strong><code>&lt;entry key=&quot;remote_ext_dict&quot;&gt;words_location&lt;/entry&gt;</code></strong>和<strong><code>&lt;entry key=&quot;remote_ext_stopwords&quot;&gt;words_location&lt;/entry&gt;</code></strong>配置支持<strong>远程扩展字典</strong>。</p>
+<h4 id="高亮显示"><a href="#高亮显示" class="headerlink" title="高亮显示"></a>高亮显示</h4><p>搜索中经常需要对<strong>搜索关键字</strong>做<strong>高亮显示</strong>，ES默认通过添加<strong><code>&lt;em&gt;&lt;/em&gt;</code></strong>标签，在HTML中会变成红色，指定的field中若包含了搜索词，就会在那个field文本中，对搜索词进行红色高亮显示。<strong><code>highlight</code></strong>中的field必须跟<strong><code>query</code></strong>中field一一<strong>对齐</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">PUT /news_website/_doc/<span class="number">1</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"title"</span>: <span class="string">"这是我写的第一篇文章"</span>,</span><br><span class="line">  <span class="string">"content"</span>: <span class="string">"大家好，这是我写的第一篇文章，特别喜欢这个文章门户网站！！！"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /news_website/_doc/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"match"</span>: &#123;<span class="string">"title"</span>: <span class="string">"文章"</span>&#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"highlight"</span>: &#123;</span><br><span class="line">    <span class="string">"fields"</span>: &#123;<span class="string">"title"</span>: &#123;&#125;&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">GET /news_website/_doc/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"bool"</span>: &#123;</span><br><span class="line">      <span class="string">"should"</span>: [</span><br><span class="line">        &#123;<span class="string">"match"</span>: &#123;<span class="string">"title"</span>: <span class="string">"文章"</span>&#125;&#125;,</span><br><span class="line">        &#123;<span class="string">"match"</span>: &#123;<span class="string">"content"</span>: <span class="string">"文章"</span>&#125;&#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"highlight"</span>: &#123;</span><br><span class="line">    <span class="string">"fields"</span>: &#123;<span class="string">"title"</span>: &#123;&#125;,<span class="string">"content"</span>: &#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>默认的<strong><code>highlight</code></strong>为<strong><code>plain highlight</code></strong>即<strong><code>lucene highlight</code></strong>，在<strong><code>mapping</code></strong>中设置<strong><code>index_options</code></strong>为<strong><code>offsets</code></strong>使用<strong><code>posting highlight</code></strong>。在<strong><code>mapping</code></strong>中设置<strong><code>term_vector</code></strong>为<strong><code>term_vector</code></strong>使用<strong><code>fast verctor highlight</code></strong>，对<strong>大于<code>1mb</code>的<code>field</code>性能更高</strong>。也可通过在查询时<strong>强制使用某种<code>highlighter</code></strong>。</p>
+<p>一般情况下用<strong><code>plain highlight</code></strong>也就足够了，不需要做其他额外设置，若对高亮性能要求很高，可尝试启用<strong><code>posting highlight</code></strong>，若<strong><code>field</code>值特别大超过了<code>1M</code></strong>，则可用<strong><code>fast vector highlight</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line">PUT /news_website</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;</span><br><span class="line">      <span class="string">"title"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>,<span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>&#125;,</span><br><span class="line">      <span class="string">"content"</span>: &#123;</span><br><span class="line">        <span class="string">"type"</span>: <span class="string">"text"</span>,</span><br><span class="line">        <span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>,</span><br><span class="line">        <span class="string">"index_options"</span>: <span class="string">"offsets"</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT /news_website</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;</span><br><span class="line">      <span class="string">"title"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>,<span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>&#125;,</span><br><span class="line">      <span class="string">"content"</span>: &#123;</span><br><span class="line">        <span class="string">"type"</span>: <span class="string">"text"</span>,</span><br><span class="line">        <span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>,</span><br><span class="line">        <span class="string">"term_vector"</span>: <span class="string">"with_positions_offsets"</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /news_website/_doc/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"content"</span>: <span class="string">"文章"</span>&#125;&#125;,</span><br><span class="line">  <span class="string">"highlight"</span>: &#123;</span><br><span class="line">    <span class="string">"fields"</span>: &#123;<span class="string">"content"</span>: &#123;<span class="string">"type"</span>: <span class="string">"plain"</span>&#125;&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /news_website/_doc/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"content"</span>: <span class="string">"文章"</span>&#125;&#125;,</span><br><span class="line">  <span class="string">"highlight"</span>: &#123; <span class="comment">// 设置高亮html标签，默认是&lt;em&gt;标签</span></span><br><span class="line">    <span class="string">"pre_tags"</span>: [<span class="string">"&lt;span color='red'&gt;"</span>],</span><br><span class="line">    <span class="string">"post_tags"</span>: [<span class="string">"&lt;/span&gt;"</span>],</span><br><span class="line">    <span class="string">"fields"</span>: &#123;<span class="string">"content"</span>: &#123;<span class="string">"type"</span>: <span class="string">"plain"</span>&#125;&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"content"</span>: <span class="string">"文章"</span>&#125;&#125;,</span><br><span class="line">  <span class="string">"highlight"</span>: &#123;</span><br><span class="line">    <span class="string">"fields"</span>: &#123;</span><br><span class="line">      <span class="string">"content"</span>: &#123;</span><br><span class="line">        <span class="string">"fragment_size"</span>: <span class="number">150</span>,	<span class="comment">// 设置要显示出来的fragment文本长度，默认100</span></span><br><span class="line">        <span class="string">"number_of_fragments"</span>: <span class="number">3</span> <span class="comment">// 指定显示高亮fragment文本片段个数</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">用一个大家容易理解的SQL语法来解释，如：<span class="function">select <span class="title">count</span><span class="params">(*)</span> from table group by column。那么group by column分组后的每组数据就是bucket。对每个分组执行的<span class="title">count</span><span class="params">(*)</span>就是metric。</span></span><br></pre></td></tr></table></figure>
+<h4 id="聚合搜索"><a href="#聚合搜索" class="headerlink" title="聚合搜索"></a>聚合搜索</h4><p><strong><code>bucket</code></strong>就是一个<strong>聚合搜索时的数据分组</strong>，<strong><code>metric</code></strong>就是对<strong>一个<code>bucket</code>数据执行的统计分析</strong>，<strong><code>metric</code></strong>有<strong>求和</strong>，<strong>最大值</strong>，<strong>最小值</strong>，<strong>平均值</strong>等<strong>多种统计</strong>。如<strong><code>select count(*) from table group by column</code></strong>其中<strong><code>group by column</code></strong>分组后的<strong>每组数据就是<code>bucket</code></strong>，每个分组执行的<strong><code>count(*)</code></strong>就是<strong><code>metric</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">PUT /cars</span><br><span class="line">&#123;<span class="string">"mappings"</span>:&#123;<span class="string">"properties"</span>:&#123;<span class="string">"price"</span>:&#123;<span class="string">"type"</span>:<span class="string">"long"</span>&#125;,<span class="string">"color"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"brand"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"model"</span>:&#123;<span class="string">"type"</span>:<span class="string">"keyword"</span>&#125;,<span class="string">"sold_date"</span>:&#123;<span class="string">"type"</span>:<span class="string">"date"</span>&#125;,<span class="string">"remark"</span>:&#123;<span class="string">"type"</span>:<span class="string">"text"</span>,<span class="string">"analyzer"</span>:<span class="string">"ik_max_word"</span>&#125;&#125;&#125;&#125;</span><br><span class="line"></span><br><span class="line">POST /cars/_bulk</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">258000</span>,<span class="string">"color"</span>:<span class="string">"金色"</span>,<span class="string">"brand"</span>:<span class="string">"大众"</span>,<span class="string">"model"</span>:<span class="string">"大众迈腾"</span>,<span class="string">"sold_date"</span>:<span class="string">"2021-10-28"</span>,<span class="string">"remark"</span>:<span class="string">"大众中档车"</span>&#125;</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">123000</span>,<span class="string">"color"</span>:<span class="string">"金色"</span>,<span class="string">"brand"</span>:<span class="string">"大众"</span>,<span class="string">"model"</span>:<span class="string">"大众速腾"</span>,<span class="string">"sold_date"</span>:<span class="string">"2021-11-05"</span>,<span class="string">"remark"</span>:<span class="string">"大众神车"</span>&#125;</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">239800</span>,<span class="string">"color"</span>:<span class="string">"白色"</span>,<span class="string">"brand"</span>:<span class="string">"标志"</span>,<span class="string">"model"</span>:<span class="string">"标志508"</span>,<span class="string">"sold_date"</span>:<span class="string">"2021-05-18"</span>,<span class="string">"remark"</span>:<span class="string">"标志品牌全球上市车型"</span>&#125;</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">148800</span>,<span class="string">"color"</span>:<span class="string">"白色"</span>,<span class="string">"brand"</span>:<span class="string">"标志"</span>,<span class="string">"model"</span>:<span class="string">"标志408"</span>,<span class="string">"sold_date"</span>:<span class="string">"2021-07-02"</span>,<span class="string">"remark"</span>:<span class="string">"比较大的紧凑型车"</span>&#125;</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">1998000</span>,<span class="string">"color"</span>:<span class="string">"黑色"</span>,<span class="string">"brand"</span>:<span class="string">"大众"</span>,<span class="string">"model"</span>:<span class="string">"大众辉腾"</span>,<span class="string">"sold_date"</span>:<span class="string">"2021-08-19"</span>,<span class="string">"remark"</span>:<span class="string">"大众最让人肝疼的车"</span>&#125;</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">218000</span>,<span class="string">"color"</span>:<span class="string">"红色"</span>,<span class="string">"brand"</span>:<span class="string">"奥迪"</span>,<span class="string">"model"</span>:<span class="string">"奥迪A4"</span>,<span class="string">"sold_date"</span>:<span class="string">"2021-11-05"</span>,<span class="string">"remark"</span>:<span class="string">"小资车型"</span>&#125;</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">489000</span>,<span class="string">"color"</span>:<span class="string">"黑色"</span>,<span class="string">"brand"</span>:<span class="string">"奥迪"</span>,<span class="string">"model"</span>:<span class="string">"奥迪A6"</span>,<span class="string">"sold_date"</span>:<span class="string">"2022-01-01"</span>,<span class="string">"remark"</span>:<span class="string">"政府专用？"</span>&#125;</span><br><span class="line">&#123;<span class="string">"index"</span>:&#123;&#125;&#125;</span><br><span class="line">&#123;<span class="string">"price"</span>:<span class="number">1899000</span>,<span class="string">"color"</span>:<span class="string">"黑色"</span>,<span class="string">"brand"</span>:<span class="string">"奥迪"</span>,<span class="string">"model"</span>:<span class="string">"奥迪A 8"</span>,<span class="string">"sold_date"</span>:<span class="string">"2022-02-12"</span>,<span class="string">"remark"</span>:<span class="string">"很贵的大A6。。。"</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>根据color<strong>分组统计销售数量</strong>，只执行聚合分组，ES中<strong>最基础的聚合</strong>为<strong><code>terms</code></strong>，相当于SQL中的count，ES中默认为分组数据做排序，使用的是<strong><code>doc_count</code></strong>数据执行<strong>降序排列</strong>。可使用<strong><code>_key</code></strong>元数据根据分组后的<strong>字段数据</strong>执行不同的排序方案，也可根据<strong><code>_count</code></strong>元数据，根据分组后的统计值<strong>执行不同的排序方案</strong>。 </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"group_by_color"</span>: &#123;</span><br><span class="line">      <span class="string">"terms"</span>: &#123;</span><br><span class="line">        <span class="string">"field"</span>: <span class="string">"color"</span>,</span><br><span class="line">        <span class="string">"order"</span>: &#123;<span class="string">"_count"</span>: <span class="string">"desc"</span>&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>先根据color执行<strong>聚合分组</strong>，在此分组的基础上，对<strong>组内数据执行聚合统计</strong>，组内数据的聚合统计就是<strong><code>metric</code></strong>，同样<strong>可执行排序</strong>，因为组内有聚合统计，且对统计数据给予了命名<code>avg_by_price</code>，所以可根据该<strong>聚合统计数据字段名执行排序逻辑</strong>。<strong><code>size</code>可设置为<code>0</code></strong>，表示<strong>不返回文档只返回聚合之后的数据</strong>，<strong>提高查询速度</strong>，若需要这些文档也可按照实际情况进行设置。对聚合统计数据进行排序，若有多层<strong><code>aggs</code></strong>执行<strong>下钻聚合</strong>时也可<strong>根据最内层聚合数据执行排序</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"group_by_color"</span>: &#123;</span><br><span class="line">      <span class="string">"terms"</span>: &#123;</span><br><span class="line">        <span class="string">"field"</span>: <span class="string">"color"</span>,</span><br><span class="line">        <span class="string">"order"</span>: &#123;<span class="string">"avg_by_price"</span>: <span class="string">"asc"</span>&#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;</span><br><span class="line">        <span class="string">"avg_by_price"</span>: &#123;<span class="string">"avg"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"size"</span>: <span class="number">0</span>,</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"group_by_color"</span>: &#123;</span><br><span class="line">      <span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"color"</span>&#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;</span><br><span class="line">        <span class="string">"group_by_brand"</span>: &#123;</span><br><span class="line">          <span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"brand"</span>,<span class="string">"order"</span>: &#123;<span class="string">"avg_by_price"</span>: <span class="string">"desc"</span>&#125;&#125;,</span><br><span class="line">          <span class="string">"aggs"</span>: &#123;<span class="string">"avg_by_price"</span>: &#123;<span class="string">"avg"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;&#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>先根据color聚合分组，在组内根据brand再次聚合分组，这种操作可称为<strong>下钻分析</strong>，<strong><code>aggs</code></strong>若定义比较多，则会感觉语法格式混乱，aggs语法格式有一个相对固定的结构，<strong><code>aggs</code>可嵌套定义也可水平定义</strong>。<strong>嵌套定义称为下钻分析</strong>，<strong>水平定义</strong>就是<strong>平铺多个分组方式</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">GET /index_name/type_name/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"定义分组名称"</span>: &#123;</span><br><span class="line">      <span class="string">"分组策略如：terms、avg、sum"</span>: &#123;</span><br><span class="line">        <span class="string">"field"</span>: <span class="string">"根据哪一个字段分组"</span>,</span><br><span class="line">        <span class="string">"其他参数"</span>: <span class="string">""</span></span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;</span><br><span class="line">        <span class="string">"分组名称1"</span>: &#123;&#125;,</span><br><span class="line">        <span class="string">"分组名称2"</span>: &#123;&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>统计不同color中的最大和最小价格、总价，聚合分析最常用的种类就是<strong>统计数量</strong>，<strong>最大</strong>，<strong>最小</strong>，<strong>平均</strong>，<strong>总计</strong>等</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"group_by_color"</span>: &#123;</span><br><span class="line">      <span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"color"</span>&#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;</span><br><span class="line">        <span class="string">"max_price"</span>: &#123;<span class="string">"max"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;,</span><br><span class="line">        <span class="string">"min_price"</span>: &#123;<span class="string">"min"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;,</span><br><span class="line">        <span class="string">"sum_price"</span>: &#123;<span class="string">"sum"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET cars/_search  <span class="comment">// 统计不同品牌汽车中价格排名最高的车型</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"size"</span>: <span class="number">0</span>,</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"group_by_brand"</span>: &#123;</span><br><span class="line">      <span class="string">"terms"</span>: &#123;<span class="string">"field"</span>: <span class="string">"brand"</span>&#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;</span><br><span class="line">        <span class="string">"top_car"</span>: &#123;</span><br><span class="line">          <span class="string">"top_hits"</span>: &#123;</span><br><span class="line">            <span class="string">"size"</span>: <span class="number">1</span>,	<span class="comment">// 取组内多少条数据，默认为10</span></span><br><span class="line">            <span class="string">"sort"</span>: [&#123;<span class="string">"price"</span>: &#123;<span class="string">"order"</span>: <span class="string">"desc"</span>&#125;&#125;], <span class="comment">// 组内使用什么字段什么规则排序，默认使用_doc的asc规则排序</span></span><br><span class="line">            <span class="string">"_source"</span>: &#123;<span class="string">"includes"</span>: [<span class="string">"model"</span>,<span class="string">"price"</span>]&#125; <span class="comment">// 结果中包含document中的哪些字段，默认包含全部字段</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>histogram</code>区间统计</strong>类似<strong><code>terms</code></strong>，也是用于<strong><code>bucket</code>分组操作</strong>，是根据一个field实现<strong>数据区间分组</strong>。如以100万为一个范围，统计不同范围内车辆销售量和平均价格。使用<strong><code>histogram</code>聚合</strong>时field指定价格字段price，区间范围是100万，此时ES会将price价格区间划分为： <strong><code>[0, 1000000), [1000000, 2000000), [2000000, 3000000)</code></strong>等依次类推。在划分区间同时<strong><code>histogram</code></strong>会类似<strong><code>terms</code></strong>进行<strong>数据数量统计</strong>，可通过<strong>嵌套<code>aggs</code></strong>对聚合分组后的组内数据做<strong>再次聚合分析</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"histogram_by_price"</span>: &#123;</span><br><span class="line">      <span class="string">"histogram"</span>: &#123;</span><br><span class="line">        <span class="string">"field"</span>: <span class="string">"price"</span>,</span><br><span class="line">        <span class="string">"interval"</span>: <span class="number">1000000</span></span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;<span class="string">"avg_by_price"</span>: &#123;<span class="string">"avg"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>date_histogram</code></strong>区间分组可对<strong><code>date</code>类型</strong>的field执行<strong>区间聚合分组</strong>，若以月为单位，统计不同月份汽车销售数量及销售总金额。此时可使用<strong><code>date_histogram</code></strong>实现聚合分组，其中field来指定用于聚合分组的字段，<strong><code>interval</code></strong>指定<strong>区间范围</strong>，可选值有<strong><code>year</code></strong>、<strong><code>quarter</code></strong>、<strong><code>month</code></strong>、<strong><code>week</code></strong>、<strong><code>day</code></strong>、<strong><code>hour</code></strong>、<strong><code>minute</code></strong>、<strong><code>second</code></strong>，<strong><code>format</code></strong>指定<strong>日期格式化</strong>，<strong><code>min_doc_count</code></strong>指定<strong>每个区间最少document</strong>，若不指定默认为0，当区间范围内没有document时，也会显示bucket分组，<strong><code>extended_bounds</code></strong>指定<strong>起始时间</strong>和<strong>结束时间</strong>，若不指定<strong>默认使用字段中日期最小值</strong>和<strong>最大值</strong>作为起始和结束时间。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"histogram_by_date"</span>: &#123;</span><br><span class="line">      <span class="string">"date_histogram"</span>: &#123;</span><br><span class="line">        <span class="string">"field"</span>: <span class="string">"sold_date"</span>,</span><br><span class="line">        <span class="string">"interval"</span>: <span class="string">"month"</span>, <span class="comment">// 7.X之后使用calendar_interval，指定区间范围</span></span><br><span class="line">        <span class="string">"format"</span>: <span class="string">"yyyy-MM-dd"</span>,	<span class="comment">// 指定日期格式化</span></span><br><span class="line">        <span class="string">"min_doc_count"</span>: <span class="number">1</span>,</span><br><span class="line">        <span class="string">"extended_bounds"</span>: &#123;<span class="string">"min"</span>: <span class="string">"2021-01-01"</span>,<span class="string">"max"</span>: <span class="string">"2022-12-31"</span>&#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;<span class="string">"sum_by_price"</span>: &#123;<span class="string">"sum"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>聚合统计数据时，有时需要<strong>对比部分数据和总体数据</strong>，如统计某品牌车辆平均价格和所有车辆平均价格。<strong><code>global</code></strong>是用于定义一个<strong>全局<code>bucket</code></strong>，该<strong><code>bucket</code></strong>会<strong>忽略<code>query</code></strong>的条件，检索所有document进行对应的聚合统计。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"size"</span>: <span class="number">0</span>,</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"brand"</span>: <span class="string">"大众"</span>&#125;&#125;,</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"volkswagen_of_avg_price"</span>: &#123;<span class="string">"avg"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;, <span class="comment">// 统计某品牌车辆平均价格</span></span><br><span class="line">    <span class="string">"all_avg_price"</span>: &#123; <span class="comment">// 所有车辆平均价格</span></span><br><span class="line">      <span class="string">"global"</span>: &#123;&#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;<span class="string">"all_of_price"</span>: &#123;<span class="string">"avg"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>filter也可和aggs组合使用，实现相对复杂的过滤聚合分析，filter的范围决定了其过滤的范围，将filter放在aggs内部，代表该过滤器<strong>只对<code>query</code>搜索得到的结果执行<code>filter</code>过滤</strong>。若filter放在aggs外部，过滤器则会过滤所有数据。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search <span class="comment">// filter和aggs组合使用，实现相对复杂的过滤聚合分析</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"constant_score"</span>: &#123;</span><br><span class="line">      <span class="string">"filter"</span>: &#123;<span class="string">"range"</span>: &#123;<span class="string">"price"</span>: &#123;<span class="string">"gte"</span>: <span class="number">100000</span>,<span class="string">"lte"</span>: <span class="number">500000</span>&#125;&#125;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;<span class="string">"avg_by_price"</span>: &#123;<span class="string">"avg"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;&#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /cars/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"brand"</span>: <span class="string">"大众"</span>&#125;&#125;,</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"count_last_year"</span>: &#123; <span class="comment">// 12M/M表示12个月，1y/y表示1年，d表示天</span></span><br><span class="line">      <span class="string">"filter"</span>: &#123;<span class="string">"range"</span>: &#123;<span class="string">"sold_date"</span>: &#123;<span class="string">"gte"</span>: <span class="string">"now-12M"</span>&#125;&#125;&#125;,</span><br><span class="line">      <span class="string">"aggs"</span>: &#123;<span class="string">"sum_of_price_last_year"</span>: &#123;<span class="string">"sum"</span>: &#123;<span class="string">"field"</span>: <span class="string">"price"</span>&#125;&#125;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="数据建模"><a href="#数据建模" class="headerlink" title="数据建模"></a>数据建模</h4><p>如下设计一个用户document数据类型，其中包含一个<strong>地址数据的数组</strong>，该设计方式相对复杂，但在管理数据时更加的灵活。但也有<strong>明显的缺陷</strong>，针对<strong>地址数据</strong>做数据<strong>搜索时</strong>，经常会<strong>搜索出不必要的数据</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">PUT /user_index</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;</span><br><span class="line">      <span class="string">"login_name"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;,</span><br><span class="line">      <span class="string">"age "</span>: &#123;<span class="string">"type"</span>: <span class="string">"short"</span>&#125;,</span><br><span class="line">      <span class="string">"address"</span>: &#123;</span><br><span class="line">        <span class="string">"properties"</span>: &#123;</span><br><span class="line">          <span class="string">"province"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;,</span><br><span class="line">          <span class="string">"city"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;,</span><br><span class="line">          <span class="string">"street"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT /user_index/_doc/<span class="number">1</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"login_name"</span>: <span class="string">"jack"</span>,</span><br><span class="line">  <span class="string">"age"</span>: <span class="number">25</span>,</span><br><span class="line">  <span class="string">"address"</span>: [</span><br><span class="line">    &#123;<span class="string">"province"</span>: <span class="string">"北京"</span>,<span class="string">"city"</span>: <span class="string">"北京"</span>,<span class="string">"street"</span>: <span class="string">"枫林三路"</span>&#125;,</span><br><span class="line">    &#123;<span class="string">"province"</span>: <span class="string">"天津"</span>,<span class="string">"city"</span>: <span class="string">"天津"</span>,<span class="string">"street"</span>: <span class="string">"华夏路"</span>&#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br><span class="line">PUT /user_index/_doc/<span class="number">2</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"login_name"</span>: <span class="string">"rose"</span>,</span><br><span class="line">  <span class="string">"age"</span>: <span class="number">21</span>,</span><br><span class="line">  <span class="string">"address"</span>: [</span><br><span class="line">    &#123;<span class="string">"province"</span>: <span class="string">"河北"</span>,<span class="string">"city"</span>: <span class="string">"廊坊"</span>,<span class="string">"street"</span>: <span class="string">"燕郊经济开发区"</span>&#125;,</span><br><span class="line">    &#123;<span class="string">"province"</span>: <span class="string">"天津"</span>,<span class="string">"city"</span>: <span class="string">"天津"</span>,<span class="string">"street"</span>: <span class="string">"华夏路"</span>&#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br><span class="line">GET /user_index/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"bool"</span>: &#123;</span><br><span class="line">      <span class="string">"must"</span>: [</span><br><span class="line">        &#123;<span class="string">"match"</span>: &#123;<span class="string">"address.province"</span>: <span class="string">"北京"</span>&#125;&#125;,</span><br><span class="line">        &#123;<span class="string">"match"</span>: &#123;<span class="string">"address.city"</span>: <span class="string">"天津"</span>&#125;&#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可使用<strong><code>nested object</code></strong>作为<strong>地址数组</strong>的集体类型可解决上述问题，且搜索时需要<strong>使用<code>nested</code>对应的搜索语法</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">PUT /user_index</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;</span><br><span class="line">      <span class="string">"login_name"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;,</span><br><span class="line">      <span class="string">"age "</span>: &#123;<span class="string">"type"</span>: <span class="string">"short"</span>&#125;,</span><br><span class="line">      <span class="string">"address"</span>: &#123;</span><br><span class="line">        <span class="string">"type"</span>: <span class="string">"nested"</span>,</span><br><span class="line">        <span class="string">"properties"</span>: &#123;</span><br><span class="line">          <span class="string">"province"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;,</span><br><span class="line">          <span class="string">"city"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;,</span><br><span class="line">          <span class="string">"street"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /user_index/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"bool"</span>: &#123;<span class="string">"must"</span>: [</span><br><span class="line">        &#123;<span class="string">"nested"</span>: &#123;<span class="string">"path"</span>: <span class="string">"address"</span>,</span><br><span class="line">            <span class="string">"query"</span>: &#123;</span><br><span class="line">              <span class="string">"bool"</span>: &#123;<span class="string">"must"</span>: [</span><br><span class="line">                  &#123;<span class="string">"match"</span>: &#123;<span class="string">"address.province"</span>: <span class="string">"北京"</span>&#125;&#125;,</span><br><span class="line">                  &#123;<span class="string">"match"</span>: &#123;<span class="string">"address.city"</span>: <span class="string">"北京"</span>&#125;&#125;</span><br><span class="line">                ]&#125;</span><br><span class="line">            &#125;&#125;</span><br><span class="line">        &#125;]</span><br><span class="line">    &#125;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>普通数组</strong>数据在ES中会<strong>被扁平化处理</strong>，<strong><code>nested object</code>数据</strong>类型ES在保存时<strong>不会扁平化处理</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&#123; <span class="comment">// 普通数组</span></span><br><span class="line">  <span class="string">"login_name"</span> : <span class="string">"jack"</span>,</span><br><span class="line">  <span class="string">"address.province"</span> : [ <span class="string">"北京"</span>, <span class="string">"天津"</span> ],</span><br><span class="line">  <span class="string">"address.city"</span> : [ <span class="string">"北京"</span>, <span class="string">"天津"</span> ]</span><br><span class="line">  <span class="string">"address.street"</span> : [ <span class="string">"枫林三路"</span>, <span class="string">"华夏路"</span> ]</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// nested数据</span></span><br><span class="line">&#123; </span><br><span class="line">  <span class="string">"login_name"</span> : <span class="string">"jack"</span></span><br><span class="line">&#125;</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"address.province"</span> : <span class="string">"北京"</span>,</span><br><span class="line">  <span class="string">"address.city"</span> : <span class="string">"北京"</span>，</span><br><span class="line">  <span class="string">"address.street"</span> : <span class="string">"枫林三路"</span></span><br><span class="line">&#125;</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"address.province"</span> : <span class="string">"天津"</span>,</span><br><span class="line">  <span class="string">"address.city"</span> : <span class="string">"天津"</span>,</span><br><span class="line">  <span class="string">"address.street"</span> : <span class="string">"华夏路"</span>,</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong><code>nested object</code></strong>建模<strong>缺点</strong>是采取的是<strong>类似冗余数据</strong>的方式，将多个数据放在一起，维护成本比较高，<strong>每次更新需要重新索引整个对象</strong>，包括根对象和嵌套对象。ES提供<strong>类似关系型数据库</strong>中<strong><code>Join</code></strong>的实现，使用Join数据类型实现父子关系，从而分离两个文档对象。</p>
+<p>更新父文档无需重新索引整个子文档，子文档被新增，更改和删除也不会影响到父文档和其他子文档，父子关系元数据映射，用于确保查询时高性能，但是有一个限制<strong>父子数据包括映射其关联关系的元数据必须存在于一个<code>shard</code>中</strong> ，搜索父子关系数据时，不用跨分片性能高。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></td><td class="code"><pre><span class="line">PUT my_blogs</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;</span><br><span class="line">      <span class="string">"blog_comments_relation"</span>: &#123;</span><br><span class="line">        <span class="string">"type"</span>: <span class="string">"join"</span>, <span class="comment">// 指明join类型</span></span><br><span class="line">        <span class="string">"relations"</span>: &#123;	<span class="comment">// 声明父子关系</span></span><br><span class="line">          <span class="string">"blog"</span>: <span class="string">"comment"</span>	<span class="comment">// blog为父文档名称，comment为子文档名称</span></span><br><span class="line">        &#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"content"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>&#125;,</span><br><span class="line">      <span class="string">"title"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT my_blogs/_doc/blog1 <span class="comment">// blog1为父文档id</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"title"</span>: <span class="string">"Learning Elasticsearch"</span>,</span><br><span class="line">  <span class="string">"content"</span>: <span class="string">"learning ELK is happy"</span>,</span><br><span class="line">  <span class="string">"blog_comments_relation"</span>: &#123;	<span class="comment">// 声明文档类型</span></span><br><span class="line">    <span class="string">"name"</span>: <span class="string">"blog"</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT my_blogs/_doc/blog2 <span class="comment">// blog2为父文档id</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"title"</span>: <span class="string">"Learning Hadoop"</span>,</span><br><span class="line">  <span class="string">"content"</span>: <span class="string">"learning Hadoop"</span>,</span><br><span class="line">  <span class="string">"blog_comments_relation"</span>: &#123;	<span class="comment">// 声明文档类型</span></span><br><span class="line">    <span class="string">"name"</span>: <span class="string">"blog"</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 父文档和子文档必须存在相同的分片上, 当指定文档时候，必须指定它的父文档ID</span></span><br><span class="line">PUT my_blogs/_doc/comment1?routing=blog1 <span class="comment">// 使用route参数来保证，分配到相同分片</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"comment"</span>: <span class="string">"I am learning ELK"</span>,</span><br><span class="line">  <span class="string">"username"</span>: <span class="string">"Jack"</span>,</span><br><span class="line">  <span class="string">"blog_comments_relation"</span>: &#123;</span><br><span class="line">    <span class="string">"name"</span>: <span class="string">"comment"</span>,</span><br><span class="line">    <span class="string">"parent"</span>: <span class="string">"blog1"</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT my_blogs/_doc/comment2?routing=blog2 <span class="comment">// comment2为子文档id，blog2为父文档id</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"comment"</span>: <span class="string">"I like Hadoop!!!!!"</span>,</span><br><span class="line">  <span class="string">"username"</span>: <span class="string">"Jack"</span>,</span><br><span class="line">  <span class="string">"blog_comments_relation"</span>: &#123;</span><br><span class="line">    <span class="string">"name"</span>: <span class="string">"comment"</span>,</span><br><span class="line">    <span class="string">"parent"</span>: <span class="string">"blog2"</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT my_blogs/_doc/comment3?routing=blog2</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"comment"</span>: <span class="string">"Hello Hadoop"</span>,</span><br><span class="line">  <span class="string">"username"</span>: <span class="string">"Bob"</span>,</span><br><span class="line">  <span class="string">"blog_comments_relation"</span>: &#123;</span><br><span class="line">    <span class="string">"name"</span>: <span class="string">"comment"</span>,</span><br><span class="line">    <span class="string">"parent"</span>: <span class="string">"blog2"</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">POST my_blogs/_search <span class="comment">// 查询所有文档</span></span><br><span class="line">&#123;&#125;</span><br><span class="line">GET my_blogs/_doc/blog2 <span class="comment">// 根据父文档ID查看</span></span><br><span class="line">POST my_blogs/_search <span class="comment">// parent_id查询，返回所有相关子文档</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"parent_id"</span>: &#123;<span class="string">"type"</span>: <span class="string">"comment"</span>,<span class="string">"id"</span>: <span class="string">"blog2"</span>&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">POST my_blogs/_search <span class="comment">// has_child查询，返回父文档</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"has_child"</span>: &#123;</span><br><span class="line">      <span class="string">"type"</span>: <span class="string">"comment"</span>,</span><br><span class="line">      <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"username"</span>: <span class="string">"Jack"</span>&#125;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">POST my_blogs/_search <span class="comment">// has_parent查询，返回相关的子文档</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"has_parent"</span>: &#123;</span><br><span class="line">      <span class="string">"parent_type"</span>: <span class="string">"blog"</span>,</span><br><span class="line">      <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"title"</span>: <span class="string">"Learning Hadoop"</span>&#125;&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT my_blogs/_doc/comment3?routing=blog2 <span class="comment">//更新子文档不会影响到父文档</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"comment"</span>: <span class="string">"Hello Hadoop??"</span>,</span><br><span class="line">  <span class="string">"blog_comments_relation"</span>: &#123;</span><br><span class="line">    <span class="string">"name"</span>: <span class="string">"comment"</span>,</span><br><span class="line">    <span class="string">"parent"</span>: <span class="string">"blog2"</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="文件系统数据"><a href="#文件系统数据" class="headerlink" title="文件系统数据"></a>文件系统数据</h4><p>若需要使用<strong>文件路径搜索</strong>内容，只需要为其中的字段定义一个特殊的<strong><code>path_hierarchy</code></strong>分词器</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line">PUT /codes</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"settings"</span>: &#123;<span class="string">"analysis"</span>: &#123;<span class="string">"analyzer"</span>: &#123;<span class="string">"path_analyzer"</span>: &#123;<span class="string">"tokenizer"</span>: <span class="string">"path_hierarchy"</span>&#125;&#125;&#125;&#125;,</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;</span><br><span class="line">      <span class="string">"fileName"</span>: &#123;<span class="string">"type"</span>: <span class="string">"keyword"</span>&#125;,</span><br><span class="line">      <span class="string">"path"</span>: &#123;</span><br><span class="line">        <span class="string">"type"</span>: <span class="string">"text"</span>,</span><br><span class="line">        <span class="string">"analyzer"</span>: <span class="string">"path_analyzer"</span>,</span><br><span class="line">        <span class="string">"fields"</span>: &#123;<span class="string">"keyword"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>,<span class="string">"analyzer"</span>: <span class="string">"standard"</span>&#125;&#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"content"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>,<span class="string">"analyzer"</span>: <span class="string">"standard"</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT /codes/_doc/<span class="number">1</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"fileName"</span>: <span class="string">"HelloWorld.java"</span>,</span><br><span class="line">  <span class="string">"path"</span>: <span class="string">"/com/eleven/first"</span>,</span><br><span class="line">  <span class="string">"content"</span>: <span class="string">"package com.eleven.first; public class HelloWorld &#123; // some code... &#125;"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /codes/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"path"</span>: <span class="string">"/com"</span>&#125;&#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /codes/_analyze</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"text"</span>: <span class="string">"/a/b/c/d"</span>,</span><br><span class="line">  <span class="string">"field"</span>: <span class="string">"path"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /codes/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"path.keyword"</span>: <span class="string">"/com"</span>&#125;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">GET /codes/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;<span class="string">"bool"</span>: &#123;<span class="string">"should"</span>: [</span><br><span class="line">        &#123;<span class="string">"match"</span>: &#123;<span class="string">"path"</span>: <span class="string">"/com"</span>&#125;&#125;,</span><br><span class="line">        &#123;<span class="string">"match"</span>: &#123;<span class="string">"path.keyword"</span>: <span class="string">"/com/eleven"</span>&#125;&#125;</span><br><span class="line">  ]&#125;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="Scroll分页"><a href="#Scroll分页" class="headerlink" title="Scroll分页"></a>Scroll分页</h4><p>使用<strong><code>from</code></strong>和<strong><code>size</code></strong>方式查询<code>1W</code>以内的数据都OK，但若数据比较多时会出现性能问题。ES做了一个限制<strong>不允许查询<code>1W</code>条以后的数据</strong>。若要查询1W条以后的数据，可使用ES中提供的<strong><code>scroll</code>游标</strong>来查询。</p>
+<p>在进行大量分页时，每次分页都需要将要查询数据进行重新排序，这样非常浪费性能。使用<strong><code>scroll</code>游标</strong>是<strong>将要用的数据一次性排序好</strong>，然后<strong>分批取出</strong>。性能要比from + size好得多，使用scroll查询后，排序后的数据会<strong>保持一定的时间</strong>，后续分页查询都从该快照取数据。响应结果中会返回<code>_scroll_id</code>，第二次查询直接使用<code>_scroll_id</code>来查询。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">GET /es_db/_search?scroll=<span class="number">1</span>m  <span class="comment">// 让排序的数据保持1分钟</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"multi_match"</span>: &#123;</span><br><span class="line">      <span class="string">"query"</span>: <span class="string">"广州长沙张三"</span>,</span><br><span class="line">      <span class="string">"fields"</span>: [<span class="string">"address"</span>,<span class="string">"name"</span>]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"size"</span>: <span class="number">100</span></span><br><span class="line">&#125;</span><br><span class="line">GET _search/scroll?scroll=<span class="number">1</span>m</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"scroll_id"</span>: <span class="string">"FGluY2x1ZGVfY29udGV4dF91dWlkDXF1ZXJ5QW5kRmV0Y2gBFnJKUnZmX1pIVGVpM05TWDBQX0JJeXcAAAAAAAaeghZDUkdZN1FJNVIwYUJhYUxvNWVxd1Rn"</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="SQL支持"><a href="#SQL支持" class="headerlink" title="SQL支持"></a>SQL支持</h4><p><strong><code>ES SQL</code></strong>允许执行<strong>类<code>SQL</code>查询</strong>，<strong><code>REST</code>接口</strong>、<strong>命令行</strong>或<strong><code>JDBC</code></strong>等都可使用<strong><code>SQL</code></strong>来进行<strong>数据检索</strong>和<strong>数据聚合</strong>。特点：</p>
+<ul>
+<li><strong>本地集成</strong>：ES SQL是<strong>专门为<code>ES</code>构建</strong>的，每个SQL查询都根据<strong>底层存储</strong>对相关节点有效执行</li>
+<li><strong>无额外要求</strong>：不依赖其他硬件、进程、运行时库，<strong>可直接运行在<code>ES</code>集群上</strong></li>
+<li><strong>轻量且高效</strong>：像SQL那样简洁、高效地完成查询</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> select_expr [, ...]</span><br><span class="line">[ <span class="keyword">FROM</span> table_name ]</span><br><span class="line">[ <span class="keyword">WHERE</span> condition ]</span><br><span class="line">[ <span class="keyword">GROUP</span> <span class="keyword">BY</span> grouping_element [, ...] ]</span><br><span class="line">[ <span class="keyword">HAVING</span> condition]</span><br><span class="line">[ <span class="keyword">ORDER</span> <span class="keyword">BY</span> expression [ <span class="keyword">ASC</span> | <span class="keyword">DESC</span> ] [, ...] ]</span><br><span class="line">[ <span class="keyword">LIMIT</span> [ <span class="keyword">count</span> ] ]</span><br><span class="line">[ <span class="keyword">PIVOT</span> ( aggregation_expr <span class="keyword">FOR</span> <span class="keyword">column</span> <span class="keyword">IN</span> ( <span class="keyword">value</span> [ [ <span class="keyword">AS</span> ] <span class="keyword">alias</span> ] [, ...] ) ) ]</span><br></pre></td></tr></table></figure>
+<p>目前<strong><code>FROM</code>只支持单表</strong>，<strong>不支持<code>JOIN</code></strong>、<strong>不支持较复杂的子查询</strong>，<strong><code>format</code></strong>表示<strong>指定返回数据类型</strong>，支持的类型有<strong>逗号分隔<code>csv</code>、<code>json</code>、制表符分隔符<code>tsv</code>、<code>txt</code>、<code>yaml</code></strong>。</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">GET /_sql?format=json</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">"query"</span>: <span class="string">"SELECT * FROM es_db limit 1"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /_sql/translate // 将SQL转换为DSL</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">"query"</span>: <span class="string">"SELECT * FROM es_db limit 1"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /_sql?format=json // field_exp匹配字段，constant_exp匹配常量表达式，</span><br><span class="line">&#123; <span class="comment">// 检索address包含广州和name中包含张三的用户</span></span><br><span class="line">  <span class="attr">"query"</span>: <span class="string">"select * from es_db where MATCH(address, '广州') or MATCH(name, '张三') limit 10"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /_sql?format=txt // 统计分组</span><br><span class="line">&#123;</span><br><span class="line">  <span class="attr">"query"</span>: <span class="string">"select age, count(*) as age_cnt from es_db group by age"</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="模本搜索"><a href="#模本搜索" class="headerlink" title="模本搜索"></a>模本搜索</h4><p>模板搜索可将一些搜索进行模板化，每次执行该搜索就直接调用模板，传入一些参数即可。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">GET /cars/_search/template <span class="comment">// 简单定义参数并传递</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"source"</span>: &#123;</span><br><span class="line">    <span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"remark"</span>: <span class="string">"&#123;&#123;kw&#125;&#125;"</span>&#125;&#125;,</span><br><span class="line">    <span class="string">"size"</span>: <span class="string">"&#123;&#123;size&#125;&#125;"</span></span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="string">"params"</span>: &#123;<span class="string">"kw"</span>: <span class="string">"大众"</span>,<span class="string">"size"</span>: <span class="number">2</span>&#125;</span><br><span class="line">&#125;</span><br><span class="line">GET cars/_search/template <span class="comment">// toJson方式传递参数</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"source"</span>: <span class="string">""</span><span class="string">"&#123; "</span>query<span class="string">": &#123; "</span>match<span class="string">": &#123;&#123;#toJson&#125;&#125;parameter&#123;&#123;/toJson&#125;&#125; &#125;&#125;"</span><span class="string">""</span>,</span><br><span class="line">  <span class="string">"params"</span>: &#123;</span><br><span class="line">    <span class="string">"parameter"</span>: &#123;<span class="string">"remark"</span>: <span class="string">"大众"</span>&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET cars/_search/template <span class="comment">// json方式传递参数</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"source"</span>: &#123;<span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;</span><br><span class="line">        <span class="string">"remark"</span>: <span class="string">"&#123;&#123;#join delimiter=' '&#125;&#125;kw&#123;&#123;/join delimiter=' '&#125;&#125;"</span></span><br><span class="line">  &#125;&#125;&#125;,</span><br><span class="line">  <span class="string">"params"</span>: &#123;<span class="string">"kw"</span>: [<span class="string">"大众"</span>,<span class="string">"标致"</span>]&#125;</span><br><span class="line">&#125;</span><br><span class="line">GET cars/_search/template</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"source"</span>: &#123;<span class="string">"query"</span>: &#123;<span class="string">"range"</span>: &#123;<span class="string">"price"</span>: &#123;</span><br><span class="line">          <span class="string">"gte"</span>: <span class="string">"&#123;&#123;start&#125;&#125;"</span>,</span><br><span class="line">          <span class="string">"lte"</span>: <span class="string">"&#123;&#123;end&#125;&#125;&#123;&#123;^end&#125;&#125;200000&#123;&#123;/end&#125;&#125;"</span> <span class="comment">// 默认值定义</span></span><br><span class="line">  &#125;&#125;&#125;&#125;,</span><br><span class="line">  <span class="string">"params"</span>: &#123;<span class="string">"start"</span>: <span class="number">100000</span>,<span class="string">"end"</span>: <span class="number">140000</span>&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>记录<code>template</code>实现重复调用</strong>可使用<strong><code>Mustache</code></strong>语言作为<strong>搜索请求预处理</strong>，它提供模板<strong>通过键值对</strong>来替换模板中的变量。把<strong>脚本存储在本地磁盘中</strong>，默认位置为<strong><code>elasticsearch\config\scripts</code></strong>，通过引用脚本名称进行使用</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">POST _scripts/test <span class="comment">// test为脚本id</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"script"</span>: &#123;</span><br><span class="line">    <span class="string">"lang"</span>: <span class="string">"mustache"</span>, <span class="comment">// 指定mustache语言</span></span><br><span class="line">    <span class="string">"source"</span>: &#123;<span class="string">"query"</span>: &#123;<span class="string">"match"</span>: &#123;<span class="string">"remark"</span>: <span class="string">"&#123;&#123;kw&#125;&#125;"</span>&#125;&#125;&#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET cars/_search/template</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"id"</span>: <span class="string">"test"</span>, <span class="comment">// 指定调用脚本的id</span></span><br><span class="line">  <span class="string">"params"</span>: &#123;<span class="string">"kw"</span>: <span class="string">"大众"</span>&#125;</span><br><span class="line">&#125;</span><br><span class="line">DELETE _scripts/test <span class="comment">// 删除脚本id为test的脚本</span></span><br></pre></td></tr></table></figure>
+<h4 id="suggest-search"><a href="#suggest-search" class="headerlink" title="suggest search"></a>suggest search</h4><p><strong><code>suggest search(completion suggest)</code></strong>即<strong>建议搜索</strong>或<strong>搜索建议</strong>，也可叫做自动完成，类似百度中搜索联想提示功能。ES实现<strong><code>suggest</code></strong>时<strong>性能非常高</strong>，其构建的<strong>不是倒排索引也不是正排索引</strong>，是纯粹用于<strong>前缀搜索</strong>的一种特殊数据结构，且会全部放在内存中，所以suggest search进行前缀搜索提示性能是非常高。需要使用suggest时候，<strong>必须在定义<code>index</code>时为其<code>mapping</code>指定开启<code>suggest</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">PUT /movie</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;<span class="string">"title"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>,<span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>,</span><br><span class="line">        <span class="string">"fields"</span>: &#123;<span class="string">"suggest"</span>: &#123;<span class="string">"type"</span>: <span class="string">"completion"</span>,<span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>&#125;&#125;</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="string">"content"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>,<span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT /movie/_doc/<span class="number">1</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"title"</span>: <span class="string">"西游记电影系列"</span>,</span><br><span class="line">  <span class="string">"content"</span>: <span class="string">"西游记之月光宝盒将与2021年进行......"</span></span><br><span class="line">&#125;</span><br><span class="line">PUT /movie/_doc/<span class="number">2</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"title"</span>: <span class="string">"西游记文学系列"</span>,</span><br><span class="line">  <span class="string">"content"</span>: <span class="string">"某知名网络小说作家已经完成了大话西游同名小说的出版"</span></span><br><span class="line">&#125;</span><br><span class="line">PUT /movie/_doc/<span class="number">3</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"title"</span>: <span class="string">"西游记之大话西游手游"</span>,</span><br><span class="line">  <span class="string">"content"</span>: <span class="string">"网易游戏近日出品了大话西游经典IP的手游，正在火爆内测中"</span></span><br><span class="line">&#125;</span><br><span class="line">GET /movie/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"suggest"</span>: &#123;</span><br><span class="line">    <span class="string">"my-suggest"</span>: &#123;</span><br><span class="line">      <span class="string">"prefix"</span>: <span class="string">"西游记"</span>,</span><br><span class="line">      <span class="string">"completion"</span>: &#123;<span class="string">"field"</span>: <span class="string">"title.suggest"</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="地理位置搜索"><a href="#地理位置搜索" class="headerlink" title="地理位置搜索"></a>地理位置搜索</h4><p>ES支持<strong>地理位置搜索</strong>和<strong>聚合分析</strong>，可实现<strong>在指定区域内搜索数据</strong>、<strong>搜索指定地点附近的数据</strong>、<strong>聚合分析指定地点附近的数据</strong>等操作。ES中若使用地理位置搜索，必须提供一个特殊的字段类型<strong><code>geo_point</code></strong>，用于指定地理位置坐标点。</p>
+<p>新增一个基于<strong><code>geo_point</code></strong>类型数据，可使用多种方式。多种类型描述<strong><code>geo_point</code></strong>类型字段时，在<strong>搜索数据时显示格式和录入格式是统一的</strong>。<strong>任何数据描述</strong>的<strong><code>geo_point</code></strong>类型字段，<strong>都适用地理位置搜索</strong>。</p>
+<p>数据范围要求<strong>纬度范围</strong>是<code>-90~90</code>之间，<strong>经度范围</strong>是<code>-180~180</code>之间，经纬度数据都是<strong>浮点数</strong>或<strong>数字串</strong>，最大精度为<strong>小数点后7位</strong>。<strong><code>latitude</code></strong>：<strong>纬度</strong>、<strong><code>longitude</code></strong>：<strong>经度</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">PUT /hotel_app</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"mappings"</span>: &#123;</span><br><span class="line">    <span class="string">"properties"</span>: &#123;</span><br><span class="line">      <span class="string">"pin"</span>: &#123;<span class="string">"type"</span>: <span class="string">"geo_point"</span>&#125;,</span><br><span class="line">      <span class="string">"name"</span>: &#123;<span class="string">"type"</span>: <span class="string">"text"</span>,<span class="string">"analyzer"</span>: <span class="string">"ik_max_word"</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT /hotel_app/_doc/<span class="number">1</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"name"</span>: <span class="string">"七天连锁酒店"</span>,</span><br><span class="line">  <span class="string">"pin"</span>: &#123;<span class="string">"lat"</span>: <span class="number">40.12</span>,<span class="string">"lon"</span>: -<span class="number">71.34</span>&#125;</span><br><span class="line">&#125;</span><br><span class="line">PUT /hotel_app/_doc/<span class="number">2</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"name"</span>: <span class="string">"维多利亚大酒店"</span>,</span><br><span class="line">  <span class="string">"pin"</span>: <span class="string">"40.99, -70.81"</span></span><br><span class="line">&#125;</span><br><span class="line">PUT /hotel_app/_doc/<span class="number">3</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"name"</span>: <span class="string">" 红树林宾馆"</span>,</span><br><span class="line">  <span class="string">"pin"</span>: [<span class="number">40</span>,-<span class="number">73.81</span>] <span class="comment">// 基于数组：依次定义经度、纬度，不推荐使用</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>矩形范围搜索</strong>传入<strong><code>top_left</code></strong>和<strong><code>bottom_right</code></strong>坐标点是有固定要求的，<strong><code>top_left</code></strong>即<strong>从西北向东南</strong>，<strong><code>Bottom_right</code></strong>即<strong>从东南向西北</strong>，且<strong><code>top_left</code>纬度应大于<code>bottom_right</code></strong>，<strong><code>top_left</code>经度应小于<code>bottom_right</code></strong>。<strong>多边形范围搜索</strong>对传入若干点坐标顺序没有任何要求，只要传入若干地理位置坐标点，即可形成多边形。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">GET /hotel_app/_doc/_search <span class="comment">// 矩形搜索</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"geo_bounding_box"</span>: &#123;</span><br><span class="line">      <span class="string">"pin"</span>: &#123;</span><br><span class="line">        <span class="string">"top_left"</span>: &#123;<span class="string">"lat"</span>: <span class="number">41.73</span>,<span class="string">"lon"</span>: -<span class="number">74.1</span>&#125;,</span><br><span class="line">        <span class="string">"bottom_right"</span>: &#123;<span class="string">"lat"</span>: <span class="number">40.01</span>,<span class="string">"lon"</span>: -<span class="number">70.12</span>&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET /hotel_app/_doc/_search <span class="comment">// 多边形搜索</span></span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"geo_polygon"</span>: &#123;</span><br><span class="line">      <span class="string">"pin"</span>: &#123;</span><br><span class="line">        <span class="string">"points"</span>: [</span><br><span class="line">          &#123;<span class="string">"lat"</span>: <span class="number">40.73</span>,<span class="string">"lon"</span>: -<span class="number">74.1</span>&#125;,</span><br><span class="line">          &#123;<span class="string">"lat"</span>: <span class="number">40.01</span>,<span class="string">"lon"</span>: -<span class="number">71.12</span>&#125;,</span><br><span class="line">          &#123;<span class="string">"lat"</span>: <span class="number">50.56</span>,<span class="string">"lon"</span>: -<span class="number">90.58</span>&#125;</span><br><span class="line">        ]</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Distance距离的单位，常用米m和千米km，建议使用<strong><code>filter</code></strong>来过滤<strong><code>geo_point</code></strong>数据，因为<strong><code>geo_point</code></strong>数据相关度评分计算比较耗时。使用query来搜索geo_point数据效率相对会慢一些。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">GET /hotel_app/_doc/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"bool"</span>: &#123;</span><br><span class="line">      <span class="string">"filter"</span>: &#123;</span><br><span class="line">        <span class="string">"geo_distance"</span>: &#123;<span class="string">"distance"</span>: <span class="string">"200km"</span>,<span class="string">"pin"</span>: &#123;<span class="string">"lat"</span>: <span class="number">40</span>,<span class="string">"lon"</span>: -<span class="number">70</span>&#125;&#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line">GET hotel_app/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"query"</span>: &#123;</span><br><span class="line">    <span class="string">"geo_distance"</span>: &#123;</span><br><span class="line">      <span class="string">"distance"</span>: <span class="string">"90km"</span>,</span><br><span class="line">      <span class="string">"pin"</span>: &#123;<span class="string">"lat"</span>: <span class="number">40.55</span>,<span class="string">"lon"</span>: -<span class="number">71.12</span>&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>聚合统计某位置附近区域内的数据</strong>，unit是距离单位，常用单位有米m，千米km，英里mi，<strong><code>distance_type</code></strong>是统计算法：<strong><code>sloppy_arc</code>默认算法</strong>、<strong><code>arc</code>最高精度</strong>、<strong><code>plane</code>最高效率</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">GET /hotel_app/_doc/_search</span><br><span class="line">&#123;</span><br><span class="line">  <span class="string">"size"</span>: <span class="number">0</span>,</span><br><span class="line">  <span class="string">"aggs"</span>: &#123;</span><br><span class="line">    <span class="string">"agg_by_pin"</span>: &#123;</span><br><span class="line">      <span class="string">"geo_distance"</span>: &#123;</span><br><span class="line">        <span class="string">"distance_type"</span>: <span class="string">"arc"</span>,</span><br><span class="line">        <span class="string">"field"</span>: <span class="string">"pin"</span>,</span><br><span class="line">        <span class="string">"origin"</span>: &#123;<span class="string">"lat"</span>: <span class="number">40</span>,<span class="string">"lon"</span>: -<span class="number">70</span>&#125;,</span><br><span class="line">        <span class="string">"unit"</span>: <span class="string">"mi"</span>,</span><br><span class="line">        <span class="string">"ranges"</span>: [ <span class="comment">// 聚合统计分别距离某位置80英里，300英里，1000英里范围内的数据数量</span></span><br><span class="line">          &#123;<span class="string">"to"</span>: <span class="number">80</span>&#125;,</span><br><span class="line">          &#123;<span class="string">"from"</span>: <span class="number">80</span>,<span class="string">"to"</span>: <span class="number">300</span>&#125;,</span><br><span class="line">          &#123;<span class="string">"from"</span>: <span class="number">300</span>,<span class="string">"to"</span>: <span class="number">1000</span>&#125;</span><br><span class="line">        ]</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/ELK/ElasticSearch实战/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        ElasticSearch实战
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/ELK/ElasticSearch基础/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">ElasticSearch基础</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

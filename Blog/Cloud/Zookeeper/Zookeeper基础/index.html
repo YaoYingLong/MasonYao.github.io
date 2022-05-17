@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Zookeeper基础 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Zookeeper">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Zookeeper是一个分布式协调框架，是Apache Hadoop的一个子项目，主要用来解决分布式应用中经常遇到的一些数据管理问题，如统一命名服务、状态同步服务、集群管理、分布式应用配置项管理等。可理解为是一个用于存储少量数据的基于内存的数据库，其核心为文件系统数据结构+监听通知机制。 Zookeeper经典应用场景有：分布式注册中心，分布式配置中心，分布式锁，分布式队列，集群选举，分布式屏障，">
+<meta name="keywords" content="Zookeeper">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Zookeeper基础">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/Zookeeper/Zookeeper基础/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Zookeeper是一个分布式协调框架，是Apache Hadoop的一个子项目，主要用来解决分布式应用中经常遇到的一些数据管理问题，如统一命名服务、状态同步服务、集群管理、分布式应用配置项管理等。可理解为是一个用于存储少量数据的基于内存的数据库，其核心为文件系统数据结构+监听通知机制。 Zookeeper经典应用场景有：分布式注册中心，分布式配置中心，分布式锁，分布式队列，集群选举，分布式屏障，">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Zookeeper/文件系统数据结构.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Zookeeper/Zookeeper成员角色.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Zookeeper/Zookeeper非公平锁实现.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Zookeeper/Zookeeper公平锁实现.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Zookeeper/Zookeeper共享锁实现.png">
+<meta property="og:updated_time" content="2021-12-20T11:20:24.559Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Zookeeper基础">
+<meta name="twitter:description" content="Zookeeper是一个分布式协调框架，是Apache Hadoop的一个子项目，主要用来解决分布式应用中经常遇到的一些数据管理问题，如统一命名服务、状态同步服务、集群管理、分布式应用配置项管理等。可理解为是一个用于存储少量数据的基于内存的数据库，其核心为文件系统数据结构+监听通知机制。 Zookeeper经典应用场景有：分布式注册中心，分布式配置中心，分布式锁，分布式队列，集群选举，分布式屏障，">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Zookeeper/文件系统数据结构.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file active"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/Zookeeper/Zookeeper基础" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/Zookeeper/">Zookeeper</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Zookeeper/">Zookeeper</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">
+            <time datetime="2021-11-18T16:00:00.000Z" itemprop="datePublished">2021-11-19</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Zookeeper基础
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>Zookeeper是一个分<strong>布式协调框架</strong>，是Apache Hadoop的一个子项目，主要用来<strong>解决分布式应用中经常遇到的一些数据管理问题</strong>，如<strong>统一命名服务</strong>、<strong>状态同步服务</strong>、<strong>集群管理</strong>、<strong>分布式应用配置项</strong>管理等。可理解为是一个用于<strong>存储少量数据</strong>的<strong>基于内存</strong>的数据库，其核心为<strong>文件系统数据结构</strong>+<strong>监听通知机制</strong>。</p>
+<p>Zookeeper经典应用场景有：<strong>分布式注册中心</strong>，<strong>分布式配置中心</strong>，<strong>分布式锁</strong>，<strong>分布式队列</strong>，<strong>集群选举</strong>，<strong>分布式屏障</strong>，<strong>发布订阅</strong>；</p>
+<h4 id="文件系统数据结构"><a href="#文件系统数据结构" class="headerlink" title="文件系统数据结构"></a>文件系统数据结构</h4><p><img src="../../../../../images/Zookeeper/文件系统数据结构.png" alt></p>
+<p><strong>每个子目录都被称为<code>znode</code>目录节点</strong>，<strong>和文件系统类似</strong>，可自由增加、删除znode，以及在一个znode下增加、删除<strong>子<code>znode</code></strong>。</p>
+<p><strong><code>PERSISTENT</code>持久化目录节点</strong>：客户端与zookeeper断开连接后，该节点依旧存在，只要<strong>不手动删除该节点</strong>，他将<strong>永远存在</strong>；</p>
+<p><strong><code>PERSISTENT_SEQUENTIAL</code>持久化顺序编号目录节点</strong>：客户端与zookeeper断开连接后，该节点依旧存在，只是Zookeeper给该<strong>节点名称进行顺序编号</strong>，即在持久化节点的基础上带顺序；</p>
+<p><strong><code>EPHEMERAL</code>临时目录节点</strong>：客户端与zookeeper<strong>断开连接后</strong>，该节点<strong>被删除</strong>；</p>
+<p><strong><code>EPHEMERAL_SEQUENTIAL</code>临时顺序编号目录节点</strong>：客户端与zookeeper<strong>断开连接后</strong>，该节点<strong>被删除</strong>，只是Zookeeper给该<strong>节点名称进行顺序编号</strong>；即在临时节点的基础上带顺序；</p>
+<p><strong><code>Container</code>容器节点</strong>：3.5.3版本新增，若Container节点下面<strong>没有子节点</strong>，则Container节点在未来会被Zookeeper<strong>自动清除</strong>，定时任务<strong>默认<code>60s</code>检查一次</strong>；</p>
+<p><strong><code>TTL</code>节点</strong>：默认<strong>禁用</strong>，只能通过系统配置<strong><code>zookeeper.extendedTypesEnabled=true</code></strong>开启，<strong>不稳定</strong>；超过了TTL指定时间后会被自动清除；</p>
+<h4 id="监听机制"><a href="#监听机制" class="headerlink" title="监听机制"></a>监听机制</h4><p><strong>客户端注册监听它关心的任意节点</strong>，或者<strong>目录节点</strong>及<strong>递归子目录节点</strong>，若注册的是<strong>对某个节点的监听</strong>，则当该节点<strong>被删除</strong>，或者<strong>被修改</strong>时，对应的客户端将被通知；若注册的是<strong>对某个目录的监听</strong>，则当<strong>该目录有子节点被创建</strong>，或者有<strong>子节点被删除</strong>，对应的客户端将被通知；若注册的是<strong>对某个目录的递归子节点进行监听</strong>，则当<strong>该目录下面的任意子节点有目录结构的变化</strong>即有<strong>子节点被创建</strong>或<strong>被删除</strong>或者<strong>根节点有数据变化</strong>时，对应的客户端将被通知。</p>
+<p><strong>所有的通知都是一次性的</strong>，及无论是对<strong>节点</strong>还是对<strong>目录</strong>进行的监听，<strong>一旦触发对应监听即被移除</strong>。递归子节点，监听是对所有子节点的，<strong>每个子节点下面的事件同样只会被触发一次</strong>。</p>
+<h4 id="Zookeeper安装"><a href="#Zookeeper安装" class="headerlink" title="Zookeeper安装"></a>Zookeeper安装</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">wget https://mirror.bit.edu.cn/apache/zookeeper/zookeeper-3.5.8/apache-zookeeper-3.5.8-bin.tar.gz</span><br><span class="line">tar -zxvf apache-zookeeper-3.5.8-bin.tar.gz</span><br><span class="line">cd apache-zookeeper-3.5.8-bin</span><br><span class="line"><span class="meta">#</span> 重命名配置文件zoo_sample.cfg</span><br><span class="line">cp zoo_sample.cfg zoo.cfg</span><br><span class="line"><span class="meta">#</span> 启动Zookeeper，可通过bin/zkServer.sh来查看都支持哪些参数 </span><br><span class="line">bin/zkServer.sh start conf/zoo.cfg</span><br><span class="line"><span class="meta">#</span> Zookeeper客户端连接服务端</span><br><span class="line">bin/zkCli.sh -server ip:port</span><br></pre></td></tr></table></figure>
+<h4 id="Zookeeper命令"><a href="#Zookeeper命令" class="headerlink" title="Zookeeper命令"></a>Zookeeper命令</h4><p>可通过help查看Zookeeper所支持的所有命令</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">addauth scheme auth</span><br><span class="line">close </span><br><span class="line">config [-c] [-w] [-s]</span><br><span class="line">connect host:port</span><br><span class="line">create [-s] [-e] [-c] [-t ttl] path [data] [acl]</span><br><span class="line">delete [-v version] path</span><br><span class="line">deleteall path</span><br><span class="line">delquota [-n|-b] path</span><br><span class="line">get [-s] [-w] path</span><br><span class="line">getAcl [-s] path</span><br><span class="line">history </span><br><span class="line">listquota path</span><br><span class="line">ls [-s] [-w] [-R] path</span><br><span class="line">ls2 path [watch]</span><br><span class="line">printwatches on|off</span><br><span class="line">quit </span><br><span class="line">reconfig [-s] [-v version] [[-file path] | [-members serverID=host:port1:port2;port3[,...]*]] | [-add serverId=host:port1:port2;port3[,...]]* [-remove serverId[,...]*]</span><br><span class="line">redo cmdno</span><br><span class="line">removewatches path [-c|-d|-a] [-l]</span><br><span class="line">rmr path</span><br><span class="line">set [-s] [-v version] path data</span><br><span class="line">setAcl [-s] [-v version] [-R] path acl</span><br><span class="line">setquota -n|-b val path</span><br><span class="line">stat [-w] path</span><br><span class="line">sync path</span><br></pre></td></tr></table></figure>
+<p>创建Zookeeper节点</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">create [-s] [-e] [-c] [-t ttl] path [data] [acl]</span><br></pre></td></tr></table></figure>
+<p>中括号为可选项，没有则<strong>默认创建持久化节点</strong>，<strong><code>-s</code>顺序节点</strong>，<strong><code>-e</code>临时节点</strong>，<strong><code>-c</code>容器节点</strong>，<strong><code>-t</code>可给节点添加过期时间</strong>，默认禁用，需要通过系统参数启用<strong><code>-Dzookeeper.extendedTypesEnabled=true</code></strong>；</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 创建持久化节点并设置数据为some-data</span><br><span class="line">create /test-node some-data</span><br><span class="line"><span class="meta">#</span> 获取节点数据</span><br><span class="line">get /test-node</span><br><span class="line"><span class="meta">#</span> 更新节点数据</span><br><span class="line">set /test-node some-data-change</span><br><span class="line"><span class="meta">#</span> 创建临时节点并设置数据为data，临时节点不能创建子节点</span><br><span class="line">create -e /ephemeral data</span><br><span class="line"><span class="meta">#</span> 创建临时顺序节点，顺序节点将再seq-parent目录下顺序递增：/seq-parent/0000000000</span><br><span class="line">create -s -e /seq-parent/ data</span><br><span class="line"><span class="meta">#</span> 给顺序节点添加前缀：/seq-parent/profix-0000000001</span><br><span class="line">create -s -e /seq-parent/profix-</span><br><span class="line"><span class="meta">#</span> 创建容器节点，若未给其创建子节点，容器节点表现和持久化节点一样，若给容器节点创建了子节点，后续又把子节点清空，容器节点也会被zookeeper删除</span><br><span class="line">create -c /container</span><br></pre></td></tr></table></figure>
+<p>查看节点状态信息</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 查看节点状态信息</span><br><span class="line">stat /test-node</span><br><span class="line">cZxid = 0xf</span><br><span class="line">ctime = Mon Nov 22 10:32:02 CST 2021</span><br><span class="line">mZxid = 0x10</span><br><span class="line">mtime = Mon Nov 22 10:32:36 CST 2021</span><br><span class="line">pZxid = 0xf</span><br><span class="line">cversion = 0</span><br><span class="line">dataVersion = 1</span><br><span class="line">aclVersion = 0</span><br><span class="line">ephemeralOwner = 0x0</span><br><span class="line">dataLength = 16</span><br><span class="line">numChildren = 0</span><br><span class="line"><span class="meta">#</span> 获取数据的同时查看节点状态信息</span><br><span class="line">get -s /test-node</span><br></pre></td></tr></table></figure>
+<ul>
+<li>cZxid：创建znode的事务ID，即Zxid值</li>
+<li>mZxid：最后修改znode的事务ID</li>
+<li>pZxid：最后添加或删除子节点的事务ID，<strong>子节点列表发生变化才会发生改变</strong></li>
+<li>ctime：znode创建时间</li>
+<li>mtime：znode最近修改时间</li>
+<li>dataVersion：znode的<strong>当前数据版本</strong>，可根据该版本号对有并发修改数据<strong>实现乐观锁</strong>的功能</li>
+<li>cversion：znode子节点结果集版本，一个节点的子节点增加、删除都会影响这个版本</li>
+<li>aclVersion：表示对此znode的acl版本。</li>
+<li>ephemeralOwner：znode是临时znode时，表示znode所有者的sessionID。 若znode不是临时znode，则该字段设置为零。</li>
+<li>dataLength：znode数据字段的长度。</li>
+<li>numChildren：znode的子znode的数量。</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 乐观锁的实现，用set命令修改数据的时候可以把版本号带上</span><br><span class="line">set -v 1 /test-node change</span><br><span class="line"><span class="meta">#</span> 数据修改版本号会递增，再用以前的版本号去修改，将会导致修改失败</span><br><span class="line">set -v 1 /test-node change</span><br><span class="line">version No is not valid : /test-node</span><br></pre></td></tr></table></figure>
+<p>创建子节点，<strong><code>zookeeper</code>是以节点组织数据的，没有相对路径这么一说</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 创建子节点，</span><br><span class="line">create /test-node/test-sub-node</span><br><span class="line"><span class="meta">#</span> 递归查看递归子节点列表</span><br><span class="line">ls -R /</span><br></pre></td></tr></table></figure>
+<p>事件监听机制，一旦事件触发，对应的注册立刻被移除，所以事件监听是一次性的</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 注册监听的同时获取数据</span><br><span class="line">get -w /test-node</span><br><span class="line"><span class="meta">#</span> 对节点进行监听，且获取元数据信息</span><br><span class="line">stat -w /test-node</span><br><span class="line"><span class="meta">#</span> 目录的变化，会触发事件，且一旦触发，对应的监听也会被移除，后续对节点的创建没有触发监听事件</span><br><span class="line">ls -w /test-node</span><br><span class="line"><span class="meta">#</span> 递归监听子目录</span><br><span class="line">ls -R -w /test-node</span><br></pre></td></tr></table></figure>
+<p><strong>Zookeeper事件类型</strong>：<strong><code>None</code>连接建立事件</strong>，<strong><code>NodeCreated</code>节点创建</strong>，<strong><code>NodeDeleted</code>节点删除</strong>，<strong><code>NodeDataChanged</code>节点数据变化</strong>，<strong><code>NodeChildrenChanged</code>子节点列表变化</strong>，<strong><code>DataWatchRemoved</code>节点监听被移除</strong>，<strong><code>ChildWatchRemoved</code>子节点监听被移除</strong>；</p>
+<h4 id="ACL权限控制"><a href="#ACL权限控制" class="headerlink" title="ACL权限控制"></a>ACL权限控制</h4><p>Zookeeper的ACL权限控制，<strong>可控制节点读写操作</strong>，保证数据安全性，Zookeeper ACL权限设置分为<strong><code>Scheme</code>权限模式</strong>、<strong><code>ID</code>授权对象</strong>、<strong><code>Permission</code>权限信息</strong>3部分组成。最终组成一条如<strong><code>scheme:id:permission</code></strong>格式的ACL请求信息。</p>
+<p><strong>Scheme权限模式</strong>：用来设置ZooKeeper服务器进行权限验证的方式。ZooKeeper 的权限验证方式大体分为两种类型：</p>
+<ul>
+<li><strong>范围验证</strong>，ZooKeeper可针对<strong>一个<code>IP</code></strong>或者<strong>一段<code>IP</code></strong>地址<strong>授予某种权限</strong>。如可让一个IP地址为<strong><code>ip：192.168.0.110</code></strong>的机器对服务器上的某个数据节点具有写入的权限。或者也可以通过<strong><code>ip:192.168.0.1/24</code></strong>给一段IP地址的机器赋权。</li>
+<li><strong>口令验证</strong>，也可理解为用户名密码的方式。在ZooKeeper中这种验证方式是<strong><code>Digest</code>认证</strong>，而Digest认证方式首先在客户端传送<strong><code>username:password</code></strong>这种形式的权限表示符后，ZooKeeper服务端会对<strong>密码部分</strong>使用<strong><code>SHA-1</code></strong>和<strong><code>BASE64</code></strong>算法<strong>进行加密</strong>以保证安全性。</li>
+<li><strong><code>Super</code>权限模式</strong>,  Super可认为是一种<strong>特殊的<code>Digest</code>认证</strong>。具有Super权限的客户端可对ZooKeeper上的<strong>任意数据节点进行任意操作</strong>。 </li>
+</ul>
+<p><strong><code>ID</code>授权对象</strong>：授权对象就是要把权限赋予谁，对应于4种不同的权限模式来说，若选择<strong><code>IP</code>方式</strong>，使用的<strong>授权对象可以是一个<code>IP</code>地址或<code>IP</code>地址段</strong>；若使用<strong><code>Digest</code></strong>或<strong><code>Super</code></strong>方式，则<strong>对应于一个用户名</strong>。若是<strong><code>World</code>模式</strong>，则是<strong>授权系统中所有用户</strong>。</p>
+<p><strong><code>Permission</code>权限信息</strong>：指可在数据节点上执行的操作种类，ZooKeeper中已经定义好的权限有<strong><code>5</code>种</strong>：</p>
+<ul>
+<li>数据节点<strong><code>c:create</code>创建权限</strong>，授予权限的对象<strong>可在数据节点下创建子节点</strong>；</li>
+<li>数据节点<strong><code>w:wirte</code>更新权限</strong>，授予权限的对象<strong>可更新该数据节点</strong>；</li>
+<li>数据节点<strong><code>r:read</code>读取权限</strong>，授予权限的对象<strong>可读取该节点内容以及子节点列表信息</strong>；</li>
+<li>数据节点<strong><code>d:delete</code>删除权限</strong>，授予权限的对象<strong>可删除该数据节点的子节点</strong>；</li>
+<li>数据节点<strong><code>a:admin</code>管理者权限</strong>，授予权限的对象<strong>可对该数据节点体进行<code>ACL</code>权限设置</strong>。</li>
+</ul>
+<p>可通过系统参数<strong><code>zookeeper.skipACL=yes</code></strong>进行配置，默认是no，可配置为true,，则配置过的ACL将不再进行权限检测，可通过如下命令对权限信息进行操作：</p>
+<ul>
+<li><strong><code>getAcl</code></strong>：获取某个节点的acl权限信息</li>
+<li><strong><code>setAcl</code></strong>：设置某个节点的acl权限信息</li>
+<li><strong><code>addauth</code></strong>：输入认证授权信息，相当于注册用户信息，注册时输入明文密码，zk将以密文的形式存储 </li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 获取某个节点的具体权限信息</span><br><span class="line">getAcl /test-node</span><br><span class="line"><span class="meta">#</span> 获取某个节点的具体权限信息同时获取节点状态信息</span><br><span class="line">getAcl -s /test-node</span><br><span class="line"><span class="meta">#</span> 创建时设置ACL权限</span><br><span class="line">create /zk-node datatest digest:gj:X/NSthOB0fD/OT6iilJ55WJVado=:cdrwa</span><br><span class="line"><span class="meta">#</span> setAcl设置ACL权限</span><br><span class="line">setAcl /zk-node  digest:gj:X/NSthOB0fD/OT6iilJ55WJVado=:cdrwa</span><br><span class="line"><span class="meta">#</span> 访问前需要添加授权信息</span><br><span class="line">addauth digest gj:test</span><br><span class="line"><span class="meta">#</span> auth明文授权，使用之前需要先通过addauth注册用户信息，后续可以直接用明文授权</span><br><span class="line">addauth digest u100:p100</span><br><span class="line">create /node-1 node1data auth:u100:p100:cdwra</span><br><span class="line"><span class="meta">#</span> IP授权模式，多个指定IP可以通过逗号分隔，如setAcl /node-ip ip:IP1:rw,ip:IP2:a</span><br><span class="line">setAcl /node-ip ip:192.168.109.128:cdwra</span><br><span class="line">create /node-ip  data  ip:192.168.109.128:cdwra</span><br><span class="line"><span class="meta">#</span> Super超级管理员模式，启动时通过JVM系统参数开启</span><br><span class="line">-Dzookeeper.DigestAuthenticationProvider.superDigest=super:&lt;base64encoded(SHA1(password))&gt;</span><br></pre></td></tr></table></figure>
+<p>可通过如下方式生成授权ID</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// echo -n &lt;user&gt;:&lt;password&gt; | openssl dgst -binary -sha1 | openssl base64</span></span><br><span class="line"><span class="meta">@Test</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">generateSuperDigest</span><span class="params">()</span> <span class="keyword">throws</span> NoSuchAlgorithmException </span>&#123;</span><br><span class="line">    String sId = DigestAuthenticationProvider.generateDigest(<span class="string">"gj:test"</span>);</span><br><span class="line">    System.out.println(sId);<span class="comment">//  gj:X/NSthOB0fD/OT6iilJ55WJVado=</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="持久化"><a href="#持久化" class="headerlink" title="持久化"></a>持久化</h4><p>Zookeeper数据的组织形式为一个类似文件系统的数据结构，而这些数据都是存储在内存中的，针对<strong>每一次客户端的事务操作</strong>，Zookeeper都会将其<strong>记录到事务日志中</strong>。可在zookeeper的主配置文件<strong><code>zoo.cfg</code>中</strong>配置<strong>内存中的数据持久化目录</strong>，也就是<strong>事务日志存储路径<code>dataLogDir</code></strong>，若<strong>未配置<code>dataLogDir</code></strong>，事务日志将存储到<strong><code>dataDir</code>目录</strong>，</p>
+<p>zookeeper提供了<strong>格式化工具</strong>可以进行数据查看事务日志数据<strong><code>org.apache.zookeeper.server.LogFormatter</code></strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -classpath .:slf4j-api-1.7.25.jar:zookeeper-3.5.8.jar:zookeeper-jute-3.5.8.jar org.apache.zookeeper.server.LogFormatter /usr/local/zookeeper/apache-zookeeper-3.5.8-bin/data/version-2/log.1</span><br></pre></td></tr></table></figure>
+<p>Zookeeper进行事务日志文件操作时<strong>会频繁进行磁盘IO操作</strong>，事务日志不断追加写操作会触发底层磁盘IO为文件开辟新的磁盘块，为了提升磁盘IO的效率，Zookeeper在创建事务日志文件时进行了<strong>文件空间预分配</strong>，即在创建文件时，就向操作系统申请一块大一点的磁盘块。该预分配的磁盘大小可以通过系统参数<strong><code>zookeeper.preAllocSize</code></strong>配置。</p>
+<p><strong>事务日志文件名</strong>为<strong><code>log</code>.&lt;当时最大事务ID&gt;</strong>，日志文件是顺序写入的，故<strong>该最大事务ID也将是整个事务日志文件中最小的事务ID</strong>，日志满了即进行下一次事务日志文件的创建。</p>
+<p><strong>数据快照</strong>用于记录Zookeeper服务器上<strong>某一时刻的全量数据</strong>，并将其写入到指定的磁盘文件中。可通过配置<strong><code>snapCount</code></strong>配置<strong>间隔事务请求个数</strong>，数据存储在<strong><code>dataDir</code></strong>指定的目录中，可通过如下方式进行查看快照数据，为避免集群中所有机器在同一时间进行快照，实际快照生成时机为事务数达到<strong><code>snapCount/2</code>   + 随机数</strong>时开始快照，随机数范围为<strong><code>1 ~ snapCount/2</code></strong>。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -classpath .:slf4j-api-1.7.25.jar:zookeeper-3.5.8.jar:zookeeper-jute-3.5.8.jar org.apache.zookeeper.server.SnapshotFormatter /usr/local/zookeeper/apache-zookeeper-3.5.8-bin/data-dir/version-2/snapshot.0</span><br></pre></td></tr></table></figure>
+<p><strong>快照事务日志文件名</strong>为<strong><code>snapshot</code>.&lt;当时最大事务ID&gt;</strong>，日志满了即进行下一次事务日志文件的创建，<strong>快照数据主要是为了快速恢复</strong>，<strong>事务日志文件是每次事务请求都会进行追加的操作</strong>，<strong>快照是达到某种设定条件下的内存全量数据</strong>。通常快照数据是反应当时内存数据的状态。事务日志是更全面的数据，所以<strong>恢复数据时</strong>，可<strong>先恢复快照数据</strong>，<strong>再通过增量恢复事务日志中的数据</strong>即可。</p>
+<h4 id="Zookeeper集群"><a href="#Zookeeper集群" class="headerlink" title="Zookeeper集群"></a>Zookeeper集群</h4><p>Zookeeper集群模式有<strong><code>Leader</code></strong>、<strong><code>Follower</code></strong>、<strong><code>Observer</code></strong>三种类型的角色：</p>
+<ul>
+<li><strong>Leader</strong>:   处理<strong>所有</strong>的事务<strong>写请求</strong>，<strong>可处理读请求</strong>，<strong>集群中只能有一个Leader</strong></li>
+<li><strong>Follower</strong>：<strong>只能处理读请求</strong>，同时<strong>作为Leader候选节点</strong>，即若Leader宕机，Follower节点要参与到新的Leader选举中，有可能成为新的Leader节点</li>
+<li><strong>Observer</strong>：<strong>只能处理读请求</strong>。<strong>不能参与选举</strong></li>
+</ul>
+<p><img src="../../../../../images/Zookeeper/Zookeeper成员角色.png" alt></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 重命名zoo_sample.cfg文件</span><br><span class="line">cp conf/zoo_sample.cfg conf/zoo-1.cfg</span><br><span class="line"><span class="meta">#</span> 修改配置文件zoo-1.cfg，原配置文件里有的，修改成下面的值，没有的则加上</span><br><span class="line">dataDir=/usr/local/data/zookeeper-1</span><br><span class="line">clientPort=2181</span><br><span class="line">server.1=127.0.0.1:2001:3001:participant # participant可不用写，默认就是participant</span><br><span class="line">server.2=127.0.0.1:2002:3002:participant</span><br><span class="line">server.3=127.0.0.1:2003:3003:participant</span><br><span class="line">server.4=127.0.0.1:2004:3004:observer</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 拷贝zoo1.cfg文件，修改dataDir和clientPort</span><br><span class="line">cp conf/zoo1.cfg conf/zoo2.cfg</span><br><span class="line">cp conf/zoo1.cfg conf/zoo3.cfg</span><br><span class="line">cp conf/zoo1.cfg conf/zoo4.cfg</span><br><span class="line">vim conf/zoo2.cfg</span><br><span class="line">dataDir=/usr/local/data/zookeeper-2</span><br><span class="line">clientPort=2182</span><br><span class="line">vim conf/zoo3.cfg</span><br><span class="line">dataDir=/usr/local/data/zookeeper-3</span><br><span class="line">clientPort=2183</span><br><span class="line">vim conf/zoo4.cfg</span><br><span class="line">dataDir=/usr/local/data/zookeeper-4</span><br><span class="line">clientPort=2184</span><br><span class="line"><span class="meta">#</span> 创建四个文件夹在每个目录中创建文件myid文件，写入当前实例的server id，即1，2，3，4 </span><br><span class="line">cd /usr/local/data/zookeeper-1</span><br><span class="line">vim myid</span><br><span class="line">1 </span><br><span class="line">cd /usr/local/data/zookeeper-2</span><br><span class="line">vim myid</span><br><span class="line">2 </span><br><span class="line">cd /usr/local/data/zookeeper-3</span><br><span class="line">vim myid</span><br><span class="line">3 </span><br><span class="line">cd /usr/local/data/zookeeper-4</span><br><span class="line">vim myid</span><br><span class="line">4</span><br><span class="line"><span class="meta">#</span> 客户端连接集群</span><br><span class="line">bin/zkCli.sh -server ip1:port1,ip2:port2,ip3:port3</span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong><code>tickTime</code></strong>：用于配置Zookeeper中<strong>最小时间单位的长度</strong>，很多运行时的时间间隔都是使用tickTime的<strong>倍数</strong>来表示的。</li>
+<li><strong><code>initLimit</code></strong>：该参数用于配置Leader服务器等待Follower启动，并完成数据同步的时间。Follower服务器在启动过程中，会与Leader建立连接并完成数据的同步，从而确定自己对外提供服务的起始状态。Leader服务器允许Follower在initLimit时间内完成该工作。</li>
+<li><strong><code>syncLimit</code></strong>：Leader与Follower<strong>心跳检测</strong>的<strong>最大延时间</strong></li>
+<li><strong><code>dataDir</code></strong>：Zookeeper保存数据目录，默认Zookeeper将<strong>写数据的日志文件</strong>也保存在这个目录里。</li>
+<li><strong><code>clientPort</code></strong>：该端口是客户端连接Zookeeper服务器的端口，Zookeeper会监听该端口，接受客户端的访问请求。</li>
+<li><strong><code>server.A=B:C:D:E</code></strong>：其中A是一个数字，<strong>表示第几号服务器</strong>；B是这个<strong>服务器的<code>ip</code>地址</strong>；C表示该服务器与集群中的Leader服务器<strong>交换信息的端口</strong>；D表示集群中的Leader服务器挂了重新进行选举的端口就是用来执行选举时服务器相互通信的端口。若是伪集群的配置方式，由于B都是一样，故不同的Zookeeper实例通信端口号不能一样，所以要给它们分配不同的端口号。若需要通过添加不参与集群选举以及事务请求的过半机制的 Observer节点，可在E的位置，添加observer标识。</li>
+</ul>
+<h4 id="分布式锁实现"><a href="#分布式锁实现" class="headerlink" title="分布式锁实现"></a>分布式锁实现</h4><p><img src="../../../../../images/Zookeeper/Zookeeper非公平锁实现.png" alt="Zookeeper非公平锁实现"></p>
+<p>Zookeeper<strong><code>非公平锁</code></strong>实现在并发比较高的情况下，性能会下降的比较厉害，因为所有连接都在对同一个节点进行监听，当服务器检测到删除事件时，要通知所有的连接，所有的连接同时收到事件，再次并发竞争，这就是<strong>羊群效应</strong>。</p>
+<p><img src="../../../../../images/Zookeeper/Zookeeper公平锁实现.png" alt="Zookeeper公平锁实现"></p>
+<p><strong>公平锁</strong>可以有效的解决羊群效应，借助于<strong>临时顺序节点</strong>，可以避免同时多个节点的并发竞争锁，缓解了服务端压力，这种实现方式所有加锁请求都进行排队加锁，请求进来直接在/lock节点下创建一个临时顺序节点，然后判断自己是否是lock节点下最小的节点，若是则获得锁，若不是则监听前一个节点。</p>
+<p><img src="../../../../../images/Zookeeper/Zookeeper共享锁实现.png" alt="Zookeeper共享锁实现"></p>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/index/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        (no title)
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/Redis/Redis分布式锁实现/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">Redis分布式锁实现</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>

@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Zookeeper集群Leader选举 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Zookeeper">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Zookeeper集群的启动是通过QuorumPeerMain的main方法中调用initializeAndRun方法，单机模式的启动是调用ZooKeeperServerMain的main方法，集群的启动是调用本类的runFromConfig方法，最终调用QuorumPeer的start方法来完成集群的启动。对于ServerCnxnFactory默认是使用NIO即创建NIOServerCnxnFa">
+<meta name="keywords" content="Zookeeper">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Zookeeper集群Leader选举">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Zookeeper集群的启动是通过QuorumPeerMain的main方法中调用initializeAndRun方法，单机模式的启动是调用ZooKeeperServerMain的main方法，集群的启动是调用本类的runFromConfig方法，最终调用QuorumPeer的start方法来完成集群的启动。对于ServerCnxnFactory默认是使用NIO即创建NIOServerCnxnFa">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/Zookeeper/Leader选举多层队列架构.png">
+<meta property="og:updated_time" content="2021-12-20T11:20:24.559Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Zookeeper集群Leader选举">
+<meta name="twitter:description" content="Zookeeper集群的启动是通过QuorumPeerMain的main方法中调用initializeAndRun方法，单机模式的启动是调用ZooKeeperServerMain的main方法，集群的启动是调用本类的runFromConfig方法，最终调用QuorumPeer的start方法来完成集群的启动。对于ServerCnxnFactory默认是使用NIO即创建NIOServerCnxnFa">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/Zookeeper/Leader选举多层队列架构.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP&TCP&UDP协议/">HTTP&TCP&UDP协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/Zookeeper/Zookeeper集群Leader选举" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/Zookeeper/">Zookeeper</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Zookeeper/">Zookeeper</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">
+            <time datetime="2021-11-22T16:00:00.000Z" itemprop="datePublished">2021-11-23</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Zookeeper集群Leader选举
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p>Zookeeper集群的启动是通过<strong><code>QuorumPeerMain</code></strong>的main方法中调用<strong><code>initializeAndRun</code></strong>方法，单机模式的启动是调用ZooKeeperServerMain的main方法，集群的启动是调用本类的<strong><code>runFromConfig</code></strong>方法，最终调用<strong><code>QuorumPeer</code></strong>的<strong><code>start</code></strong>方法来完成集群的启动。对于<strong><code>ServerCnxnFactory</code></strong>默认是使用<strong><code>NIO</code></strong>即创建NIOServerCnxnFactory，官方<strong>推荐<code>Netty</code></strong>可通过指定VM参数<strong><code>-Dzookeeper.serverCnxnFactory=org.apache.zookeeper.server.NettyServerCnxnFactory</code></strong>使用。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuorumPeerMain</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        QuorumPeerMain main = <span class="keyword">new</span> QuorumPeerMain();</span><br><span class="line">        main.initializeAndRun(args);</span><br><span class="line">        System.exit(<span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initializeAndRun</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> ConfigException, IOException, AdminServerException </span>&#123;</span><br><span class="line">        QuorumPeerConfig config = <span class="keyword">new</span> QuorumPeerConfig();</span><br><span class="line">        <span class="keyword">if</span> (args.length == <span class="number">1</span>) &#123;</span><br><span class="line">            config.parse(args[<span class="number">0</span>]); <span class="comment">// 解析配置文件加载到内存，包括myid文件内容校验</span></span><br><span class="line">        &#125;</span><br><span class="line">        DatadirCleanupManager purgeMgr = <span class="keyword">new</span> DatadirCleanupManager(config.getDataDir(), config.getDataLogDir(), config.getSnapRetainCount(), config.getPurgeInterval());</span><br><span class="line">        purgeMgr.start(); <span class="comment">// 清理快照文件任务</span></span><br><span class="line">        <span class="keyword">if</span> (args.length == <span class="number">1</span> &amp;&amp; config.isDistributed()) &#123;</span><br><span class="line">            runFromConfig(config);  <span class="comment">// 集群启动核心流程</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            ZooKeeperServerMain.main(args); <span class="comment">// 单机模式启动</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">runFromConfig</span><span class="params">(QuorumPeerConfig config)</span> <span class="keyword">throws</span> IOException, AdminServerException </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ServerCnxnFactory cnxnFactory = <span class="keyword">null</span>;</span><br><span class="line">            ServerCnxnFactory secureCnxnFactory = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">if</span> (config.getClientPortAddress() != <span class="keyword">null</span>) &#123;</span><br><span class="line">                cnxnFactory = ServerCnxnFactory.createFactory(); <span class="comment">// 初始化服务端链接对象zk默认用NIO，官方推荐Netty</span></span><br><span class="line">                cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), <span class="keyword">false</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            quorumPeer = getQuorumPeer(); <span class="comment">// 获取本节点对象</span></span><br><span class="line">            quorumPeer.setTxnFactory(<span class="keyword">new</span> FileTxnSnapLog(config.getDataLogDir(), config.getDataDir()));</span><br><span class="line">            quorumPeer.enableLocalSessions(config.areLocalSessionsEnabled());</span><br><span class="line">            quorumPeer.enableLocalSessionsUpgrading(config.isLocalSessionsUpgradingEnabled());</span><br><span class="line">            quorumPeer.setElectionType(config.getElectionAlg()); <span class="comment">// 设置选举类型，默认为3</span></span><br><span class="line">            quorumPeer.setMyid(config.getServerId());</span><br><span class="line">            quorumPeer.setTickTime(config.getTickTime());</span><br><span class="line">            quorumPeer.setMinSessionTimeout(config.getMinSessionTimeout());</span><br><span class="line">            quorumPeer.setMaxSessionTimeout(config.getMaxSessionTimeout());</span><br><span class="line">            quorumPeer.setInitLimit(config.getInitLimit());</span><br><span class="line">            quorumPeer.setSyncLimit(config.getSyncLimit());</span><br><span class="line">            quorumPeer.setConfigFileName(config.getConfigFilename());</span><br><span class="line">            quorumPeer.setZKDatabase(<span class="keyword">new</span> ZKDatabase(quorumPeer.getTxnFactory())); <span class="comment">// 初始化内存数据库对象</span></span><br><span class="line">            quorumPeer.setQuorumVerifier(config.getQuorumVerifier(), <span class="keyword">false</span>);</span><br><span class="line">            quorumPeer.initConfigInZKDatabase();</span><br><span class="line">            quorumPeer.setCnxnFactory(cnxnFactory); <span class="comment">// 将上面创建的初始服务连接对象放入本服务节点对象</span></span><br><span class="line">            quorumPeer.setSecureCnxnFactory(secureCnxnFactory);</span><br><span class="line">            quorumPeer.setSslQuorum(config.isSslQuorum());</span><br><span class="line">            quorumPeer.setUsePortUnification(config.shouldUsePortUnification());</span><br><span class="line">            quorumPeer.setLearnerType(config.getPeerType());</span><br><span class="line">            quorumPeer.setSyncEnabled(config.getSyncEnabled());</span><br><span class="line">            quorumPeer.setQuorumListenOnAllIPs(config.getQuorumListenOnAllIPs());</span><br><span class="line">            quorumPeer.setQuorumSaslEnabled(config.quorumEnableSasl);</span><br><span class="line">            quorumPeer.setQuorumCnxnThreadsSize(config.quorumCnxnThreadsSize);</span><br><span class="line">            quorumPeer.initialize();</span><br><span class="line">            quorumPeer.start(); <span class="comment">// 启动服务节点</span></span><br><span class="line">            quorumPeer.join();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先判断当前myid是否在配置文件中配置的集群列表中，然后通过loadDataBase调用<strong><code>ZKDatabase</code></strong>的<strong><code>loadDataBase</code></strong>方法读取<strong>快照</strong>和<strong>事务日志</strong>后<strong>恢复服务器数据库</strong>。然后通过前面创建的<strong><code>NettyServerCnxnFactory</code></strong>的start方法<strong>启动<code>Netty</code>服务绑定<code>2181</code>端口</strong>。然后通过startLeaderElection方法初始化集群选举leader相关对象数据，最后执行<strong><code>QuorumPeer</code></strong>的run方法<strong>启动集群选举leader线程</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuorumPeer</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> <span class="keyword">implements</span> <span class="title">QuorumStats</span>.<span class="title">Provider</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!getView().containsKey(myid)) &#123; <span class="comment">// 判断当前myid是否在配置文件中配置的集群列表中</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"My id "</span> + myid + <span class="string">" not in the peer list"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        loadDataBase(); <span class="comment">// 加载文件数据到内存，读取快照和事务日志后恢复服务器数据库</span></span><br><span class="line">        startServerCnxnFactory(); <span class="comment">// 启动Netty服务</span></span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            adminServer.start(); <span class="comment">// 启动内嵌jetty服务，默认8080端口，用来查看服务端状态信息</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (AdminServerException e) &#123;</span><br><span class="line">            System.out.println(e);</span><br><span class="line">        &#125;</span><br><span class="line">        startLeaderElection();  <span class="comment">// 初始化集群选举leader相关对象数据</span></span><br><span class="line">        <span class="keyword">super</span>.start(); <span class="comment">// 执行当前类的run方法，启动集群选举leader线程</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="集群选举初始化"><a href="#集群选举初始化" class="headerlink" title="集群选举初始化"></a>集群选举初始化</h4><p>初始化集群选举leader相关对象数据，首先将<strong>当前选票<code>currentVote</code>设置为本节点</strong>，然后启动<strong><code>QuorumCnxManager.Listener</code></strong>线程类开启<strong><code>BIO</code>监听选举端口</strong>，然后<strong>通过<code>FastLeaderElection</code>启动快速选举算法相关的线程</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuorumPeer</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> <span class="keyword">implements</span> <span class="title">QuorumStats</span>.<span class="title">Provider</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">synchronized</span> <span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startLeaderElection</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (getPeerState() == ServerState.LOOKING) &#123; <span class="comment">// 初始时默认为ServerState.LOOKING</span></span><br><span class="line">                currentVote = <span class="keyword">new</span> Vote(myid, getLastLoggedZxid(), getCurrentEpoch()); <span class="comment">// 默认将当前选票置为当前节点</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            RuntimeException re = <span class="keyword">new</span> RuntimeException(e.getMessage());</span><br><span class="line">            re.setStackTrace(e.getStackTrace());</span><br><span class="line">            <span class="keyword">throw</span> re;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.electionAlg = createElectionAlgorithm(electionType); <span class="comment">// 初始化选举数据管理器，启动选举监听，启动快速选举算法相关的线程</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> Election <span class="title">createElectionAlgorithm</span><span class="params">(<span class="keyword">int</span> electionAlgorithm)</span> </span>&#123;</span><br><span class="line">        Election le = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">switch</span> (electionAlgorithm) &#123;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">3</span>: <span class="comment">// electionAlgorithm默认为3</span></span><br><span class="line">                QuorumCnxManager qcm = createCnxnManager(); <span class="comment">// 初始化选举数据管理器</span></span><br><span class="line">                QuorumCnxManager oldQcm = qcmRef.getAndSet(qcm); <span class="comment">// 将新建的选举数据管理器设置到qcmRef，并返回旧的</span></span><br><span class="line">                <span class="keyword">if</span> (oldQcm != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    oldQcm.halt(); <span class="comment">// 若旧的选举数据管理器不为null则关闭旧的</span></span><br><span class="line">                &#125;</span><br><span class="line">                QuorumCnxManager.Listener listener = qcm.listener;</span><br><span class="line">                <span class="keyword">if</span> (listener != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    listener.start(); <span class="comment">// 启动选举监听，调用QuorumCnxManager.Listener的run方法</span></span><br><span class="line">                    FastLeaderElection fle = <span class="keyword">new</span> FastLeaderElection(<span class="keyword">this</span>, qcm);</span><br><span class="line">                    fle.start(); <span class="comment">// 启动快速选举算法相关的线程</span></span><br><span class="line">                    le = fle;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                <span class="keyword">assert</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> le;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>开启<strong><code>BIO</code>监听选举端口</strong>，当接收到数据后通过<strong><code>receiveConnection</code></strong>处理接收到的数据，首先<strong>读取发送选票的机器<code>sid</code></strong>即该机器<strong><code>myid</code>文件中配置的值</strong>，由于Socket链接是<strong>全双工</strong>的为了<strong>防止重复链接的创建</strong>，Zookeeper<strong>只允许<code>sid</code>大的机器连接<code>sid</code>小的机器</strong>，若<strong>当前机器的<code>sid</code></strong>大于<strong>发送选票机器的<code>sid</code></strong>则关闭Socket连接，然后<strong>当前机器主动发起socket连接到发送选票的id较小的机器</strong>。若小于则为其创建一个独属的<strong>选票发送器线程</strong>和<strong>选票接收线程</strong>用于将来发送或接收选票使用，且将选票发送器与sid对应放入<strong><code>senderWorkerMap</code></strong>中缓存起来，且给发送选票sid机器初始化一个<strong>发送选票队列</strong>放入<strong><code>queueSendMap</code></strong>中。然后启动<strong>选票发送线程</strong>和<strong>选票接收线程</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Listener</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123; <span class="comment">// 使用普通的socket通信即BIO</span></span><br><span class="line">        <span class="keyword">int</span> numRetries = <span class="number">0</span>;</span><br><span class="line">        InetSocketAddress addr;</span><br><span class="line">        Socket client = <span class="keyword">null</span>;</span><br><span class="line">        Exception exitException = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">while</span> ((!shutdown) &amp;&amp; (portBindMaxRetry == <span class="number">0</span> || numRetries &lt; portBindMaxRetry)) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                ss = <span class="keyword">new</span> ServerSocket(); <span class="comment">// 初始化Socket</span></span><br><span class="line">                ss.setReuseAddress(<span class="keyword">true</span>);</span><br><span class="line">                self.recreateSocketAddresses(self.getId());</span><br><span class="line">                addr = self.getElectionAddress(); <span class="comment">// 获取进行选举的ip和端口，即配置文件中配置的当前服务的server.1=127.0.0.1:3001</span></span><br><span class="line">                setName(addr.toString());</span><br><span class="line">                ss.bind(addr); <span class="comment">// 绑定监听地址：127.0.0.1:3001</span></span><br><span class="line">                <span class="keyword">while</span> (!shutdown) &#123;</span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        client = ss.accept();   <span class="comment">// 在选举端口监听连接</span></span><br><span class="line">                        setSockOpts(client);</span><br><span class="line">                        <span class="keyword">if</span> (quorumSaslAuthEnabled) &#123;</span><br><span class="line">                            receiveConnectionAsync(client);</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                            receiveConnection(client); <span class="comment">// 接收连接数据</span></span><br><span class="line">                        &#125;</span><br><span class="line">                        numRetries = <span class="number">0</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuorumCnxManager</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">receiveConnection</span><span class="params">(<span class="keyword">final</span> Socket sock)</span> </span>&#123;</span><br><span class="line">        DataInputStream din = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            din = <span class="keyword">new</span> DataInputStream(<span class="keyword">new</span> BufferedInputStream(sock.getInputStream()));</span><br><span class="line">            handleConnection(sock, din); <span class="comment">// 处理连接信息</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            closeSocket(sock);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">handleConnection</span><span class="params">(Socket sock, DataInputStream din)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        Long sid = <span class="keyword">null</span>, protocolVersion = <span class="keyword">null</span>;</span><br><span class="line">        InetSocketAddress electionAddr = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            protocolVersion = din.readLong(); <span class="comment">// 读取发送选票的机器id，即myid文件中配置的值</span></span><br><span class="line">            <span class="keyword">if</span> (protocolVersion &gt;= <span class="number">0</span>) &#123; <span class="comment">// this is a server id and not a protocol version</span></span><br><span class="line">                sid = protocolVersion;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    InitialMessage init = InitialMessage.parse(protocolVersion, din);</span><br><span class="line">                    sid = init.sid;</span><br><span class="line">                    electionAddr = init.electionAddr;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InitialMessage.InitialMessageException ex) &#123;</span><br><span class="line">                    closeSocket(sock);</span><br><span class="line">                    <span class="keyword">return</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (sid == QuorumPeer.OBSERVER_ID) &#123;</span><br><span class="line">                sid = observerCounter.getAndDecrement();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            closeSocket(sock);</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        authServer.authenticate(sock, din); <span class="comment">// 认证权限相关的处理</span></span><br><span class="line">        <span class="keyword">if</span> (sid &lt; self.getId()) &#123; <span class="comment">// 若发送选票的机器id小于当前机器则关闭连接，为了防止机器之间相互重复的建立socket连接，不允许id小的机器连接id大的机器</span></span><br><span class="line">            SendWorker sw = senderWorkerMap.get(sid);</span><br><span class="line">            <span class="keyword">if</span> (sw != <span class="keyword">null</span>) &#123;</span><br><span class="line">                sw.finish();</span><br><span class="line">            &#125;</span><br><span class="line">            closeSocket(sock); <span class="comment">// 关闭Socket连接</span></span><br><span class="line">            <span class="keyword">if</span> (electionAddr != <span class="keyword">null</span>) &#123;</span><br><span class="line">                connectOne(sid, electionAddr);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                connectOne(sid); <span class="comment">// 当前机器主动发起socket连接到发送选票的id较小的机器</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (sid == self.getId()) &#123; <span class="comment">// 一般不可能发送，若发生可能是bug</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123; <span class="comment">// Otherwise start worker threads to receive data.</span></span><br><span class="line">            <span class="comment">// 在接收到选票时，就给发选票的机器建立一个选票发送器线程供将来发送选票使用，并启动发送线程</span></span><br><span class="line">            SendWorker sw = <span class="keyword">new</span> SendWorker(sock, sid); <span class="comment">// 给发送选票sid这台机器创建一个选票发送器</span></span><br><span class="line">            RecvWorker rw = <span class="keyword">new</span> RecvWorker(sock, din, sid, sw); <span class="comment">// 开启接收选票线程</span></span><br><span class="line">            sw.setRecv(rw);</span><br><span class="line">            SendWorker vsw = senderWorkerMap.get(sid);</span><br><span class="line">            <span class="keyword">if</span> (vsw != <span class="keyword">null</span>) &#123;</span><br><span class="line">                vsw.finish();</span><br><span class="line">            &#125;</span><br><span class="line">            senderWorkerMap.put(sid, sw); <span class="comment">// 将选票发送器与sid对应放入map</span></span><br><span class="line">            queueSendMap.putIfAbsent(sid, <span class="keyword">new</span> ArrayBlockingQueue&lt;ByteBuffer&gt;(SEND_CAPACITY)); <span class="comment">// 给发送选票sid机器初始化一个发送选票队列放入map</span></span><br><span class="line">            sw.start(); <span class="comment">// 启动选票发送线程</span></span><br><span class="line">            rw.start(); <span class="comment">// 启动选票接收线程</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在快速选举类<strong><code>FastLeaderElection</code></strong>的start方法中通过<strong><code>Messenger</code></strong>类启动了<strong>发送选票线程<code>WorkerSender</code></strong>和<strong>接收选票线程<code>WorkerReceiver</code></strong>。这里的两个线程与<strong><code>QuorumCnxManager.Listener</code></strong>中开启的<strong><code>SendWorker</code></strong>和<strong><code>RecvWorker</code></strong>组成了<strong><code>Leader</code>选举的多层队列架构</strong>。</p>
+<p><img src="../../../../../images/Zookeeper/Leader选举多层队列架构.png" alt></p>
+<p>这里可以将选举底层分为由<strong><code>WorkerSender</code></strong>和<strong><code>WorkerReceiver</code></strong>组成的<strong>选举应用层</strong>，以及由<strong><code>SendWorker</code></strong>和<strong><code>RecvWorker</code></strong>组成的<strong>选举传输层</strong>。应用层有自己的<strong>队列统一接收和发送选票</strong>，<strong>传输层也有自己的队列</strong>，且是<strong>按照发送机器分配的队列</strong>，<strong>避免给没太机器发送消息时相互影响</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FastLeaderElection</span> <span class="keyword">implements</span> <span class="title">Election</span> </span>&#123;</span><br><span class="line">    LinkedBlockingQueue&lt;ToSend&gt; sendqueue;</span><br><span class="line">    LinkedBlockingQueue&lt;Notification&gt; recvqueue;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FastLeaderElection</span><span class="params">(QuorumPeer self, QuorumCnxManager manager)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.stop = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">this</span>.manager = manager;</span><br><span class="line">        starter(self, manager);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">starter</span><span class="params">(QuorumPeer self, QuorumCnxManager manager)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.self = self;</span><br><span class="line">        proposedLeader = -<span class="number">1</span>;</span><br><span class="line">        proposedZxid = -<span class="number">1</span>;</span><br><span class="line">        sendqueue = <span class="keyword">new</span> LinkedBlockingQueue&lt;ToSend&gt;();</span><br><span class="line">        recvqueue = <span class="keyword">new</span> LinkedBlockingQueue&lt;Notification&gt;();</span><br><span class="line">        <span class="keyword">this</span>.messenger = <span class="keyword">new</span> Messenger(manager);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.wsThread.start(); <span class="comment">// 运行发送选票线程</span></span><br><span class="line">        <span class="keyword">this</span>.wrThread.start(); <span class="comment">// 运行接收选票线程</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">protected</span> <span class="class"><span class="keyword">class</span> <span class="title">Messenger</span> </span>&#123;</span><br><span class="line">    WorkerSender ws;</span><br><span class="line">    WorkerReceiver wr;</span><br><span class="line">    Messenger(QuorumCnxManager manager) &#123;</span><br><span class="line">        <span class="keyword">this</span>.ws = <span class="keyword">new</span> WorkerSender(manager); <span class="comment">// 用于发送选票的异步线程</span></span><br><span class="line">        <span class="keyword">this</span>.wsThread = <span class="keyword">new</span> Thread(<span class="keyword">this</span>.ws, <span class="string">"WorkerSender[myid="</span> + self.getId() + <span class="string">"]"</span>);</span><br><span class="line">        <span class="keyword">this</span>.wsThread.setDaemon(<span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.wr = <span class="keyword">new</span> WorkerReceiver(manager); <span class="comment">// 用于接收选票的异步线程</span></span><br><span class="line">        <span class="keyword">this</span>.wrThread = <span class="keyword">new</span> Thread(<span class="keyword">this</span>.wr, <span class="string">"WorkerReceiver[myid="</span> + self.getId() + <span class="string">"]"</span>);</span><br><span class="line">        <span class="keyword">this</span>.wrThread.setDaemon(<span class="keyword">true</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>应用层</strong>发送选票线程<code>WorkerSender</code>，首先从从<strong>应用层发送阻塞队列</strong>里获取选票信息，然后<strong>判断发送方是否为本节点</strong>，若<strong>为本节点</strong>则将选票信息放入<strong>传输层接收选票的阻塞队列<code>recvQueue</code>中</strong>由<strong><code>WorkerReceiver</code></strong>异步处理。若<strong>不为本节点</strong>则将选票信息<strong>放入传输层待发送队列</strong>由<strong><code>SendWorker</code></strong>异步处理。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WorkerSender</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span> (!stop) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                ToSend m = sendqueue.poll(<span class="number">3000</span>, TimeUnit.MILLISECONDS);  <span class="comment">// 从应用层发送阻塞队列里获取选票</span></span><br><span class="line">                <span class="keyword">if</span> (m == <span class="keyword">null</span>) <span class="keyword">continue</span>;</span><br><span class="line">                process(m); <span class="comment">// 处理取出的选票</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">process</span><span class="params">(ToSend m)</span> </span>&#123;</span><br><span class="line">        ByteBuffer requestBuffer = buildMsg(m.state.ordinal(), m.leader, m.zxid, m.electionEpoch, m.peerEpoch, m.configData);</span><br><span class="line">        manager.toSend(m.sid, requestBuffer);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuorumCnxManager</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">toSend</span><span class="params">(Long sid, ByteBuffer b)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">this</span>.mySid == sid) &#123; <span class="comment">// 若选票接收机器是自己，则放入本节点传输层接收队列中</span></span><br><span class="line">            b.position(<span class="number">0</span>);</span><br><span class="line">            addToRecvQueue(<span class="keyword">new</span> Message(b.duplicate(), sid));</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            ArrayBlockingQueue&lt;ByteBuffer&gt; bq = <span class="keyword">new</span> ArrayBlockingQueue&lt;ByteBuffer&gt;(SEND_CAPACITY);</span><br><span class="line">            ArrayBlockingQueue&lt;ByteBuffer&gt; oldq = queueSendMap.putIfAbsent(sid, bq);</span><br><span class="line">            <span class="keyword">if</span> (oldq != <span class="keyword">null</span>) &#123;</span><br><span class="line">                addToSendQueue(oldq, b); <span class="comment">// 放入传输层待发送队列</span></span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                addToSendQueue(bq, b); <span class="comment">// 放入传输层待发送队列</span></span><br><span class="line">            &#125;</span><br><span class="line">            connectOne(sid); <span class="comment">// 与对方sid机器建立连接</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addToRecvQueue</span><span class="params">(Message msg)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (recvQLock) &#123;</span><br><span class="line">            <span class="keyword">if</span> (recvQueue.remainingCapacity() == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    recvQueue.remove();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (NoSuchElementException ne) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                recvQueue.add(msg); <span class="comment">// 将接收到的选票丢入传输层接收选票的阻塞队列recvQueue中异步处理</span></span><br><span class="line">            &#125; <span class="keyword">catch</span> (IllegalStateException ie) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>应用层</strong>接收选票线程<code>WorkerReceiver</code>首先从<strong>应用层阻塞队列<code>recvQueue</code></strong>中取出选票，首先判断接收到的选票是否是由<strong>无投票权</strong>的节点，若是则将<strong>当前节点</strong>的<strong>投出的选票信息</strong>返回<strong>应用层发送队列</strong>中发送给发起方。否则判断单签节点状态，若为LOOKING状态则<strong>将选票信息放入应用层接收队列</strong>由<strong>传输层<code>RecvWorker</code></strong>线程去处理。且若<strong>发送选票方是选举状态且其选举周期小于本节点</strong>，则把本节点投出的选票回发给发送选票方，该情况可能是发送选票方节点后启动。若<strong>本节点状态不是<code>LOOKING</code></strong>但<strong>发送选票的节点状态为<code>LOOKING</code></strong>，则<strong>说明Leader已经明确</strong>，则<strong><code>currentVote</code></strong>中存储的是Leader节点的票据信息，则只需要将Leader的票据信息回发即可。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WorkerReceiver</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        Message response;</span><br><span class="line">        <span class="keyword">while</span> (!stop) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                response = manager.pollRecvQueue(<span class="number">3000</span>, TimeUnit.MILLISECONDS); <span class="comment">// 从传输层接收队列recvQueue中取出选票</span></span><br><span class="line">                <span class="keyword">if</span> (response == <span class="keyword">null</span>) <span class="keyword">continue</span>; <span class="comment">// 若未渠道则继续等待下一次获取选票</span></span><br><span class="line">                <span class="keyword">final</span> <span class="keyword">int</span> capacity = response.buffer.capacity();</span><br><span class="line">                <span class="keyword">if</span> (capacity &lt; <span class="number">28</span>) &#123;</span><br><span class="line">                    <span class="keyword">continue</span>; <span class="comment">// 当前协议和前两代协议至少发送28bytes</span></span><br><span class="line">                &#125;</span><br><span class="line">                response.buffer.clear();</span><br><span class="line">                Notification n = <span class="keyword">new</span> Notification();</span><br><span class="line">                <span class="keyword">int</span> rstate = response.buffer.getInt();</span><br><span class="line">                <span class="keyword">long</span> rleader = response.buffer.getLong();</span><br><span class="line">                <span class="keyword">long</span> rzxid = response.buffer.getLong();</span><br><span class="line">                <span class="keyword">long</span> relectionEpoch = response.buffer.getLong();</span><br><span class="line">                <span class="keyword">long</span> rpeerepoch;</span><br><span class="line">                <span class="keyword">int</span> version = <span class="number">0x0</span>;</span><br><span class="line">                QuorumVerifier rqv = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">if</span> (!validVoter(response.sid)) &#123; <span class="comment">// 若来自无投票权的节点则将当前节点投出的选票信息返回应用层发送队列中发送给发起方</span></span><br><span class="line">                    Vote current = self.getCurrentVote();</span><br><span class="line">                    QuorumVerifier qv = self.getQuorumVerifier();</span><br><span class="line">                    ToSend notmsg = <span class="keyword">new</span> ToSend(ToSend.mType.notification, current.getId(), current.getZxid(), logicalclock.get(), self.getPeerState(), response.sid, current.getPeerEpoch(), qv.toString().getBytes());</span><br><span class="line">                    sendqueue.offer(notmsg); <span class="comment">// 将当前的选票信息放回应用层发送队列中</span></span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    QuorumPeer.ServerState ackstate = QuorumPeer.ServerState.LOOKING;</span><br><span class="line">                    <span class="keyword">switch</span> (rstate) &#123;</span><br><span class="line">                        <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">                            ackstate = QuorumPeer.ServerState.LOOKING;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">                            ackstate = QuorumPeer.ServerState.FOLLOWING;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">case</span> <span class="number">2</span>:</span><br><span class="line">                            ackstate = QuorumPeer.ServerState.LEADING;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">case</span> <span class="number">3</span>:</span><br><span class="line">                            ackstate = QuorumPeer.ServerState.OBSERVING;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">default</span>:</span><br><span class="line">                            <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    n.leader = rleader;</span><br><span class="line">                    n.zxid = rzxid;</span><br><span class="line">                    n.electionEpoch = relectionEpoch;</span><br><span class="line">                    n.state = ackstate;</span><br><span class="line">                    n.sid = response.sid;</span><br><span class="line">                    n.peerEpoch = rpeerepoch;</span><br><span class="line">                    n.version = version;</span><br><span class="line">                    n.qv = rqv;</span><br><span class="line">                    <span class="keyword">if</span> (self.getPeerState() == QuorumPeer.ServerState.LOOKING) &#123;</span><br><span class="line">                        recvqueue.offer(n); <span class="comment">// 是本机且还处于选举状态，放入应用层接收队列，由RecvWorker线程去处理</span></span><br><span class="line">                        <span class="comment">// 若发送选票方是选举状态，且发送选票方选举周期小于自己，则把自己PK出来的选票回发给发送选票方</span></span><br><span class="line">                        <span class="keyword">if</span> ((ackstate == QuorumPeer.ServerState.LOOKING) &amp;&amp; (n.electionEpoch &lt; logicalclock.get())) &#123;</span><br><span class="line">                            Vote v = getVote();</span><br><span class="line">                            QuorumVerifier qv = self.getQuorumVerifier();</span><br><span class="line">                            ToSend notmsg = <span class="keyword">new</span> ToSend(ToSend.mType.notification, v.getId(), v.getZxid(), logicalclock.get(), self.getPeerState(), response.sid, v.getPeerEpoch(), qv.toString().getBytes());</span><br><span class="line">                            sendqueue.offer(notmsg); <span class="comment">// 把自己PK出来的选票回发给发送选票方，其实就是当前节点的投票发送回去</span></span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123; <span class="comment">// 若本节点状态不是LOOKING但发送选票的节点状态为LOOKING，则说明Leader已经明确，则只需要将Leader的票据信息返回即可</span></span><br><span class="line">                        Vote current = self.getCurrentVote(); <span class="comment">// 获取本节点当前的投票</span></span><br><span class="line">                        <span class="keyword">if</span> (ackstate == QuorumPeer.ServerState.LOOKING) &#123;</span><br><span class="line">                            QuorumVerifier qv = self.getQuorumVerifier();</span><br><span class="line">                            ToSend notmsg = <span class="keyword">new</span> ToSend(ToSend.mType.notification, current.getId(), current.getZxid(), current.getElectionEpoch(), self.getPeerState(), response.sid, current.getPeerEpoch(), qv.toString().getBytes());</span><br><span class="line">                            sendqueue.offer(notmsg); <span class="comment">// 把本节点的投票回发给发送选票方</span></span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) </span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> Message <span class="title">pollRecvQueue</span><span class="params">(<span class="keyword">long</span> timeout, TimeUnit unit)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> recvQueue.poll(timeout, unit);  <span class="comment">// 从传输层接收队列中取出选票</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>传输层</strong>接收选票线程<code>RecvWorker</code>，将<strong>接收到的选票信息</strong>放入<strong>传输层</strong>接收选票队列<strong><code>recvQueue</code></strong>中由<strong>应用层<code>WorkerReceiver</code>线程</strong>异步处理。这里接收到的选票信息是由<strong>其他节点的<code>SendWorker</code>线程发来</strong>的。<strong><code>RecvWorker</code>线程是每个连接的节点都创建了一个</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">RecvWorker</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        threadCnt.incrementAndGet();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">while</span> (running &amp;&amp; !shutdown &amp;&amp; sock != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">int</span> length = din.readInt();</span><br><span class="line">                <span class="keyword">if</span> (length &lt;= <span class="number">0</span> || length &gt; PACKETMAXSIZE) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Received packet with invalid packet: "</span> + length);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">byte</span>[] msgArray = <span class="keyword">new</span> <span class="keyword">byte</span>[length];</span><br><span class="line">                din.readFully(msgArray, <span class="number">0</span>, length);</span><br><span class="line">                ByteBuffer message = ByteBuffer.wrap(msgArray);</span><br><span class="line">                addToRecvQueue(<span class="keyword">new</span> Message(message.duplicate(), sid)); <span class="comment">// 将接收到的选票丢入recvQueue中异步处理</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            sw.finish();</span><br><span class="line">            closeSocket(sock);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addToRecvQueue</span><span class="params">(Message msg)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (recvQLock) &#123;</span><br><span class="line">        <span class="keyword">if</span> (recvQueue.remainingCapacity() == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                recvQueue.remove();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (NoSuchElementException ne) &#123;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            recvQueue.add(msg); <span class="comment">// 将接收到的选票丢入传输层接收选票队列recvQueue中由应用层WorkerReceiver线程异步处理</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (IllegalStateException ie) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>传输层</strong>发送选票线程<code>SendWorker</code>，这里队列中的数据是<strong>应用层</strong>发送选票线程<code>WorkerSender</code>放入队列中的，将选票数据从队列中取出发送给对应的节点，这里的<strong><code>SendWorker</code>线程是每个连接的节点都创建了一个</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">SendWorker</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        threadCnt.incrementAndGet();</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ArrayBlockingQueue&lt;ByteBuffer&gt; bq = queueSendMap.get(sid); <span class="comment">// 取出发送选票队列</span></span><br><span class="line">            <span class="keyword">if</span> (bq == <span class="keyword">null</span> || isSendQueueEmpty(bq)) &#123;</span><br><span class="line">                ByteBuffer b = lastMessageSent.get(sid);</span><br><span class="line">                <span class="keyword">if</span> (b != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    send(b); <span class="comment">// 发送选票</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">            <span class="keyword">this</span>.finish();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">while</span> (running &amp;&amp; !shutdown &amp;&amp; sock != <span class="keyword">null</span>) &#123;</span><br><span class="line">                ByteBuffer b = <span class="keyword">null</span>;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    ArrayBlockingQueue&lt;ByteBuffer&gt; bq = queueSendMap.get(sid); <span class="comment">// 取出发送选票的阻塞队列</span></span><br><span class="line">                    <span class="keyword">if</span> (bq != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        b = pollSendQueue(bq, <span class="number">1000</span>, TimeUnit.MILLISECONDS); <span class="comment">// 从阻塞队列中取出选票</span></span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (b != <span class="keyword">null</span>) &#123;</span><br><span class="line">                        lastMessageSent.put(sid, b);</span><br><span class="line">                        send(b); <span class="comment">// 发送选票</span></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.finish();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">send</span><span class="params">(ByteBuffer b)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">byte</span>[] msgBytes = <span class="keyword">new</span> <span class="keyword">byte</span>[b.capacity()];</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            b.position(<span class="number">0</span>);</span><br><span class="line">            b.get(msgBytes);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (BufferUnderflowException be) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        dout.writeInt(b.capacity());</span><br><span class="line">        dout.write(b.array());</span><br><span class="line">        dout.flush();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="集群选举启动"><a href="#集群选举启动" class="headerlink" title="集群选举启动"></a>集群选举启动</h4><p><strong><code>QuorumPeer</code></strong>就是一个Thread线程类，启动集群选举就是掉用该类的run方法来完成的。若本节点为<strong><code>LOOKING</code></strong>状态，不论是不是只读模式最终会通过<strong><code>makeLEStrategy().lookForLeader()</code></strong>调用<strong><code>FastLeaderElection</code></strong>的<strong><code>lookForLeader</code></strong>方法来完成选举功能。若本节点为LEADING状态，在<strong><code>Leader</code></strong>的<strong><code>lead()</code></strong>方法中会<strong>同步数据给从节点</strong>且会每隔一段时间给从节点<strong>发送<code>ping</code>消息保持长连接</strong>；若本节点为<strong><code>OBSERVING</code></strong>状态或<strong><code>FOLLOWING</code></strong>状态，在其<strong><code>Observer</code></strong>的<strong><code>observeLeader()</code></strong>方法和<strong><code>Follower</code></strong>的<strong><code>followLeader()</code></strong>方法中会<strong>与leader建立连接</strong>并接收leader数据同步且<strong>一直保持连接</strong>。不论是这三种哪种状态，若连接断开则将通过<strong><code>updateServerState()</code></strong>方法将本节点更新为LOOKING状态，然后重新进行选举。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuorumPeer</span> <span class="keyword">extends</span> <span class="title">ZooKeeperThread</span> <span class="keyword">implements</span> <span class="title">QuorumStats</span>.<span class="title">Provider</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="keyword">while</span> (running) &#123; <span class="comment">// 死循环根据当前节点状态做对应业务处理</span></span><br><span class="line">                <span class="keyword">switch</span> (getPeerState()) &#123; <span class="comment">// 获取本节点状态</span></span><br><span class="line">                    <span class="keyword">case</span> LOOKING:</span><br><span class="line">                        <span class="keyword">if</span> (Boolean.getBoolean(<span class="string">"readonlymode.enabled"</span>)) &#123; <span class="comment">// 只读模式</span></span><br><span class="line">                            <span class="keyword">final</span> ReadOnlyZooKeeperServer roZk = <span class="keyword">new</span> ReadOnlyZooKeeperServer(logFactory, <span class="keyword">this</span>, <span class="keyword">this</span>.zkDb);</span><br><span class="line">                            Thread roZkMgr = <span class="keyword">new</span> Thread() &#123;</span><br><span class="line">                                <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">                                    <span class="keyword">try</span> &#123;</span><br><span class="line">                                        sleep(Math.max(<span class="number">2000</span>, tickTime));</span><br><span class="line">                                        <span class="keyword">if</span> (ServerState.LOOKING.equals(getPeerState())) &#123;</span><br><span class="line">                                            roZk.startup();</span><br><span class="line">                                        &#125;</span><br><span class="line">                                    &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                                    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                                    &#125;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;;</span><br><span class="line">                            <span class="keyword">try</span> &#123;</span><br><span class="line">                                roZkMgr.start();</span><br><span class="line">                                reconfigFlagClear();</span><br><span class="line">                                <span class="keyword">if</span> (shuttingDownLE) &#123;</span><br><span class="line">                                    shuttingDownLE = <span class="keyword">false</span>;</span><br><span class="line">                                    startLeaderElection();</span><br><span class="line">                                &#125;</span><br><span class="line">                                setCurrentVote(makeLEStrategy().lookForLeader());</span><br><span class="line">                            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                                LOG.warn(<span class="string">"Unexpected exception"</span>, e);</span><br><span class="line">                                setPeerState(ServerState.LOOKING);</span><br><span class="line">                            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                                roZkMgr.interrupt();</span><br><span class="line">                                roZk.shutdown();</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                            <span class="keyword">try</span> &#123; <span class="comment">// 这里的Leader选举策略默认是FastLeaderElection</span></span><br><span class="line">                                reconfigFlagClear(); <span class="comment">// 将reconfigFlag置为false，在updateServerState()方法中会用到</span></span><br><span class="line">                                <span class="keyword">if</span> (shuttingDownLE) &#123;</span><br><span class="line">                                    shuttingDownLE = <span class="keyword">false</span>;</span><br><span class="line">                                    startLeaderElection();</span><br><span class="line">                                &#125;</span><br><span class="line">                                setCurrentVote(makeLEStrategy().lookForLeader()); <span class="comment">// 调用FastLeaderElection的lookForLeader方法</span></span><br><span class="line">                            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                                setPeerState(ServerState.LOOKING);</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    <span class="keyword">case</span> OBSERVING:</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            setObserver(makeObserver(logFactory));</span><br><span class="line">                            observer.observeLeader();</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                            observer.shutdown();</span><br><span class="line">                            setObserver(<span class="keyword">null</span>);</span><br><span class="line">                            updateServerState();</span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    <span class="keyword">case</span> FOLLOWING:</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            setFollower(makeFollower(logFactory));</span><br><span class="line">                            follower.followLeader(); <span class="comment">// 与leader建立连接并接收leader数据同步</span></span><br><span class="line">                        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                            follower.shutdown();</span><br><span class="line">                            setFollower(<span class="keyword">null</span>);</span><br><span class="line">                            updateServerState(); <span class="comment">// 将自己的状态改为LOOKING，进入下一轮选举</span></span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    <span class="keyword">case</span> LEADING:</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            setLeader(makeLeader(logFactory));</span><br><span class="line">                            leader.lead();</span><br><span class="line">                            setLeader(<span class="keyword">null</span>);</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                            <span class="keyword">if</span> (leader != <span class="keyword">null</span>) &#123;</span><br><span class="line">                                leader.shutdown(<span class="string">"Forcing shutdown"</span>);</span><br><span class="line">                                setLeader(<span class="keyword">null</span>);</span><br><span class="line">                            &#125;</span><br><span class="line">                            updateServerState();</span><br><span class="line">                        &#125;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                start_fle = Time.currentElapsedTime();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">updateServerState</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!reconfigFlag) &#123; <span class="comment">// 进行选举流程时会通过reconfigFlagClear()方法先将reconfigFlag置为false</span></span><br><span class="line">        setPeerState(ServerState.LOOKING);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (getId() == getCurrentVote().getId()) &#123;</span><br><span class="line">        setPeerState(ServerState.LEADING);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (getLearnerType() == LearnerType.PARTICIPANT) &#123;</span><br><span class="line">        setPeerState(ServerState.FOLLOWING);</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (getLearnerType() == LearnerType.OBSERVER) &#123;</span><br><span class="line">        setPeerState(ServerState.OBSERVING);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123; <span class="comment">// currently shouldn't happen since there are only 2 learner types</span></span><br><span class="line">        setPeerState(ServerState.LOOKING);</span><br><span class="line">    &#125;</span><br><span class="line">    reconfigFlag = <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Leader选举首先会将<strong>本节点选举周期加一</strong>，其<strong>初始化选票为本节点</strong>，然后将给自己的投票通过<strong><code>sendNotifications</code></strong>将选票放入<strong>应用层发送队列</strong>由<strong><code>WorkerSender</code></strong>线程异步处理。然后通过while循环对接收到的选票进行处理，首先从<strong>应用层接收队列中取出接收到的选票</strong>，第一次启动时<strong>没有选票</strong>会<strong>跟需要发送选票的机器建立连接</strong>，若获取到选票先<strong>判断发送选票方选票是否有效</strong>即判断发送选票方<strong><code>sid</code></strong>与<strong>选票</strong>是否在<strong><code>votingMembers</code></strong>中，然后根据发送方的状态走不同的逻辑。</p>
+<p>若<strong>发送选票方为<code>LOOKING</code>状态</strong>即<strong>选举主线</strong>，首先判断<strong>发送选票方</strong>选举周期<strong>大于本节点选举周期</strong>，该情况<strong>可能</strong>是本节点<strong>后启动</strong>加入集群选举或<strong>网络中断恢复后加入集群选举</strong>，其他机器都选举好几轮了，故需要更新本节点选举周期到最新，然后<strong>清空之前的选票箱</strong>，然后通过<strong><code>totalOrderPredicate</code></strong>进行选票PK，并将最终通过<strong><code>updateProposal</code></strong>方法将PK获胜的选票更新，最后<strong>将获胜的选票发送给所有其他参与投票的节点</strong>。若<strong>发送选票方</strong>选举周期<strong>小于本节点选举周期</strong>，一般是发送选票的机器刚加入到集群选举，发起投它自己的选票，这种选票一般废弃掉；若<strong>选举周期相等</strong>，则将<strong>发送方节点投递的选票</strong>和<strong>本节点投递的选票</strong>进行选票PK，若<strong>发送方节点投递的选票获胜</strong>则将选票更新并发送给所有参与选票的节点；</p>
+<p>将收到的选票放入选票箱中，然后通过<strong>过半数选举<code>leader</code>逻辑</strong>，判断是否已经产生了leader，若已产生会查看是否有新选票加入，若有再做一次PK，<strong>若新选票获胜则重新选举</strong>，若没有新选票加入则返回最终的Leader设置到<strong><code>currentVote</code></strong>属性中。</p>
+<p>若<strong>发送方节点</strong>为<strong><code>OBSERVING</code>状态</strong>则直接退出不参与选举，若发送选票方节点为<strong><code>FOLLOWING</code></strong>或<strong><code>LEADING</code></strong>状态，一般是<strong>本节点去加入已经选出<code>leader</code>的集群</strong>，本节点处于LOKING状态会先将选票投给自己，其他机器接收到后回发已选出的集群leader选票给本节点。直接将收到的集群选票做<strong>过半数选举<code>leader</code>逻辑</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FastLeaderElection</span> <span class="keyword">implements</span> <span class="title">Election</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Vote <span class="title">lookForLeader</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (self.start_fle == <span class="number">0</span>) &#123;</span><br><span class="line">            self.start_fle = Time.currentElapsedTime();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            HashMap&lt;Long, Vote&gt; recvset = <span class="keyword">new</span> HashMap&lt;Long, Vote&gt;();</span><br><span class="line">            HashMap&lt;Long, Vote&gt; outofelection = <span class="keyword">new</span> HashMap&lt;Long, Vote&gt;();</span><br><span class="line">            <span class="keyword">int</span> notTimeout = finalizeWait;</span><br><span class="line">            <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">                logicalclock.incrementAndGet(); <span class="comment">// 选举周期加一</span></span><br><span class="line">                updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch()); <span class="comment">// 初始化选票为自己</span></span><br><span class="line">            &#125;</span><br><span class="line">            sendNotifications(); <span class="comment">// 发送选票选自己</span></span><br><span class="line">            <span class="comment">// 当前节点是选举状态会不断从应用层接收队列中获取选票做选举</span></span><br><span class="line">            <span class="keyword">while</span> ((self.getPeerState() == ServerState.LOOKING) &amp;&amp; (!stop)) &#123;</span><br><span class="line">                <span class="comment">// 从应用层接收队列中取出接收到的选票</span></span><br><span class="line">                Notification n = recvqueue.poll(notTimeout, TimeUnit.MILLISECONDS);</span><br><span class="line">                <span class="keyword">if</span> (n == <span class="keyword">null</span>) &#123; <span class="comment">// 第一次启动时肯定没有选票，这时会跟需要发送选票的机器建立连接</span></span><br><span class="line">                    <span class="keyword">if</span> (manager.haveDelivered()) &#123;</span><br><span class="line">                        sendNotifications();</span><br><span class="line">                    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                        manager.connectAll();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">int</span> tmpTimeOut = notTimeout * <span class="number">2</span>;</span><br><span class="line">                    notTimeout = (tmpTimeOut &lt; maxNotificationInterval ? tmpTimeOut : maxNotificationInterval);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (validVoter(n.sid) &amp;&amp; validVoter(n.leader)) &#123;<span class="comment">// 判断发送选票方选票是否有效，其实就是判断sid与选票是否在votingMembers中</span></span><br><span class="line">                    <span class="keyword">switch</span> (n.state) &#123; <span class="comment">// 根据发送方的状态走不同的逻辑</span></span><br><span class="line">                        <span class="keyword">case</span> LOOKING: <span class="comment">// 选举主线</span></span><br><span class="line">                            <span class="comment">// 接收的选票选举周期大于自己的选举周期，1.可能是自己后启动加入集群选举；2.网络中断恢复后加入集群选举；其他机器都选举好几轮了，所以需要更新自己的选举周期到最新</span></span><br><span class="line">                            <span class="keyword">if</span> (n.electionEpoch &gt; logicalclock.get()) &#123;</span><br><span class="line">                                logicalclock.set(n.electionEpoch); <span class="comment">// 更新自己的选举周期到最新</span></span><br><span class="line">                                recvset.clear(); <span class="comment">// 清空之前的选票箱</span></span><br><span class="line">                                <span class="comment">// 选票PK，因为自己选举周期落后，可能是刚加入集群选举，所以是拿收到的选票跟给自己的选票做PK</span></span><br><span class="line">                                <span class="keyword">if</span> (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, getInitId(), getInitLastLoggedZxid(), getPeerEpoch())) &#123;</span><br><span class="line">                                    updateProposal(n.leader, n.zxid, n.peerEpoch); <span class="comment">// 接收到的选票获胜，更新选票</span></span><br><span class="line">                                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                                    updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch()); <span class="comment">// 本节点获胜，更新选票</span></span><br><span class="line">                                &#125;</span><br><span class="line">                                sendNotifications(); <span class="comment">// 发送选票给其他参与选举的所有节点</span></span><br><span class="line">                            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (n.electionEpoch &lt; logicalclock.get()) &#123;</span><br><span class="line">                                <span class="keyword">break</span>;<span class="comment">// 接收的选票选举周期小于自己的选举周期，一般发送选票的机器刚加入到集群选举，发起投它自己的选票，这种选票一般废弃掉</span></span><br><span class="line">                            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) &#123;</span><br><span class="line">                                <span class="comment">// 接收的选票的选举周期等于自己，说明大家一直都在参与选举，则在选举PK时需要拿收到的选票跟之前本机投的选票做PK</span></span><br><span class="line">                                updateProposal(n.leader, n.zxid, n.peerEpoch); <span class="comment">// 接收到的选票获胜，更新选票</span></span><br><span class="line">                                sendNotifications(); <span class="comment">// 发送选票给其他参与选举的所有节点</span></span><br><span class="line">                            &#125;</span><br><span class="line">                            recvset.put(n.sid, <span class="keyword">new</span> Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch)); <span class="comment">// 将接收到的选票放入选票箱</span></span><br><span class="line">                            <span class="keyword">if</span> (termPredicate(recvset, <span class="keyword">new</span> Vote(proposedLeader, proposedZxid, logicalclock.get(), proposedEpoch))) &#123; <span class="comment">// 过半数选举leader逻辑</span></span><br><span class="line">                                <span class="comment">// 虽然termPredicate已经选出leader，但需要查看是否有新选票加入，若有再做一次PK，若新选票获胜则重新选举</span></span><br><span class="line">                                <span class="keyword">while</span> ((n = recvqueue.poll(finalizeWait, TimeUnit.MILLISECONDS)) != <span class="keyword">null</span>) &#123;</span><br><span class="line">                                    <span class="keyword">if</span> (totalOrderPredicate(n.leader, n.zxid, n.peerEpoch, proposedLeader, proposedZxid, proposedEpoch)) &#123;</span><br><span class="line">                                        recvqueue.put(n);</span><br><span class="line">                                        <span class="keyword">break</span>; <span class="comment">// 若新选票获胜则重新选举，则退出重新选举</span></span><br><span class="line">                                    &#125;</span><br><span class="line">                                &#125;</span><br><span class="line">                                <span class="keyword">if</span> (n == <span class="keyword">null</span>) &#123;</span><br><span class="line">                                    <span class="comment">// 若选出的Leader节点是当前节点，则设置为LEADING，否则设置为FOLLOWING或OBSERVING</span></span><br><span class="line">                                    self.setPeerState((proposedLeader == self.getId()) ? ServerState.LEADING : learningState());</span><br><span class="line">                                    Vote endVote = <span class="keyword">new</span> Vote(proposedLeader, proposedZxid, logicalclock.get(), proposedEpoch);</span><br><span class="line">                                    leaveInstance(endVote);</span><br><span class="line">                                    <span class="keyword">return</span> endVote; <span class="comment">// 返回选出的Leader并设置到本节点的currentVote属性中</span></span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">case</span> OBSERVING: <span class="comment">// 若是OBSERVING状态的节点则不参与选举</span></span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">case</span> FOLLOWING:</span><br><span class="line">                        <span class="keyword">case</span> LEADING:</span><br><span class="line">                            <span class="comment">// FOLLOWING和LEADING状态的都会走该逻辑，这种状态一般是已经选出leader的集群有新机器加入，新机器处于LOKING状态，会先将选票投给自己</span></span><br><span class="line">                            <span class="comment">// 其他机器接收到后会发已选出的集群leader选票给该机器，该选票的发送方状态就是LEADING或FOLLOWING</span></span><br><span class="line">                            <span class="keyword">if</span> (n.electionEpoch == logicalclock.get()) &#123; <span class="comment">// 若选举周期相等</span></span><br><span class="line">                                recvset.put(n.sid, <span class="keyword">new</span> Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch));</span><br><span class="line">                                <span class="comment">// 判断n的选票是否超过半数</span></span><br><span class="line">                                <span class="keyword">if</span> (termPredicate(recvset, <span class="keyword">new</span> Vote(n.version, n.leader, n.zxid, n.electionEpoch, n.peerEpoch, n.state))</span><br><span class="line">                                    &amp;&amp; checkLeader(outofelection, n.leader, n.electionEpoch)) &#123;</span><br><span class="line">                                    self.setPeerState((n.leader == self.getId()) ? ServerState.LEADING : learningState());</span><br><span class="line">                                    Vote endVote = <span class="keyword">new</span> Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch);</span><br><span class="line">                                    leaveInstance(endVote);</span><br><span class="line">                                    <span class="keyword">return</span> endVote;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                            outofelection.put(n.sid, <span class="keyword">new</span> Vote(n.version, n.leader, n.zxid, n.electionEpoch, n.peerEpoch, n.state));</span><br><span class="line">                            <span class="keyword">if</span> (termPredicate(outofelection, <span class="keyword">new</span> Vote(n.version, n.leader, n.zxid, n.electionEpoch, n.peerEpoch, n.state))</span><br><span class="line">                                &amp;&amp; checkLeader(outofelection, n.leader, n.electionEpoch)) &#123;</span><br><span class="line">                                <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">                                    logicalclock.set(n.electionEpoch);</span><br><span class="line">                                    self.setPeerState((n.leader == self.getId()) ? ServerState.LEADING : learningState());</span><br><span class="line">                                &#125;</span><br><span class="line">                                Vote endVote = <span class="keyword">new</span> Vote(n.leader, n.zxid, n.electionEpoch, n.peerEpoch);</span><br><span class="line">                                leaveInstance(endVote);</span><br><span class="line">                                <span class="keyword">return</span> endVote;</span><br><span class="line">                            &#125;</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                        <span class="keyword">default</span>:</span><br><span class="line">                            <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">updateProposal</span><span class="params">(<span class="keyword">long</span> leader, <span class="keyword">long</span> zxid, <span class="keyword">long</span> epoch)</span> </span>&#123;</span><br><span class="line">    proposedLeader = leader;</span><br><span class="line">    proposedZxid = zxid;</span><br><span class="line">    proposedEpoch = epoch;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">sendNotifications</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">long</span> sid : self.getCurrentAndNextConfigVoters()) &#123;</span><br><span class="line">        QuorumVerifier qv = self.getQuorumVerifier();</span><br><span class="line">        <span class="comment">// 选票中最大zxid是从内存树中取得</span></span><br><span class="line">        ToSend notmsg = <span class="keyword">new</span> ToSend(ToSend.mType.notification, proposedLeader, proposedZxid, logicalclock.get(), QuorumPeer.ServerState.LOOKING, sid, proposedEpoch, qv.toString().getBytes());</span><br><span class="line">        sendqueue.offer(notmsg); <span class="comment">// 给所有其他参与投票的节点发送选票到应用层发送队列</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于选票的PK逻辑，首先<strong>比较选票的选举周期</strong>，若前者的选票的<strong>选举周期大于</strong>后者的则返回<strong><code>true</code></strong>，若选举周期相等则比较<strong>最大事务<code>zxid</code></strong>，若前者大返回true，若最大事务zxid也相等，则比较<strong><code>sid</code></strong>或者叫<strong><code>myid</code></strong>，若前者大返回true，否则返回false；</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">totalOrderPredicate</span><span class="params">(<span class="keyword">long</span> newId, <span class="keyword">long</span> newZxid, <span class="keyword">long</span> newEpoch, <span class="keyword">long</span> curId, <span class="keyword">long</span> curZxid, <span class="keyword">long</span> curEpoch)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (self.getQuorumVerifier().getWeight(newId) == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 首先比较收到的选票的选举周期，若收到的选票的选举周期大于当前的则返回true，若选举周期相同，比较zxid，若选举周期相同，zxid也相同，则比较myid</span></span><br><span class="line">    <span class="keyword">return</span> ((newEpoch &gt; curEpoch) || ((newEpoch == curEpoch) &amp;&amp; ((newZxid &gt; curZxid) || ((newZxid == curZxid) &amp;&amp; (newId &gt; curId)))));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>过半数选举leader逻辑，是判断<strong>选票箱中<code>vote</code>的选票</strong>是否超过<strong>参与选举机器</strong>的半数，没有超过半数则返回false；</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">termPredicate</span><span class="params">(Map&lt;Long, Vote&gt; votes, Vote vote)</span> </span>&#123; <span class="comment">// 过半数选举leader逻辑，判断vote的选票是否超过半数</span></span><br><span class="line">    SyncedLearnerTracker voteSet = <span class="keyword">new</span> SyncedLearnerTracker();</span><br><span class="line">    voteSet.addQuorumVerifier(self.getQuorumVerifier());</span><br><span class="line">    <span class="keyword">if</span> (self.getLastSeenQuorumVerifier() != <span class="keyword">null</span> &amp;&amp; self.getLastSeenQuorumVerifier().getVersion() &gt; self.getQuorumVerifier().getVersion()) &#123;</span><br><span class="line">        voteSet.addQuorumVerifier(self.getLastSeenQuorumVerifier());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 遍历选票箱中收到的选票与本机投的leader选票对比，若相等，则将投票机器sid加入到选票箱</span></span><br><span class="line">    <span class="keyword">for</span> (Map.Entry&lt;Long, Vote&gt; entry : votes.entrySet()) &#123;</span><br><span class="line">        <span class="keyword">if</span> (vote.equals(entry.getValue())) &#123;</span><br><span class="line">            voteSet.addAck(entry.getKey());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> voteSet.hasAllQuorums(); <span class="comment">// 判断投票机器是否超过半数，超过半数返回true</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SyncedLearnerTracker</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">hasAllQuorums</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (QuorumVerifierAcksetPair qvAckset : qvAcksetPairs) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!qvAckset.getQuorumVerifier().containsQuorum(qvAckset.getAckset()))</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">false</span>; <span class="comment">// containsQuorum判断投票机器是否超过半数</span></span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuorumMaj</span> <span class="keyword">implements</span> <span class="title">QuorumVerifier</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">containsQuorum</span><span class="params">(Set&lt;Long&gt; ackSet)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (ackSet.size() &gt; half);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>若本节点为<strong><code>OBSERVING</code></strong>状态，则通过makeObserver新建一个<strong><code>Observer</code></strong>类然后调用其<strong><code>observeLeader()</code></strong>方法，与leader建立连接并接收leader数据同步且<strong>一直保持连接</strong>，若连接断开会将observer关闭后置空且将当前节点状态置为<strong><code>LOOKING</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Observer</span> <span class="keyword">extends</span> <span class="title">Learner</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">observeLeader</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        zk.registerJMX(<span class="keyword">new</span> ObserverBean(<span class="keyword">this</span>, zk), self.jmxLocalPeerBean);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            QuorumServer leaderServer = findLeader();</span><br><span class="line">            <span class="keyword">try</span> &#123; <span class="comment">// 连接到leader节点交换信息的端口，如配置的2001</span></span><br><span class="line">                connectToLeader(leaderServer.addr, leaderServer.hostname);<span class="comment">// 主动向leader发起socket连接</span></span><br><span class="line">                <span class="keyword">long</span> newLeaderZxid = registerWithLeader(Leader.OBSERVERINFO);<span class="comment">// 注册自己到Leader</span></span><br><span class="line">                <span class="keyword">if</span> (self.isReconfigStateChange())</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> Exception(<span class="string">"learned about role change"</span>);</span><br><span class="line">                syncWithLeader(newLeaderZxid);<span class="comment">// 同步leader数据</span></span><br><span class="line">                QuorumPacket qp = <span class="keyword">new</span> QuorumPacket();</span><br><span class="line">                <span class="keyword">while</span> (<span class="keyword">this</span>.isRunning()) &#123; <span class="comment">// 死循环获取数据且保持连接</span></span><br><span class="line">                    readPacket(qp);<span class="comment">// 若leader挂了，这里从leader取数据时会抛出异常退出循环</span></span><br><span class="line">                    processPacket(qp);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    sock.close();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException e1) &#123;</span><br><span class="line">                    e1.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                pendingRevalidations.clear();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>若本节点为<strong><code>FOLLOWING</code></strong>状态，其逻辑和<strong><code>OBSERVING</code></strong>状态的节点类似。若连接断开会将observer关闭后置空且将当前节点状态置为<strong><code>LOOKING</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Follower</span> <span class="keyword">extends</span> <span class="title">Learner</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">followLeader</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        self.end_fle = Time.currentElapsedTime();</span><br><span class="line">        <span class="keyword">long</span> electionTimeTaken = self.end_fle - self.start_fle;</span><br><span class="line">        self.setElectionTimeTaken(electionTimeTaken);</span><br><span class="line">        self.start_fle = <span class="number">0</span>;</span><br><span class="line">        self.end_fle = <span class="number">0</span>;</span><br><span class="line">        fzk.registerJMX(<span class="keyword">new</span> FollowerBean(<span class="keyword">this</span>, zk), self.jmxLocalPeerBean);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            QuorumServer leaderServer = findLeader();  <span class="comment">// 获取leader server</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                connectToLeader(leaderServer.addr, leaderServer.hostname); <span class="comment">// 主动向leader发起socket连接</span></span><br><span class="line">                <span class="keyword">long</span> newEpochZxid = registerWithLeader(Leader.FOLLOWERINFO); <span class="comment">// 注册自己到Leader</span></span><br><span class="line">                <span class="keyword">if</span> (self.isReconfigStateChange())</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> Exception(<span class="string">"learned about role change"</span>);</span><br><span class="line">                <span class="keyword">long</span> newEpoch = ZxidUtils.getEpochFromZxid(newEpochZxid);</span><br><span class="line">                <span class="keyword">if</span> (newEpoch &lt; self.getAcceptedEpoch()) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Error: Epoch of leader is lower"</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                syncWithLeader(newEpochZxid); <span class="comment">// 同步leader数据</span></span><br><span class="line">                QuorumPacket qp = <span class="keyword">new</span> QuorumPacket();</span><br><span class="line">                <span class="keyword">while</span> (<span class="keyword">this</span>.isRunning()) &#123; <span class="comment">// while死循环接收leader同步的数据</span></span><br><span class="line">                    readPacket(qp); <span class="comment">// 若leader挂了，这里从leader取数据时会抛出异常退出循环</span></span><br><span class="line">                    processPacket(qp);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    sock.close();</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException e1) &#123;</span><br><span class="line">                    e1.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                pendingRevalidations.clear();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            zk.unregisterJMX((Learner)<span class="keyword">this</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>若本节点为<strong><code>LEADING</code></strong>状态，其逻辑与<strong><code>OBSERVING</code></strong>和<strong><code>FOLLOWING</code></strong>状态的节点有一点区别，这里是调用Leader的lead()方法，首先会通过<strong><code>LearnerCnxAcceptor</code>同步数据给从节点</strong>，然后<strong>每隔一段时间给从节点发送ping消息保持长连接</strong>。若连接断开会将observer关闭后置空且将当前节点状态置为<strong><code>LOOKING</code></strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Leader</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">lead</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">        self.end_fle = Time.currentElapsedTime();</span><br><span class="line">        <span class="keyword">long</span> electionTimeTaken = self.end_fle - self.start_fle;</span><br><span class="line">        self.setElectionTimeTaken(electionTimeTaken);</span><br><span class="line">        self.start_fle = <span class="number">0</span>;</span><br><span class="line">        self.end_fle = <span class="number">0</span>;</span><br><span class="line">        zk.registerJMX(<span class="keyword">new</span> LeaderBean(<span class="keyword">this</span>, zk), self.jmxLocalPeerBean);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            self.tick.set(<span class="number">0</span>);</span><br><span class="line">            zk.loadData(); <span class="comment">// 初始化LeaderZookeeperServer数据</span></span><br><span class="line">            leaderStateSummary = <span class="keyword">new</span> StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());</span><br><span class="line">            cnxAcceptor = <span class="keyword">new</span> LearnerCnxAcceptor();</span><br><span class="line">            cnxAcceptor.start();  <span class="comment">// 同步数据给从节点</span></span><br><span class="line">            <span class="keyword">long</span> epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());</span><br><span class="line">            zk.setZxid(ZxidUtils.makeZxid(epoch, <span class="number">0</span>));</span><br><span class="line">            <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">                lastProposed = zk.getZxid();</span><br><span class="line">            &#125;</span><br><span class="line">            newLeaderProposal.packet = <span class="keyword">new</span> QuorumPacket(NEWLEADER, zk.getZxid(), <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">            QuorumVerifier lastSeenQV = self.getLastSeenQuorumVerifier();</span><br><span class="line">            QuorumVerifier curQV = self.getQuorumVerifier();</span><br><span class="line">            <span class="keyword">if</span> (curQV.getVersion() == <span class="number">0</span> &amp;&amp; curQV.getVersion() == lastSeenQV.getVersion()) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    QuorumVerifier newQV = self.configFromString(curQV.toString());</span><br><span class="line">                    newQV.setVersion(zk.getZxid());</span><br><span class="line">                    self.setLastSeenQuorumVerifier(newQV, <span class="keyword">true</span>);    </span><br><span class="line">                &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> IOException(e);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            newLeaderProposal.addQuorumVerifier(self.getQuorumVerifier());</span><br><span class="line">            <span class="keyword">if</span> (self.getLastSeenQuorumVerifier().getVersion() &gt; self.getQuorumVerifier().getVersion())&#123;</span><br><span class="line">                newLeaderProposal.addQuorumVerifier(self.getLastSeenQuorumVerifier());</span><br><span class="line">            &#125;</span><br><span class="line">            waitForEpochAck(self.getId(), leaderStateSummary);</span><br><span class="line">            self.setCurrentEpoch(epoch);</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                waitForNewLeaderAck(self.getId(), zk.getZxid());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                shutdown(<span class="string">"Waiting for a quorum of followers, only synced with sids: [ "</span> + newLeaderProposal.ackSetsToString() + <span class="string">" ]"</span>);</span><br><span class="line">                HashSet&lt;Long&gt; followerSet = <span class="keyword">new</span> HashSet&lt;Long&gt;();</span><br><span class="line">                <span class="keyword">for</span>(LearnerHandler f : getLearners()) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (self.getQuorumVerifier().getVotingMembers().containsKey(f.getSid()))&#123;</span><br><span class="line">                        followerSet.add(f.getSid());</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;    </span><br><span class="line">                <span class="keyword">boolean</span> initTicksShouldBeIncreased = <span class="keyword">true</span>;</span><br><span class="line">                <span class="keyword">for</span> (Proposal.QuorumVerifierAcksetPair qvAckset:newLeaderProposal.qvAcksetPairs) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (!qvAckset.getQuorumVerifier().containsQuorum(followerSet)) &#123;</span><br><span class="line">                        initTicksShouldBeIncreased = <span class="keyword">false</span>;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">return</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            startZkServer();</span><br><span class="line">            String initialZxid = System.getProperty(<span class="string">"zookeeper.testingonly.initialZxid"</span>);</span><br><span class="line">            <span class="keyword">if</span> (initialZxid != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">long</span> zxid = Long.parseLong(initialZxid);</span><br><span class="line">                zk.setZxid((zk.getZxid() &amp; <span class="number">0xffffffff00000000L</span>) | zxid);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!System.getProperty(<span class="string">"zookeeper.leaderServes"</span>, <span class="string">"yes"</span>).equals(<span class="string">"no"</span>)) &#123;</span><br><span class="line">                self.setZooKeeperServer(zk);</span><br><span class="line">            &#125;</span><br><span class="line">            self.adminServer.setZooKeeperServer(zk);</span><br><span class="line">            <span class="keyword">boolean</span> tickSkip = <span class="keyword">true</span>;</span><br><span class="line">            String shutdownMessage = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">                    <span class="keyword">long</span> start = Time.currentElapsedTime();</span><br><span class="line">                    <span class="keyword">long</span> cur = start;</span><br><span class="line">                    <span class="keyword">long</span> end = start + self.tickTime / <span class="number">2</span>;</span><br><span class="line">                    <span class="keyword">while</span> (cur &lt; end) &#123;</span><br><span class="line">                        wait(end - cur);</span><br><span class="line">                        cur = Time.currentElapsedTime();</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (!tickSkip) &#123;</span><br><span class="line">                        self.tick.incrementAndGet();</span><br><span class="line">                    &#125;</span><br><span class="line">                    SyncedLearnerTracker syncedAckSet = <span class="keyword">new</span> SyncedLearnerTracker();</span><br><span class="line">                    syncedAckSet.addQuorumVerifier(self.getQuorumVerifier());</span><br><span class="line">                    <span class="keyword">if</span> (self.getLastSeenQuorumVerifier() != <span class="keyword">null</span> &amp;&amp; self.getLastSeenQuorumVerifier().getVersion() &gt; self.getQuorumVerifier().getVersion()) &#123;</span><br><span class="line">                        syncedAckSet.addQuorumVerifier(self.getLastSeenQuorumVerifier());</span><br><span class="line">                    &#125;</span><br><span class="line">                    syncedAckSet.addAck(self.getId());</span><br><span class="line">                    <span class="keyword">for</span> (LearnerHandler f : getLearners()) &#123;</span><br><span class="line">                        <span class="keyword">if</span> (f.synced()) &#123;</span><br><span class="line">                            syncedAckSet.addAck(f.getSid());</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (!<span class="keyword">this</span>.isRunning()) &#123;</span><br><span class="line">                        shutdownMessage = <span class="string">"Unexpected internal error"</span>;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">if</span> (!tickSkip &amp;&amp; !syncedAckSet.hasAllQuorums()) &#123;</span><br><span class="line">                        shutdownMessage = <span class="string">"Not sufficient followers synced, only synced with sids: [ "</span> + syncedAckSet.ackSetsToString() + <span class="string">" ]"</span>;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    tickSkip = !tickSkip;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">for</span> (LearnerHandler f : getLearners()) &#123;</span><br><span class="line">                    f.ping(); <span class="comment">// leader跟所有follower定时发送ping请求保持长连接</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (shutdownMessage != <span class="keyword">null</span>) &#123;</span><br><span class="line">                shutdown(shutdownMessage);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/MQ/RabbitMQ基础/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        RabbitMQ基础
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/index/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title"></div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>
