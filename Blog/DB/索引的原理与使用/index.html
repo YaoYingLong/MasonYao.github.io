@@ -26,7 +26,7 @@
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/MylSAM存储引擎索引实现.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/InnoDB存储引擎索引实现.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/DB/InnoDB二级索引结构.png">
-<meta property="og:updated_time" content="2022-03-13T09:19:09.074Z">
+<meta property="og:updated_time" content="2022-04-07T15:56:14.358Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="索引的原理与使用">
 <meta name="twitter:description" content="索引是帮助MySQL高效获取数据的排好序的数据结构。索引的数据结构：二叉树、红黑树、Hash表、B-Tree； MySQL的索引使用的是B+树而不是使用的B树，因为B树不管叶子节点还是非叶子节点，都会保存数据，这样导致在非叶子节点中能保存的指针数量变少，指针少的情况下要保存大量数据，只能增加树的高度，而在查找数据时一次页的查找代表一次IO，导致IO操作变多，查询性能变低； Hash对索引的key进">
@@ -286,6 +286,8 @@
                     <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
                 
                     <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
                 
             </ul>
         
@@ -1009,6 +1011,12 @@
                 
                     <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
                 
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
             </ul>
         
                     </li>
@@ -1241,8 +1249,14 @@
 <p>B+Tree是一颗有序的树，对于联合索引<strong><code>A、B、C</code></strong>，在A相等的情况B是有序的，在A、B相等的情况C是有序的</p>
 <h3 id="聚集索引"><a href="#聚集索引" class="headerlink" title="聚集索引"></a>聚集索引</h3><p><strong>聚集索引</strong>即<strong>叶节点包含了完整的数据记录</strong>，每个InnoDB表<strong>有且仅有一个主键索引即聚集索引</strong>，<strong>二级索引等都是非聚集索引</strong>，需要回表，再去查询聚集索引从而找到具体的数据。</p>
 <p>单从索引查询效率来说，<strong>聚集索引</strong>比<strong>非聚集索引</strong>要快，<strong>非聚集索引</strong>叶节点上的数据是存储的<strong>主键索引</strong>的<strong><code>ID</code></strong>。当表<strong>未建立主键索引时</strong>，MySQL会使用<strong>唯一性索引</strong>来作为主键索引，当表没有主键索引和唯一性索引时，将使用隐藏字段<strong><code>rowId</code></strong>作为主键索引。</p>
-<p><strong>非聚集索引</strong>查询时需要<strong>回表</strong>到<strong>主键索引</strong>中查询具体的数据，但一般查询到的主键ID可能是乱序的，回表效率很低下，故引入了<strong><code>MRR</code>即<code>Multi Range Read</code></strong>针对于<strong>辅助索引</strong>上的<strong>范围查询进行优化</strong>，收集辅助索引对应<strong>主键<code>rowid</code></strong>，进行<strong>排序后回表查询</strong>，将<strong>随机<code>IO</code>转顺序<code>IO</code></strong>。</p>
-<h3 id="非聚集索引"><a href="#非聚集索引" class="headerlink" title="非聚集索引"></a>非聚集索引</h3><h3 id="自适应哈希索引"><a href="#自适应哈希索引" class="headerlink" title="自适应哈希索引"></a>自适应哈希索引</h3><p><strong><code>InnoDB</code></strong>存储引擎内部<strong>监控索引热数据</strong>，然后<strong>内部创建一个<code>Hash</code>索引</strong>，称之为<strong>自适应哈希索引<code>Adaptive Hash Index, AHI</code></strong>，控制参数<strong><code>Innodb_adaptive_hash_index</code></strong>和<strong><code>innodb_adaptive_hash_index_parts</code></strong>，可通过<strong><code>show engine innodb status</code></strong>命令查看hash索引使用情况。</p>
+<p><strong>主键索引</strong>中<strong>行是按照聚集索引物理排序的</strong>，若<strong>主键频繁改变</strong>，物理顺序会改变，MySQL要不断调整B+树，且中间可能会产生<strong>页面的分裂和合并</strong>等等，<strong>会导致性能会急剧降低</strong>。</p>
+<h3 id="非聚集索引"><a href="#非聚集索引" class="headerlink" title="非聚集索引"></a>非聚集索引</h3><p><strong>除</strong>了<strong>主键索引</strong>以外的索引都叫做<strong>非聚集索引</strong>，或叫<strong>辅助索引</strong>、<strong>二级索引</strong>，<strong>非聚集索引叶子节点不包含行记录全部数据</strong>，叶子节点除了包含键值以外，每个叶子节点中的索引行中还包含了<strong>相应行数据的聚集索引键</strong>。</p>
+<p>辅助索引的存在<strong>并不影响数据在聚集索引中的组织</strong>，因此每张表上可有多个辅助索引，当通过辅助索引来寻找数据时，InnoDB存储引擎会<strong>遍历辅助索引</strong>并<strong>通过叶级别的指针</strong>获得<strong>指向主键索引的主键</strong>，然后再通过主键索引来找到一个完整的行记录，该过程也被称为<strong>回表</strong>。根据辅助索引的值查询一条完整的用户记录需要使用到2棵B+树，一次辅助索引一次聚集索引。</p>
+<p><strong>非聚集索引</strong>查询时需要<strong>回表</strong>到<strong>主键索引</strong>中查询具体的数据，但一般查询到的<strong>主键ID可能是乱序的</strong>，回表效率很低下，故引入了<strong><code>MRR</code>即<code>Multi Range Read</code>多范围读取</strong>针对于<strong>辅助索引</strong>上的<strong>范围查询进行优化</strong>，收集辅助索引对应<strong>主键<code>rowid</code></strong>，进行<strong>排序后回表查询</strong>，将<strong>随机<code>IO</code>转顺序<code>IO</code></strong>。但<strong><code>MRR</code></strong>优化措施的条件比较苛刻。</p>
+<p><strong>辅助索引</strong>上之虽然可以<strong>存放完整数据</strong>从而<strong>避免回表操作</strong>，但存放完整数据太占磁盘空间，导致存储空间大量浪费，且每次对数据的变化要在所有包含数据的索引中全部都修改一次，性能也非常低下。</p>
+<h3 id="自适应哈希索引"><a href="#自适应哈希索引" class="headerlink" title="自适应哈希索引"></a>自适应哈希索引</h3><p><strong><code>InnoDB</code></strong>存储引擎内部<strong>监控索引热数据</strong>，然后<strong>内部创建一个<code>Hash</code>索引</strong>，称之为<strong>自适应哈希索引<code>Adaptive Hash Index, AHI</code></strong>仅数据库自身创建并使用，并不能对其进行干预，控制参数<strong><code>Innodb_adaptive_hash_index</code></strong>和<strong><code>innodb_adaptive_hash_index_parts</code></strong>，可通过<strong><code>show engine innodb status</code></strong>命令查看hash索引使用情况。InnoDB存储引擎使用的哈希函数采用<strong>除法散列方式</strong>，其<strong>冲突机制采用链表方式</strong>。</p>
+<p>哈希索引只能用来搜索等值的查询，如<strong><code>SELECT * FROM table WHERE index co=xxx</code></strong>，对于其他查找类型，如范围查找，是不能使用哈希索引的，可通过<strong><code>hash searches</code>和<code>non-hash searches</code></strong>可大概了解使用哈希索引后的效率，<strong>默认<code>AHI</code>为开启状态</strong>。若发现监视索引查找和维护哈希索引结构的额外开销远远超过了自适应哈希索引带来的性能提升就需要关闭这个功能。</p>
+<p>同时在<strong><code>MySQL 5.7</code></strong>中<strong>自适应哈希索引搜索系统被分区</strong>，<strong>每个索引都绑定到一个特定的分区</strong>，<strong>每个分区都由一个单独的<code>latch</code>锁保</strong>护，分区由<strong><code>innodb_adaptive_hash_index_parts</code></strong>配置选项控制，早期版本中<strong>自适应哈希索引</strong>搜索系统受到<strong>单个<code>latch</code>锁的保护</strong>，这可能成为繁重工作负载下的争用点，<strong><code>innodb_adaptive_hash_index_parts</code></strong>默认情况下为<strong><code>8</code></strong>最大设置为<strong><code>512</code></strong>。</p>
 <h3 id="联合索引"><a href="#联合索引" class="headerlink" title="联合索引"></a>联合索引</h3><p><img src="../../../../images/DB/联合索引最左前缀原理.png" alt="联合主键数据结构"></p>
 <p>例：<strong><code>where age = 30 and position = &#39;dev&#39;</code></strong>该语句是不能用到索引的，因为虽然在某一个页里面age和position是排好序的，但跳过name在不同的页相比较age和position是乱序的。</p>
 <h3 id="MylSAM存储引擎"><a href="#MylSAM存储引擎" class="headerlink" title="MylSAM存储引擎"></a>MylSAM存储引擎</h3><p>MylSAM索引文件和数据文件是分离的，即索引是非聚集索引（非聚蔟索引）</p>
@@ -1256,10 +1270,19 @@
 <h5 id="为什么非主键索引结构叶子节点存储的是主键的索引值？"><a href="#为什么非主键索引结构叶子节点存储的是主键的索引值？" class="headerlink" title="为什么非主键索引结构叶子节点存储的是主键的索引值？"></a>为什么非主键索引结构叶子节点存储的是主键的索引值？</h5><p><strong>一致性和节省存储空间</strong></p>
 <h5 id="InnoDB二级索引结构"><a href="#InnoDB二级索引结构" class="headerlink" title="InnoDB二级索引结构"></a>InnoDB二级索引结构</h5><p><img src="../../../../images/DB/InnoDB二级索引结构.png" alt="InnoDB二级索引结构"></p>
 <h5 id="全文索引"><a href="#全文索引" class="headerlink" title="全文索引"></a>全文索引</h5><p>InnoDB也支持<strong>全文索引即倒排索引</strong>，只对数据类型<strong><code>char</code></strong>、<strong><code>vachar</code></strong>、<strong><code>text</code></strong>支持创建全文索引，<strong><code>MySQL5.6.X</code></strong>版本开始支持全文索引。但不推荐使用MySQL全文索引，<strong>一张表只能有一个全文索引</strong>，对<strong>中文</strong>或<strong>非拉丁文分词</strong>非常差。</p>
+<h3 id="索引的代价"><a href="#索引的代价" class="headerlink" title="索引的代价"></a>索引的代价</h3><p><strong>空间上</strong>每建立一个<strong>索引</strong>都要为它建立一棵B+树，每一棵B+树的每一个节点都是一个数据页，一个页默认会占用16KB的存储空间，一棵很大的B+树由许多数据页组成会占据很多的存储空间。</p>
+<p><strong>时间上</strong>每次对表中的数据进行<strong>增、删、改</strong>操作时，都需要去<strong>修改各个B+树索引</strong>，而增、删、改操作可能会对<strong>节点</strong>和<strong>记录</strong>的<strong>排序造成破坏</strong>，故存储引擎需要额外的时间进行一些<strong>记录移位</strong>，<strong>页面分裂</strong>、<strong>页面回收</strong>的操作来维护好节点和记录的排序。若建了许多索引，每个索引对应的B+树都要进行相关的维护操作，必然会对性能造成影响。<strong>一般一张表<code>6-7</code>个索引以下</strong>都能够取得比较好的性能权衡。</p>
+<h3 id="前缀索引"><a href="#前缀索引" class="headerlink" title="前缀索引"></a>前缀索引</h3><p>有时候需要索引很长的字符列，这会让索引变得大且慢，可以使用<strong>拟哈希索引</strong>，将很长的字符串进行hash运算，最终将hash值存库，还可以使用前缀索引来解决。</p>
+<p>在<strong><code>Varchar</code></strong>字段上建立索引时，<strong>必须指定索引长度</strong>，没有必要对全字段建立索引，根据实际文本区分度决定索引长度，索引长度与区分度是一对矛盾体，一般对字符串类型数据，<strong>长度为<code>20</code>的索引，区分度会高达<code>90%</code>以上</strong>，可以使用<strong><code>count(distinct left(列名, 索引长度))/count(*)</code></strong>来确定区分度。</p>
+<p>但是前缀索引的缺点很明显，无法使用前缀索引做<strong><code>ORDER BY</code></strong>和<strong><code>GROUP BY</code></strong>，也无法使用前缀索引做<strong>覆盖扫描</strong>。</p>
+<p>有时候<strong>后缀索引</strong>也有用途，如<strong>找到某个域名的所有电子邮件地址</strong>，MSQL原生并不支持反向索引，但是可以<strong>把字符串反转后存储</strong>，并基于此建立前缀索引，也可以通过<strong>触发器</strong>或者<strong>应用程序</strong>自行处理来维护索引。</p>
 <h3 id="MySQL索引类型"><a href="#MySQL索引类型" class="headerlink" title="MySQL索引类型"></a>MySQL索引类型</h3><p>从数据结构角度可分为<strong>B+Tree树索引</strong>、<strong>哈希索引</strong>、<strong>FULLTEXT索引</strong>、用于GIS数据类型创建的SPATIAL索引即<strong>R-Tree索引</strong></p>
 <p>从物理角度分为<strong>聚集索引</strong>、<strong>非聚集索引</strong></p>
 <p>从逻辑角度分为<strong>主键索引</strong>、<strong>普通索引</strong>或<strong>单列索引</strong>、<strong>联合索引或多列索引</strong>、<strong>唯一索引</strong>、<strong>非唯一索引</strong></p>
 <p><strong>密集索引</strong>即索引中不仅存储了索引的key还包括数据，MySQL中<strong>主键索引</strong>即聚集索引才是密集索引。与之相对的是<strong>稀疏索引</strong>，<strong>非聚集索引</strong>都是稀疏索引，所有<strong>二级索引</strong>都是稀疏索引。</p>
+<h3 id="三星索引"><a href="#三星索引" class="headerlink" title="三星索引"></a>三星索引</h3><p><strong>索引将相关的记录放到一起</strong>即<strong>一个查询相关的索引行是相邻的或者至少相距足够靠近</strong>必须<strong>扫描的索引片宽度就会缩至最短</strong>则获得<strong>一星</strong>，若索引中的<strong>数据顺序和查找中的排列顺序一致</strong>则获得<strong>二星</strong>即<strong>排序星</strong>；若索引中的<strong>列包含了查询中需要的全部列</strong>则获得<strong>三星</strong>即<strong>宽索引星</strong>；</p>
+<p>可以理解为<strong>第三颗星比重是<code>50%</code></strong>，<strong>第一颗星为<code>27%</code></strong>，<strong>第二颗星为<code>23%</code></strong>，所以大部分情况下，会先考虑第一颗星，但会根据业务情况调整这两颗星的优先度。</p>
+<p>对于一个查询而言，一个三星索引，可能是其最好的索引，若查询使用三星索引，一次查询通常只需要进行<strong>一次磁盘随机读</strong>以及<strong>一次窄索引片的扫描</strong>，因此其响应时间通常比使用一个普通索引的响应时间少几个数量级。</p>
 
         </div>
         

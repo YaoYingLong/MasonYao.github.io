@@ -34,7 +34,7 @@
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/skiplist.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/geohash.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Redis/混合持久化AOF文件结构.png">
-<meta property="og:updated_time" content="2022-02-21T13:36:21.450Z">
+<meta property="og:updated_time" content="2022-03-27T10:23:13.134Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Redis基础">
 <meta name="twitter:description" content="Redis是非关系型的键值对数据库，可根据键以O(1)时间复杂度取出或插入关联值，Redis数据是存在内存中，键值对中键可以是字符串、整型、浮点型等且键唯一。值的类型可以是string、hash、list、set、sorted set等。内置了复制、磁盘持久化、LUA脚本、事务、SSL、ACLs、客户端缓存、客户端代理等功能，通过哨兵模式和Cluster模式提供高可用。 Redis的速度非常的快，">
@@ -294,6 +294,8 @@
                     <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
                 
                     <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
                 
             </ul>
         
@@ -1017,6 +1019,12 @@
                 
                     <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
                 
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
             </ul>
         
                     </li>
@@ -1315,10 +1323,11 @@
 <h4 id="有序集合对象zset"><a href="#有序集合对象zset" class="headerlink" title="有序集合对象zset"></a>有序集合对象zset</h4><p>zset是<strong>有序的自动去重的</strong>集合数据结构，<strong>底层实现为字典 + 跳表<code>skiplist</code></strong>，当<strong>数据比较少时</strong>，<strong>用<code>ziplist</code>编码结构存储</strong>。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">zset-max-ziplist-entries 128 # 元素个数超过128，将用skiplist编码</span><br><span class="line">zset-max-ziplist-value 64    # 单个元素大小超过64byte，将用skiplist编码</span><br></pre></td></tr></table></figure>
 <p><img src="../../../../../images/Redis/zset-ziplist.png" alt="zset-ziplist"></p>
-<h5 id="跳跃表skiplist"><a href="#跳跃表skiplist" class="headerlink" title="跳跃表skiplist"></a>跳跃表skiplist</h5><p><strong>有序集合的底层实现之一</strong>，<code>redis</code>中实现<strong>有序集合键</strong>和<strong>集群节点的内部结构</strong>中都是使用跳跃表。<code>redis</code>跳跃表由<code>zskiplist</code>和<code>zskiplistNode</code>组成，<code>zskiplist</code>用于保存<strong>跳跃表信息</strong>（表头、表尾节点、长度等），<code>zskiplistNode</code>用于表示<strong>表跳跃节点</strong>，每个跳跃表的<strong>层高</strong>都是<code>1-32</code>的<strong>随机数</strong>，在同一个跳跃表中，多个节点可以包含相同的分值，但是每个节点的成员对象必须是唯一的，<strong>节点按照分值大小排序</strong>，如果<strong>分值相同，则按照成员对象的大小排序</strong>。</p>
+<h5 id="跳跃表skiplist"><a href="#跳跃表skiplist" class="headerlink" title="跳跃表skiplist"></a>跳跃表skiplist</h5><p><strong>有序集合的底层实现之一</strong>，<code>redis</code>中实现<strong>有序集合键</strong>和<strong>集群节点的内部结构</strong>中都是使用跳跃表。<code>redis</code>跳跃表由<code>zskiplist</code>和<code>zskiplistNode</code>组成，<code>zskiplist</code>用于保存<strong>跳跃表信息</strong>（表头、表尾节点、长度等），<code>zskiplistNode</code>用于表示<strong>表跳跃节点</strong>，每个跳跃表的<strong>层高</strong>都是<code>1-32</code>的<strong>随机数</strong>，<strong>层级越高的层出现概率越低</strong>，随机层高大于当前的最大层高，则初始化新的层高，在同一个跳跃表中，多个节点可以包含相同的分值，但是每个节点的成员对象必须是唯一的，<strong>节点按照分值大小排序</strong>，如果<strong>分值相同，则按照成员对象的大小排序</strong>。</p>
 <p><img src="../../../../../images/Redis/skiplist.png" alt></p>
 <p>可应用于<strong>排行榜</strong>，如展示当日排行前十、七日搜索榜单计算、七日排行前十等</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">zadd zset_test 1 member1 2 member2</span><br><span class="line">object encoding zset_test</span><br><span class="line">zadd zset_test 1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</span><br><span class="line">zadd zset_test 1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab</span><br></pre></td></tr></table></figure>
+<p><strong>元素插入过程</strong>，首先通过<strong><code>zskiplist</code></strong>的<strong><code>header</code></strong>找到<strong>索引层</strong>，<strong><code>level</code></strong>记录<strong>最高层高</strong>，首先<strong>从最高层往下找</strong>到具体的层，然后判断当前数据<strong>分值</strong>是否大于<strong>当前层起始分值</strong>，若大于继续通过<strong><code>forward</code></strong>指针往下找，若<strong><code>forward</code></strong>指向<strong><code>null</code></strong>，则往<strong>下沉一层</strong>继续找。</p>
 <h4 id="GeoHash"><a href="#GeoHash" class="headerlink" title="GeoHash"></a>GeoHash</h4><p>geohash是一种地理位置编码方法，它将<strong>地理位置编码</strong>为一串<strong>简短</strong>的<strong>字母</strong>和<strong>数字</strong>，<strong>是一种分层的空间数据结构</strong>，将空间细分为网格形状的桶，是<strong><code>Z</code>顺序曲线</strong>的众多应用之一，通常是空间填充曲线。</p>
 <p><img src="../../../../../images/Redis/geohash.png" alt="geohash"></p>
 <p>通过GeoHash算法，可将<strong>经纬度的二维坐标变成一个可排序、可比较的字符串编码</strong>，在编码中<strong>每个字符代表一个区域</strong>，且<strong>前面的字符是后面字符的父区域</strong>。</p>
