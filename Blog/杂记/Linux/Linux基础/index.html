@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        Linux基础 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="Linux">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Unix是最早的多用户、多任务操作系统，按操作系统分类属于分时操作系统，Unix大多被用在服务器、工作站，现在也有用在个人计算机上。它在创建互联网、计算机网络或客户端/服务器模型方面发挥着非常重要的作用。 Linux是1991年芬兰的业余计算机爱好者Linus Torvalds编写了一款类似Minix的系统即基于微内核架构的类Unix操作系统，被ftp管理员命名为Linux加入到自由软件基金的GN">
+<meta name="keywords" content="Linux">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux基础">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/杂记/Linux/Linux基础/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="Unix是最早的多用户、多任务操作系统，按操作系统分类属于分时操作系统，Unix大多被用在服务器、工作站，现在也有用在个人计算机上。它在创建互联网、计算机网络或客户端/服务器模型方面发挥着非常重要的作用。 Linux是1991年芬兰的业余计算机爱好者Linus Torvalds编写了一款类似Minix的系统即基于微内核架构的类Unix操作系统，被ftp管理员命名为Linux加入到自由软件基金的GN">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/操作系统/Linux发行版.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/操作系统/Linux文件系统目录结构.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/操作系统/Linux文件权限解释.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/操作系统/Linux文件权限修改.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/操作系统/Linux软链接和硬链接.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/操作系统/Linux软链接和硬链接原始文件.png">
+<meta property="og:updated_time" content="2022-07-31T15:37:48.668Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux基础">
+<meta name="twitter:description" content="Unix是最早的多用户、多任务操作系统，按操作系统分类属于分时操作系统，Unix大多被用在服务器、工作站，现在也有用在个人计算机上。它在创建互联网、计算机网络或客户端/服务器模型方面发挥着非常重要的作用。 Linux是1991年芬兰的业余计算机爱好者Linus Torvalds编写了一款类似Minix的系统即基于微内核架构的类Unix操作系统，被ftp管理员命名为Linux加入到自由软件基金的GN">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/操作系统/Linux发行版.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用技巧/">Linux常用技巧</a></li>
+                
+                    <li class="file active"><a href="/Blog/杂记/Linux/Linux基础/">Linux基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCP&UDP协议/">TCP&UDP协议</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP协议/">HTTP协议</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTPs协议/">HTTPs协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-杂记/Linux/Linux基础" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/杂记/">杂记</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/杂记/Linux/">Linux</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/Linux/">Linux</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/杂记/Linux/Linux基础/">
+            <time datetime="2020-07-30T16:00:00.000Z" itemprop="datePublished">2020-07-31</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            Linux基础
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <p><strong><code>Unix</code></strong>是最早的<strong>多用户</strong>、<strong>多任务</strong>操作系统，按操作系统分类属于<strong>分时操作系统</strong>，Unix大多被用在<strong>服务器</strong>、<strong>工作站</strong>，现在也有用在个人计算机上。它在创建互联网、计算机网络或客户端/服务器模型方面发挥着非常重要的作用。</p>
+<p>Linux是<strong><code>1991</code></strong>年<strong>芬兰</strong>的业余计算机爱好者<strong><code>Linus Torvalds</code></strong>编写了一款<strong>类似<code>Minix</code>的系统</strong>即基于<strong>微内核架构</strong>的<strong>类<code>Unix</code>操作系统</strong>，被<strong><code>ftp</code></strong>管理员命名为Linux加入到自由软件基金的GNU计划中。</p>
+<p>Linux是一套<strong>免费</strong>使用和<strong>自由传播</strong>的类<strong>Unix操作系统</strong>，Linux存在着<strong>许多不同的Linux版本</strong>，但它们<strong>都使用了Linux内核</strong>。Linux可安装在各种计算机硬件设备中，如<strong>手机</strong>、<strong>平板电脑</strong>、<strong>路由器</strong>、<strong>视频游戏控制台</strong>、<strong>台式计算机</strong>、<strong>大型机</strong>和<strong>超级计算机</strong>。严格来讲Linux这个词本身只表示Linux内核，但实际上人们已经习惯了用Linux来形容整个基于Linux内核，并且使用GNU工程各种工具和数据库的操作系统。</p>
+<p>根据<strong>原生程度</strong>将Linux分为：<strong>内核版</strong>和<strong>发行版</strong></p>
+<ul>
+<li><strong>内核版</strong>：Linux不是一个操作系统，严格来讲Linux只是一个操作系统中的内核，建立了计算机软件与硬件之间通讯的平台，内核提供系统服务，如文件管理、虚拟内存、设备I/O等</li>
+<li><strong>发行版</strong>：一些组织或公司在<strong>内核版基础上</strong>进行<strong>二次开发</strong>而<strong>重新发行的版本</strong>，Linux发行版本有很多种</li>
+</ul>
+<p><img src="../../../../../images/操作系统/Linux发行版.png" alt="Linux发行版"></p>
+<p>在Linux操作系统中，<strong>所有被操作系统管理的资源</strong>，如网络接口卡、磁盘驱动器、打印机、输入输出设备、普通文件或是目录<strong>都被看作是一个文件</strong>。</p>
+<p>在<strong><code>Linux</code></strong>系统<strong>一切都是文件</strong>，其实这是Unix哲学的一个体现，而Linux是重写Unix而来，所以这个概念也就传承了下来。在UNIX系统中，<strong>把一切资源都看作是文件</strong>，<strong>包括硬件设备</strong>。UNIX系统把每个硬件都看成是一个文件，通常称为<strong>设备文件</strong>，这样<strong>用户就可以用读写文件的方式实现对硬件的访问</strong>。</p>
+<p>Linux文件系统的结构层次鲜明，就像<strong>一棵倒立的树</strong>，最顶层是其根目录：</p>
+<p><img src="../../../../../images/操作系统/Linux文件系统目录结构.png" alt="Linux文件系统目录结构"></p>
+<ul>
+<li><strong><code>/bin</code></strong>：<strong>存放二进制可执行文件</strong>，如<strong><code>ls</code></strong>、<strong><code>cat</code></strong>、<strong><code>mkdir</code></strong>等</li>
+<li><strong><code>/etc</code></strong>：存放<strong>系统管理</strong>和<strong>配置文件</strong></li>
+<li><strong><code>/home</code></strong>：存放<strong>所有用户文件的根目录</strong>，是<strong>用户主目录的基点</strong>，如用户user的主目录<strong><code>/home/user</code></strong>，可用<strong><code>~user</code></strong>表示</li>
+<li><strong><code>/usr</code></strong>：用于存放<strong>系统应用程序</strong></li>
+<li><strong><code>/opt</code></strong>：额外<strong>安装的可选应用程序包</strong>所放置的位置，一般情况下可把<strong><code>tomcat</code></strong>等都<strong>安装</strong>到这里</li>
+<li><strong><code>/proc</code></strong>：<strong>虚拟文件系统目录</strong>，<strong>是系统内存的映射</strong>，<strong>可直接访问该目录来获取系统信息</strong></li>
+<li><strong><code>/root</code></strong>：超级用户即<strong>系统管理员的主目录</strong></li>
+<li><strong><code>/sbin</code></strong>：存放<strong>二进制可执行文件</strong>，只有<strong>root才能访问</strong>，这里存放的是<strong>系统管理员</strong>使用的<strong>系统级别</strong>的<strong>管理命令</strong>和<strong>程序</strong>，如<strong><code>ifconfig</code></strong>等</li>
+<li><strong><code>/dev</code></strong>：用于<strong>存放设备文件</strong></li>
+<li><strong><code>/mnt</code></strong>：<strong>系统管理员</strong>安装<strong>临时文件系统</strong>的<strong>安装点</strong>，系统提供这个目录是让用户<strong>临时挂载其他的文件系统</strong></li>
+<li><strong><code>/boot</code></strong>：存放用于<strong>系统引导时使用的各种文件</strong></li>
+<li><strong><code>/lib</code></strong>：存放着和<strong>系统运行相关</strong>的库文件</li>
+<li><strong><code>/tmp</code></strong>：用于<strong>存放各种临时文件</strong>，是<strong>公用</strong>的<strong>临时文件存储点</strong></li>
+<li><strong><code>/var</code></strong>：用于存放<strong>运行时需要改变数据的文件</strong>，也是<strong>某些大文件的溢出区</strong>，如各种服务的<strong>日志文件</strong>等</li>
+<li><strong><code>/lost+found</code></strong>：该目录平时是空的，<strong>系统非正常关机</strong>而留下<strong>无家可归</strong>的文件</li>
+</ul>
+<h3 id="Linux基本命令"><a href="#Linux基本命令" class="headerlink" title="Linux基本命令"></a>Linux基本命令</h3><p>Linux命令用法一般用<strong><code>man</code>命令</strong>可查看其帮助信息，也可通过<a href="https://man.linuxde.net/" rel="external nofollow noopener noreferrer" target="_blank">Linux命令大全</a>中文帮助文档查看。</p>
+<h4 id="目录切换命令"><a href="#目录切换命令" class="headerlink" title="目录切换命令"></a>目录切换命令</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 切换到上一层目录</span><br><span class="line">cd ..</span><br><span class="line"><span class="meta">#</span> 切换到上一层目录</span><br><span class="line">cd ../</span><br><span class="line"><span class="meta">#</span> 切换到根目录</span><br><span class="line">cd /</span><br><span class="line"><span class="meta">#</span> 切换到用户主目录</span><br><span class="line">cd ~</span><br><span class="line"><span class="meta">#</span> 切换到上一个所在目录</span><br><span class="line">cd -</span><br><span class="line"><span class="meta">#</span> 切换到当前目录的dirname目录</span><br><span class="line">cd dirname</span><br></pre></td></tr></table></figure>
+<h4 id="文件或目录修改命令"><a href="#文件或目录修改命令" class="headerlink" title="文件或目录修改命令"></a>文件或目录修改命令</h4><h5 id="创建目录或文件"><a href="#创建目录或文件" class="headerlink" title="创建目录或文件"></a>创建目录或文件</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 在当前目录下创建dirname目录</span><br><span class="line">mkdir dirname</span><br><span class="line"><span class="meta">#</span> 若所要建立目录的上层目录目前尚未建立，则会一并建立上层目录</span><br><span class="line">mkdir -p dirname/subdir1/subdir11</span><br></pre></td></tr></table></figure>
+<h5 id="剪切或更名命令"><a href="#剪切或更名命令" class="headerlink" title="剪切或更名命令"></a>剪切或更名命令</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 将文件ex3改名为new1</span><br><span class="line">mv ex3 new1</span><br><span class="line"><span class="meta">#</span> 将目录/usr/men中的所有文件移到当前目录中</span><br><span class="line">mv /usr/men/* .</span><br></pre></td></tr></table></figure>
+<h5 id="拷贝"><a href="#拷贝" class="headerlink" title="拷贝"></a>拷贝</h5><p>所有目标文件指定的目录必须是己经存在的，<strong><code>cp</code>命令不能创建目录</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 将文件file复制到目录/usr/men/tmp下，并改名为file1</span><br><span class="line">cp file /usr/men/tmp/file1</span><br><span class="line"><span class="meta">#</span> 将目录/usr/men下的所有文件及其子目录复制到目录/usr/zh中</span><br><span class="line">cp -r /usr/men /usr/zh</span><br><span class="line"><span class="meta">#</span> 交互式地将目录/usr/men中的以m打头的所有.c文件复制到目录/usr/zh中</span><br><span class="line">cp -i /usr/men m*.c /usr/zh</span><br></pre></td></tr></table></figure>
+<h5 id="删除"><a href="#删除" class="headerlink" title="删除"></a>删除</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 交互式删除当前目录下的文件test和example</span><br><span class="line">rm -i test example</span><br><span class="line"><span class="meta">#</span> 强制删除目录/文件/压缩包</span><br><span class="line">rm -rf test</span><br></pre></td></tr></table></figure>
+<h4 id="文件操作命令"><a href="#文件操作命令" class="headerlink" title="文件操作命令"></a>文件操作命令</h4><h5 id="创建文件"><a href="#创建文件" class="headerlink" title="创建文件"></a>创建文件</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 在当前目录下创建ex2文件</span><br><span class="line">touch ex2</span><br></pre></td></tr></table></figure>
+<h5 id="文件内存查看"><a href="#文件内存查看" class="headerlink" title="文件内存查看"></a>文件内存查看</h5><p><strong><code>cat</code></strong>命令值能显示最后一屏内容</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 在屏幕上显示文件ml的内容</span><br><span class="line">cat m1</span><br><span class="line"><span class="meta">#</span> 同时显示文件ml和m2的内容</span><br><span class="line">cat m1 m2</span><br><span class="line"><span class="meta">#</span> 将文件ml和m2合并后放入文件m3中</span><br><span class="line">cat m1 m2 &gt; m3</span><br></pre></td></tr></table></figure>
+<p><strong><code>more</code></strong>命令可<strong>显示百分比</strong>，<strong>回车</strong>可<strong>向下翻一行</strong>， <strong>空格</strong>可<strong>向下翻一页</strong>，<strong><code>q</code></strong>可<strong>退出查看</strong></p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">more filename</span><br></pre></td></tr></table></figure>
+<p><strong><code>less</code></strong>可使用键盘上的<strong><code>PgUp</code></strong>和<strong><code>PgDn</code></strong>向上和向下翻页，<strong><code>q</code></strong>结束查看</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> -N显示行号</span><br><span class="line">less -N filename</span><br></pre></td></tr></table></figure>
+<p><strong><code>head</code></strong>查看文件的<strong>前<code>N</code>行</strong>，<strong><code>Ctrl+C</code></strong>结束</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 查看文件前10行</span><br><span class="line">head -10 filename</span><br><span class="line"><span class="meta">#</span> 显示文件filename的前100个字符</span><br><span class="line">head -c 100 filename</span><br></pre></td></tr></table></figure>
+<p><strong><code>tail</code></strong>查看文件的<strong>后N行</strong>，<strong><code>Ctrl+C</code></strong>结束</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 显示文件file的最后10行</span><br><span class="line">tail file</span><br><span class="line"><span class="meta">#</span> 显示文件file的内容，从第20行至文件末尾</span><br><span class="line">tail +20 file</span><br><span class="line"><span class="meta">#</span> 显示文件file的最后10个字符</span><br><span class="line">tail -c 10 file</span><br><span class="line"><span class="meta">#</span> 显示文件file的最后100行，且显示文件最新追加的内容</span><br><span class="line">tail -100f file</span><br></pre></td></tr></table></figure>
+<h5 id="vim文件修改"><a href="#vim文件修改" class="headerlink" title="vim文件修改"></a>vim文件修改</h5><p><strong><code>vim</code></strong>编辑器是Linux中的强大组件，是<strong><code>vi</code></strong>编辑器的加强版，实际开发中vim编辑器主要作用就是<strong>修改配置文件</strong>和<strong>编写<code>shell</code>脚本</strong>，vim有<strong>命令模式</strong>、<strong>编辑模式</strong>、<strong>底行模式</strong>3中模式</p>
+<ul>
+<li><strong>命令模式</strong>：可<strong>控制光标的移动</strong>，<strong>字符</strong>、<strong>字</strong>或<strong>行</strong>的<strong>删除</strong>，<strong>移动复制某段区域</strong>，该模式下可进入<strong>插入模式</strong>和<strong>底行模式</strong>，通过vim刚进入文件即是该模式</li>
+<li><strong>编辑模式</strong>：可<strong>插入</strong>、<strong>删除</strong>文字，通过<strong><code>Esc</code></strong>进入<strong>底行模式</strong></li>
+<li><strong>底行模式</strong>：<strong>保存文件</strong>或<strong>退出<code>vim</code></strong></li>
+</ul>
+<h6 id="移动光标"><a href="#移动光标" class="headerlink" title="移动光标"></a>移动光标</h6><ul>
+<li>vim可使用<strong>小写</strong>英文字母<strong><code>h</code></strong>、<strong><code>j</code></strong>、<strong><code>k</code></strong>、<strong><code>l</code></strong>分别控制光标<strong>左</strong>、<strong>下</strong>、<strong>上</strong>、<strong>右</strong>移动，<strong>也可使用箭头</strong></li>
+<li><strong><code>Ctrl+b</code></strong>：向前<strong>翻一页</strong></li>
+<li><strong><code>Ctrl+f</code></strong>：向后<strong>翻一页</strong></li>
+<li><strong><code>Ctrl+u</code></strong>：向前<strong>翻半页</strong></li>
+<li><strong><code>Ctrl+d</code></strong>：向后<strong>翻半页</strong></li>
+<li><strong><code>Shift+g</code></strong>即<strong><code>G</code></strong>：移动到<strong>文章的最后</strong></li>
+<li><strong><code>Shift+4</code></strong>即<strong><code>$</code></strong>符：移动到光标所在<strong>行的末尾</strong></li>
+<li><strong><code>Shift+6</code></strong>即<strong><code>^</code></strong>符：移动到光标所在<strong>行的行首</strong></li>
+<li><strong><code>w</code></strong>：光标跳到<strong>下个字的开头</strong></li>
+<li><strong><code>e</code></strong>：光标跳到<strong>下个字的字尾</strong></li>
+<li><strong><code>b</code></strong>：光标<strong>回到上个字的开头</strong></li>
+<li><strong><code>#l</code></strong>：将光标在该行向后移动<strong><code>#</code></strong>个位置，<strong><code>#</code></strong>表示一个数字</li>
+<li><strong><code>gg</code></strong>：<strong>跳转到文本开始</strong></li>
+</ul>
+<h6 id="删除文字"><a href="#删除文字" class="headerlink" title="删除文字"></a>删除文字</h6><ul>
+<li><strong><code>x</code></strong>：<strong>每按一次</strong>删除<strong>光标所在位置后面</strong>的一个字符</li>
+<li><strong><code>#x</code></strong>：如<strong><code>6x</code></strong>删除光标所在位置的后面包含自己在内6个字符</li>
+<li><strong><code>Shift+x</code></strong>即<strong><code>X</code></strong>：<strong>每按一次</strong>删除<strong>光标所在位置的前面</strong>一个字符</li>
+<li><strong><code>Shift+#x</code></strong>即<strong><code>#X</code></strong>：如20X删除<strong>光标所在位置前面20个字符</strong></li>
+<li><strong><code>dd</code></strong>：<strong>删除光标所在行</strong></li>
+<li><strong><code>#dd</code></strong>：如<strong><code>6dd</code>从光标所在行开始删除<code>6</code>行</strong></li>
+</ul>
+<h6 id="复制"><a href="#复制" class="headerlink" title="复制"></a>复制</h6><p>所有与<strong><code>y</code></strong>有关的复制命令都必须与<strong><code>p</code></strong>配合才能完成复制粘贴功</p>
+<ul>
+<li><strong><code>yw</code></strong>：将<strong>光标所在之处</strong>到<strong>字尾</strong>的字符复制到缓冲区中</li>
+<li><strong><code>#yw</code></strong>：如<strong><code>6yw</code>复制6个字到缓冲区</strong></li>
+<li><strong><code>yy</code></strong>：<strong>复制光标所在行到缓冲区</strong></li>
+<li><strong><code>#yy</code></strong>：如<strong>6yy</strong>拷贝从<strong>光标所在的该行</strong>往<strong>下数<code>6</code>行</strong>文字</li>
+<li><strong><code>p</code></strong>：<strong>将缓冲区内的字符贴到光标所在位置</strong></li>
+</ul>
+<h6 id="替换"><a href="#替换" class="headerlink" title="替换"></a>替换</h6><ul>
+<li><strong><code>r</code></strong>：<strong>替换光标所在处的字符</strong></li>
+<li><strong><code>R</code></strong>：<strong>替换光标所到之处的字符</strong>，直到按下<strong><code>Esc</code></strong>键为止</li>
+</ul>
+<h6 id="撤销上一次操作"><a href="#撤销上一次操作" class="headerlink" title="撤销上一次操作"></a>撤销上一次操作</h6><ul>
+<li><strong><code>u</code></strong>：<strong>撤销上一次操作</strong>，按动多次u可执行多次撤销</li>
+</ul>
+<h6 id="更改"><a href="#更改" class="headerlink" title="更改"></a>更改</h6><ul>
+<li><strong><code>cw</code></strong>：<strong>更改光标所在处的字</strong>到<strong>字尾处</strong></li>
+<li><strong><code>c#w</code></strong>：如<strong><code>c3w</code></strong>表示<strong>更改三个字</strong></li>
+</ul>
+<h6 id="跳至指定行"><a href="#跳至指定行" class="headerlink" title="跳至指定行"></a>跳至指定行</h6><ul>
+<li><strong><code>Ctrl+g</code></strong>：<strong>列出光标所在行的行号</strong>，百分比</li>
+<li><strong><code>#G</code></strong>：如<strong><code>15G</code></strong>表示<strong>移动光标到文章的第15行行首</strong></li>
+</ul>
+<h4 id="压缩文件操作命令"><a href="#压缩文件操作命令" class="headerlink" title="压缩文件操作命令"></a>压缩文件操作命令</h4><p>Linux中<strong>打包文件</strong>一般是以<strong><code>.tar</code></strong>结尾，<strong>压缩文件</strong>一般是以<strong><code>.gz</code></strong>结尾，而一般情况下<strong>打包</strong>和<strong>压缩</strong>是一起进行的，打包并压缩后的文件的后缀名一般<strong><code>.tar.gz</code></strong>。</p>
+<h5 id="打包压缩"><a href="#打包压缩" class="headerlink" title="打包压缩"></a>打包压缩</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 打包后，以gzip压缩 </span><br><span class="line">tar -zcvf 打包压缩后的文件名 要打包压缩的文件</span><br><span class="line"><span class="meta">#</span> 将多个文件压缩</span><br><span class="line">tar -zcvf log.tar.gz log2022-01.log log2022-02.log</span><br><span class="line"><span class="meta">#</span> 仅打包，不压缩</span><br><span class="line">tar -cvf log.tar log2012.log</span><br><span class="line"><span class="meta">#</span> 打包后，以bzip2压缩</span><br><span class="line">tar -jcvf log.tar.bz2 log2012.log</span><br></pre></td></tr></table></figure>
+<h5 id="解压缩"><a href="#解压缩" class="headerlink" title="解压缩"></a>解压缩</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 可将压缩档在任何地方解开</span><br><span class="line">tar -zxvf /opt/soft/test/log.tar.gz</span><br><span class="line"><span class="meta">#</span> 查阅tar包内的文件名称</span><br><span class="line">tar -ztvf mytar.tar.gz</span><br><span class="line"><span class="meta">#</span> 只将tar内的部分文件解压出来</span><br><span class="line">tar -zxvf mytar.tar.gz log2022-01.log</span><br><span class="line"><span class="meta">#</span> 将数据解压到特定目录</span><br><span class="line">tar -zxvf mytar.tar.gz -C /data/test2</span><br></pre></td></tr></table></figure>
+<h4 id="查找命令"><a href="#查找命令" class="headerlink" title="查找命令"></a>查找命令</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 列出当前目录及子目录下所有文件和文件夹</span><br><span class="line">find .</span><br><span class="line"><span class="meta">#</span> 在/home目录下查找以.txt结尾的文件名</span><br><span class="line">find /home -name '*.txt'</span><br><span class="line"><span class="meta">#</span> 在/home目录下查找以.txt结尾的文件名，且忽略大小写</span><br><span class="line">find /home -iname '*.txt'</span><br><span class="line"><span class="meta">#</span> 当前目录及子目录下查找所有以.txt和.pdf结尾的文件</span><br><span class="line">find . \( -name "*.txt" -o -name "*.pdf" \)</span><br><span class="line">find . -name "*.txt" -o -name "*.pdf"</span><br><span class="line"><span class="meta">#</span> 匹配文件路径或者文件</span><br><span class="line">find /usr/ -path "*local*"</span><br><span class="line"><span class="meta">#</span> 基于正则表达式匹配文件路径，-iregex忽略大小写，这里斜杠\表示转义</span><br><span class="line">find . -regex ".*\(\.txt\|\.pdf\)$"</span><br><span class="line">find . -iregex ".*\(\.txt\|\.pdf\)$"</span><br><span class="line"><span class="meta">#</span> 找出/home下不是以.txt结尾的文件</span><br><span class="line">find /home ! -name "*.txt"</span><br><span class="line"><span class="meta">#</span> 根据文件类型进行搜索：f 普通文件，l 符号连接，d 目录，c 字符设备，b 块设备，s 套接字，p Fifo</span><br><span class="line">find . -type f</span><br><span class="line"><span class="meta">#</span> 基于目录深度搜索，搜索出深度距离当前目录向下最大深度限制为3的子目录的所有文件</span><br><span class="line">find . -maxdepth 3 -type f</span><br><span class="line"><span class="meta">#</span> 搜索出深度距离当前目录至少2个子目录的所有文件</span><br><span class="line">find . -mindepth 2 -type f</span><br><span class="line"><span class="meta">#</span> 删除匹配文件：删除当前目录下所有.txt文件</span><br><span class="line">find . -type f -name "*.txt" -delete</span><br><span class="line"><span class="meta">#</span> 查找当前目录或者子目录下所有.txt文件，但是跳过子目录sk</span><br><span class="line">find . -path "./sk" -prune -o -name "*.txt" -print</span><br><span class="line"><span class="meta">#</span> 要列出所有长度为零的文件</span><br><span class="line">find . -empty</span><br></pre></td></tr></table></figure>
+<h5 id="根据文件时间戳进行搜索"><a href="#根据文件时间戳进行搜索" class="headerlink" title="根据文件时间戳进行搜索"></a>根据文件时间戳进行搜索</h5><p>UNIX/Linux文件系统每个文件都有三种时间戳：</p>
+<ul>
+<li><strong>访问时间</strong>（<strong><code>-atime</code></strong>/天，<strong><code>-amin</code></strong>/分钟）：用户最近一次访问时间。</li>
+<li><strong>修改时间</strong>（<strong><code>-mtime</code></strong>/天，<strong><code>-mmin</code></strong>/分钟）：文件最后一次修改时间。</li>
+<li><strong>变化时间</strong>（<strong><code>-ctime</code></strong>/天，<strong><code>-cmin</code></strong>/分钟）：文件数据元（例如权限等）最后一次修改时间。</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 搜索最近七天内被访问过的所有文件</span><br><span class="line">find . -type f -atime -7</span><br><span class="line"><span class="meta">#</span> 搜索恰好在七天前被访问过的所有文件</span><br><span class="line">find . -type f -atime 7</span><br><span class="line"><span class="meta">#</span> 搜索超过七天内被访问过的所有文件</span><br><span class="line">find . -type f -atime +7</span><br><span class="line"><span class="meta">#</span> 搜索访问时间超过10分钟的所有文件</span><br><span class="line">find . -type f -amin +10</span><br><span class="line"><span class="meta">#</span> 找出比file.log修改时间更长的所有文件</span><br><span class="line">ind . -type f -newer file.log</span><br></pre></td></tr></table></figure>
+<h5 id="根据文件大小进行匹配"><a href="#根据文件大小进行匹配" class="headerlink" title="根据文件大小进行匹配"></a>根据文件大小进行匹配</h5><p>文件大小单元：</p>
+<ul>
+<li><strong>b</strong>：块（512字节）</li>
+<li><strong>c</strong>：字节</li>
+<li><strong>w</strong>：字（2字节）</li>
+<li><strong>k</strong>：千字节</li>
+<li><strong>M</strong>：兆字节</li>
+<li><strong>G</strong>：吉字节</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 搜索大于10KB的文件</span><br><span class="line">find . -type f -size +10k</span><br><span class="line"><span class="meta">#</span> 搜索小于10KB的文件</span><br><span class="line">find . -type f -size -10k</span><br><span class="line"><span class="meta">#</span> 搜索等于10KB的文件</span><br><span class="line">find . -type f -size 10k</span><br></pre></td></tr></table></figure>
+<h5 id="根据文件权限匹配"><a href="#根据文件权限匹配" class="headerlink" title="根据文件权限匹配"></a>根据文件权限匹配</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 当前目录下搜索出权限为777的文件</span><br><span class="line">find . -type f -perm 777</span><br><span class="line"><span class="meta">#</span> 出当前目录下权限不是644的php文件</span><br><span class="line">find . -type f -name "*.php" ! -perm 644</span><br><span class="line"><span class="meta">#</span> 找出当前目录用户tom拥有的所有文件</span><br><span class="line">find . -type f -user eleven</span><br><span class="line"><span class="meta">#</span> 找出当前目录用户组sunk拥有的所有文件</span><br><span class="line">find . -type f -group sunk</span><br></pre></td></tr></table></figure>
+<h5 id="借助-exec选项与其他命令结合使用"><a href="#借助-exec选项与其他命令结合使用" class="headerlink" title="借助-exec选项与其他命令结合使用"></a>借助-exec选项与其他命令结合使用</h5><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 找出当前目录下所有root的文件，并把所有权更改为用户tom，&#123;&#125;用于与-exec选项结合使用来匹配所有文件，然后会被替换为相应的文件名</span><br><span class="line">find .-type f -user root -exec chown tom &#123;&#125; \;</span><br><span class="line"><span class="meta">#</span> 找出家目录下所有的.txt文件并删除，-ok和-exec行为一样，不过它会给出提示，是否执行相应的操作</span><br><span class="line">find $HOME/. -name "*.txt" -ok rm &#123;&#125; \;</span><br><span class="line"><span class="meta">#</span> 查找当前目录下所有.txt文件并把他们拼接起来写入到all.txt文件中</span><br><span class="line">find . -type f -name "*.txt" -exec cat &#123;&#125; \;&gt; all.txt</span><br><span class="line"><span class="meta">#</span> 将30天前的.log文件移动到old目录中</span><br><span class="line">find . -type f -mtime +30 -name "*.log" -exec cp &#123;&#125; old \;</span><br><span class="line"><span class="meta">#</span> 找出当前目录下所有.txt文件并以“File:文件名”的形式打印出来</span><br><span class="line">find . -type f -name "*.txt" -exec printf "File: %s\n" &#123;&#125; \;</span><br></pre></td></tr></table></figure>
+<h4 id="权限命令"><a href="#权限命令" class="headerlink" title="权限命令"></a>权限命令</h4><p>操作系统中<strong>每个文件</strong>都拥有<strong>特定权限</strong>、<strong>所属用户</strong>和<strong>所属组</strong>，权限是操作系统用来<strong>限制资源访问的机制</strong>，在Linux中权限一般分为<strong>读<code>readable</code></strong>、<strong>写<code>writable</code></strong>、<strong>执行<code>excutable</code></strong>，且<strong>分为三组</strong>分别对应<strong>文件的属主<code>owner</code></strong>，<strong>属组<code>group</code></strong>和<strong>其他用户<code>other</code></strong>，通过该机制来限制<strong>哪些用户</strong>、<strong>哪些组</strong>可对特定的文件进行什么样的操作，通过<strong><code>ls -l</code></strong>命令可查看<strong>某个目录下</strong>的<strong>文件</strong>或<strong>目录</strong>的权限。</p>
+<p>Linux中<strong>每个用户必须属于一个用户组</strong>，不能独立于用户组外，在Linux中<strong>每个文件</strong>有<strong>所有者</strong>、<strong>所在用户组</strong>、<strong>其它组</strong>的概念：</p>
+<ul>
+<li><strong>所有者</strong>：<strong>文件的创建者</strong>，可以使用<strong><code>chown 用户名 文件名</code></strong>来<strong>修改文件的所有者</strong></li>
+<li><strong>文件所在用户组</strong>：当某个用户创建了一个文件后，<strong>该文件所在组就是该用户所在的组</strong></li>
+<li><strong>其它组</strong>：除<strong>文件所有者</strong>和<strong>所在用户组的用户</strong>外，系统的<strong>其它用户</strong>都是文件的其它组</li>
+</ul>
+<p><img src="../../../../../images/操作系统/Linux文件权限解释.png" alt></p>
+<table>
+<thead>
+<tr>
+<th>权限名称</th>
+<th>含义</th>
+<th>文件可执行操作</th>
+<th>目录可执行操作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>r</code></strong></td>
+<td><strong>可读</strong>，用数字<strong><code>4</code></strong>表示</td>
+<td>可使用cat、tail等<strong>查看文件内容</strong></td>
+<td>可<strong>查看目录下文件列表</strong></td>
+</tr>
+<tr>
+<td><strong><code>w</code></strong></td>
+<td><strong>可写</strong>，用数字<strong><code>2</code></strong>表示</td>
+<td>可<strong>修改文件内容</strong></td>
+<td>可<strong>创建</strong>和<strong>删除</strong>目录下文件</td>
+</tr>
+<tr>
+<td><strong><code>x</code></strong></td>
+<td><strong>可执行</strong>，用数字<strong><code>1</code></strong>表示</td>
+<td>可将其<strong>运行为二进制文件</strong></td>
+<td>可使用<strong><code>cd</code>进入目录</strong></td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 修改aaa.txt文件的权限</span><br><span class="line">chmod u=rwx,g=rw,o=r aaa.txt</span><br><span class="line">chmod 764 aaa.txt</span><br><span class="line"><span class="meta">#</span> 为属主、属组、其他组加上可执行权限</span><br><span class="line">chmod +x aaa.txt</span><br><span class="line"><span class="meta">#</span> -R递归更改文件属组，在更改某个目录文件的属组时</span><br><span class="line">chgrp [-R] 属组名 文件名</span><br><span class="line"><span class="meta">#</span> 更改文件属主，也可以同时更改文件属组</span><br><span class="line">chown [–R] 属主名 文件名</span><br><span class="line">chown [-R] 属主名:属组名 文件名</span><br></pre></td></tr></table></figure>
+<p><img src="../../../../../images/操作系统/Linux文件权限修改.png" alt></p>
+<h5 id="文件类型"><a href="#文件类型" class="headerlink" title="文件类型"></a>文件类型</h5><ul>
+<li><strong><code>d</code></strong>：代表<strong>目录</strong></li>
+<li><strong><code>-</code></strong>：代表<strong>文件</strong></li>
+<li><strong><code>l</code></strong>：代表<strong>链接</strong>，可认为是window中的快捷方式</li>
+<li><strong><code>b</code></strong>：设备文件中科供存储的接口设备</li>
+<li><strong><code>c</code></strong>：设备文件中串口设备，如键盘、鼠标等一次性读取设备</li>
+</ul>
+<h4 id="用户管理"><a href="#用户管理" class="headerlink" title="用户管理"></a>用户管理</h4><p>Linux系统是一个<strong>多用户多任务</strong>的<strong>分时操作系统</strong>，任何一个要使用系统资源的用户，都必须首先<strong>向系统管理员申请一个账号</strong>，然后以这个账号的身份进入系统。<strong>用户的账号</strong>一方面可<strong>帮助系统管理员对使用系统的用户进行跟踪</strong>，并控制他们对系统资源的访问，另一方面也可<strong>帮助用户组织文件</strong>并<strong>为用户提供安全性保护</strong>。用户的修改实际上就是对<strong><code>/etc/passwd</code></strong>文件的更新。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 添加用户账号eleven2，使用useradd指令所建立的帐号，实际上是保存在/etc/passwd文本文件中</span><br><span class="line">useradd eleven2</span><br><span class="line"><span class="meta">#</span> 删除用户账号eleven2</span><br><span class="line">userdel eleven2</span><br><span class="line"><span class="meta">#</span> 修改账号</span><br><span class="line">usermod eleven3</span><br><span class="line"><span class="meta">#</span> 修改或创建用户密码</span><br><span class="line">passwd eleven3</span><br><span class="line"><span class="meta">#</span> 显示用户账号密码</span><br><span class="line">passwd -S eleven3</span><br><span class="line"><span class="meta">#</span> 清除用户密码</span><br><span class="line">passwd -d eleven3</span><br><span class="line"><span class="meta">#</span> 切换登录用户</span><br><span class="line">su - eleven3</span><br><span class="line"><span class="meta">#</span> 查看用户信息</span><br><span class="line">more /etc/passwd</span><br></pre></td></tr></table></figure>
+<p>每个用户都有一个用户组，系统可对一个用户组中的所有用户进行集中管理，不同Linux 系统对用户组的规定有所不同，如Linux下的用户属于与它同名的用户组，这个用户组在创建用户时同时创建。用户组的管理涉及<strong>用户组的添加</strong>、<strong>删除</strong>和<strong>修改</strong>。<strong>组</strong>的<strong>增加</strong>、<strong>删除</strong>和<strong>修改</strong>实际上就是对<strong><code>/etc/group</code></strong>文件的更新。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 添加用户组ele</span><br><span class="line">groupadd ele</span><br><span class="line"><span class="meta">#</span> 删除一个已有的用户组</span><br><span class="line">groupdel ele</span><br><span class="line"><span class="meta">#</span> 修改用户组属性</span><br><span class="line">groupmod ele</span><br></pre></td></tr></table></figure>
+<h4 id="kill命令"><a href="#kill命令" class="headerlink" title="kill命令"></a>kill命令</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kill -9 PID</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">HUP     1    终端断线</span><br><span class="line">INT     2    中断（同 Ctrl + C）</span><br><span class="line">QUIT    3    退出（同 Ctrl + \）</span><br><span class="line">TERM   15    终止</span><br><span class="line">KILL    9    强制终止</span><br><span class="line">CONT   18    继续（与STOP相反， fg/bg命令）</span><br><span class="line">STOP   19    暂停（同 Ctrl + Z）</span><br></pre></td></tr></table></figure>
+<h4 id="其他命令"><a href="#其他命令" class="headerlink" title="其他命令"></a>其他命令</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 显示当前所在位置绝对路径</span><br><span class="line">pwd </span><br><span class="line"><span class="meta">#</span> 搜索文件aaa.txt中包含eleven的内容，且高亮显示，--color可省略</span><br><span class="line">grep eleven aaa.txt --color</span><br><span class="line"><span class="meta">#</span> 查看当前系统正在运行进程，两者的区别是展示格式不同</span><br><span class="line">ps -ef</span><br><span class="line">ps aux</span><br><span class="line"><span class="meta">#</span> 立即关机</span><br><span class="line">shutdown -h now</span><br><span class="line"><span class="meta">#</span> 指定5分钟后关机，同时送出警告信息给登入用户</span><br><span class="line">shutdown +5</span><br></pre></td></tr></table></figure>
+<h4 id="链接命令"><a href="#链接命令" class="headerlink" title="链接命令"></a>链接命令</h4><p><strong>链接相当于快键方式</strong>，<strong>修改原始文件</strong>，可通过软硬链接查看到最新内容</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 创建链接文件</span><br><span class="line">ln -s [源文件] [目标文件]</span><br></pre></td></tr></table></figure>
+<p><img src="../../../../../images/操作系统/Linux软链接和硬链接.png" alt></p>
+<p><strong>硬链接</strong>和<strong>软链接</strong>的区别，<strong>删除原始文件后软链接就不可用了</strong>，但硬链接依然正常</p>
+<p><img src="../../../../../images/操作系统/Linux软链接和硬链接原始文件.png" alt></p>
+<h4 id="网络通信命令"><a href="#网络通信命令" class="headerlink" title="网络通信命令"></a>网络通信命令</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 查看当前系统的网卡信息</span><br><span class="line">ifconfig</span><br><span class="line"><span class="meta">#</span> 查看与某台机器的连接情况</span><br><span class="line">ping</span><br><span class="line"><span class="meta">#</span> 查看当前系统的所有连接和端口</span><br><span class="line">netstat -an</span><br><span class="line"><span class="meta">#</span> 查看当前系统正在监听TCP（t）和UDP（u）的端口</span><br><span class="line">netstat -tuln</span><br><span class="line"><span class="meta">#</span> 查看网关</span><br><span class="line">netstat -rn</span><br></pre></td></tr></table></figure>
+<h4 id="设置全局变量"><a href="#设置全局变量" class="headerlink" title="设置全局变量"></a>设置全局变量</h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/profile</span><br><span class="line"><span class="meta">#</span> 通过冒号将新增环境变量拼接到原来的变量后面</span><br><span class="line">PATH=$PATH:$JAVA_HOME/bin</span><br><span class="line"><span class="meta">#</span> 通过export命令追加</span><br><span class="line">export PATH JAVA_HOME CLASSPATH</span><br><span class="line"><span class="meta">#</span> 使配置文件生效</span><br><span class="line">source /etc/profile</span><br></pre></td></tr></table></figure>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+        
+            <a href="/Blog/算法/二叉搜索树/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">二叉搜索树</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>
