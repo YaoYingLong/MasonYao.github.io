@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    
+    <title>
+        RocketMQ高级特性 |
+        
+        YingLong</title>
+    
+    
+        <meta name="keywords" content="RocketMQ">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="消息模型RocketMQ主要由Producer、Broker、Consumer三部分组成，Producer负责生产消息，Consumer负责消费消息，Broker负责存储消息。 Broker在实际部署过程中对应一台服务器，每个Broker可存储多个Topic消息，每个Topic消息也可分片存储于不同的Broker。MessageQueue用于存储消息的物理地址，每个Topic中的消息地址存储于多个">
+<meta name="keywords" content="RocketMQ">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RocketMQ高级特性">
+<meta property="og:url" content="https://yaoyinglong.github.io/Blog/Cloud/MQ/RocketMQ/RocketMQ高级特性/index.html">
+<meta property="og:site_name" content="YingLong">
+<meta property="og:description" content="消息模型RocketMQ主要由Producer、Broker、Consumer三部分组成，Producer负责生产消息，Consumer负责消费消息，Broker负责存储消息。 Broker在实际部署过程中对应一台服务器，每个Broker可存储多个Topic消息，每个Topic消息也可分片存储于不同的Broker。MessageQueue用于存储消息的物理地址，每个Topic中的消息地址存储于多个">
+<meta property="og:locale" content="en">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/MQ/RaftTerms.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/MQ/RocketMQ消息存储结构.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/MQ/RocketMQ同步刷盘和异步刷盘.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/MQ/RocketMQ发送者队列轮询.png">
+<meta property="og:image" content="https://yaoyinglong.github.io/images/MQ/RocketMQ%20Consumer平均分配.png">
+<meta property="og:updated_time" content="2022-01-07T14:11:58.736Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RocketMQ高级特性">
+<meta name="twitter:description" content="消息模型RocketMQ主要由Producer、Broker、Consumer三部分组成，Producer负责生产消息，Consumer负责消费消息，Broker负责存储消息。 Broker在实际部署过程中对应一台服务器，每个Broker可存储多个Topic消息，每个Topic消息也可分片存储于不同的Broker。MessageQueue用于存储消息的物理地址，每个Topic中的消息地址存储于多个">
+<meta name="twitter:image" content="https://yaoyinglong.github.io/images/MQ/RaftTerms.png">
+    
+
+    
+
+    
+        <link rel="icon" href="/favicon.ico">
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="/libs/jquery/plugins/cookie/1.4.1/jquery.cookie.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+</html>
+<body>
+<div id="container">
+    <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">YingLong</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+                    <a class="main-nav-link" href="/about">About</a>
+                
+                <a class="main-nav-link" href="javascript:trigger()">Reading</a>
+            </nav>
+            
+            <div id="search-form-wrap">
+    
+        <form class="search-form">
+            <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+            <button type="submit" class="search-form-submit"></button>
+        </form>
+        <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="Type something...">
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: 'Posts',
+                PAGES: 'Pages',
+                CATEGORIES: 'Categories',
+                TAGS: 'Tags',
+                UNTITLED: '(Untitled)',
+            },
+            ROOT_URL: '/',
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js"></script>
+    
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                    <td><a class="main-nav-link" href="/about">About</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="Search">
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+<script type="text/javascript">
+    var index = 0
+    trigger = function () {
+        if (index % 2 == 0) {
+            $("#sidebar").css("display", "none");
+            $("#main").css("float", "none");
+        } else {
+            $("#sidebar").css("display", "inline");
+            $("#main").css("float", "left");
+        }
+        index++
+    }
+</script>
+
+    <div class="outer">
+        
+        
+            <aside id="sidebar">
+    
+        
+    <div class="widget-wrap" id="categories">
+        <h3 class="widget-title">
+            <span>categories</span>
+            &nbsp;
+            <a id="allExpand" href="#">
+                <i class="fa fa-angle-double-down fa-2x"></i>
+            </a>
+        </h3>
+
+        
+        
+        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            Cloud
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Dubbo
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo基础/">Dubbo基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务调用/">Dubbo服务调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/SPI机制源码/">SPI机制源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务引入/">Dubbo服务引入</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo服务导出/">Dubbo服务导出</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Dubbo/Dubbo与Spring集成原理/">Dubbo与Spring集成原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            ELK
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch基础/">ElasticSearch基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch实战/">ElasticSearch实战</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/ELK/ElasticSearch进阶/">ElasticSearch进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            MQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory open">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder-open"></i>
+                            &nbsp;
+                            RocketMQ
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ/NameServer&Broker启动源码/">NameServer&Broker启动源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ/Producer&Consumer启动源码/">Producer&Consumer启动源码</a></li>
+                
+                    <li class="file active"><a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ高级特性/">RocketMQ高级特性</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ基础/">RocketMQ基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ消息存储源码/">RocketMQ消息存储源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ生产者源码/">RocketMQ生产者源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ消费者源码/">RocketMQ消费者源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/Kafka基础/">Kafka基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ高级特性及Spring集成/">RabbitMQ高级特性及Spring集成</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/MQ/RabbitMQ基础/">RabbitMQ基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Nacos
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Client原理/">Nacos Client原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos Server原理/">Nacos Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos问题总结/">Nacos问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群CP模式/">Nacos集群CP模式</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Server原理/">Nacos配置中心Server原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群成员信息同步/">Nacos集群成员信息同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos集群注册服务同步/">Nacos集群注册服务同步</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Nacos/Nacos配置中心Client原理/">Nacos配置中心Client原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Netty
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/IO模型基础/">IO模型基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty基础/">Netty基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty源码/">Netty源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Netty/Netty进阶/">Netty进阶</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Redis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis分布式锁实现/">Redis分布式锁实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis缓存及性能优化/">Redis缓存及性能优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis基础/">Redis基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Redis/Redis集群架构/">Redis集群架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Seata
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata集成原理/">Seata集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Seata/Seata分布式事务原理/">Seata分布式事务原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Sentinel
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel配置持久化/">Sentinel配置持久化</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel规则发布源码/">Sentinel规则发布源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/常见限流算法/">常见限流算法</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Sentinel/Sentinel限流熔断降级源码/">Sentinel限流熔断降级源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Zookeeper
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper基础/">Zookeeper基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper客户端之ZAB/">Zookeeper客户端之ZAB</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper集群Leader选举/">Zookeeper集群Leader选举</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Zookeeper/Zookeeper服务端之ZAB/">Zookeeper服务端之ZAB</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            网关
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Cloud/网关/Gateway源码/">Gateway源码</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Feign集成原理/">Feign集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Canal基础/">Canal基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/Ribbon集成原理/">Ribbon集成原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式事务解决方案/">分布式事务解决方案</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/分布式系统常见问题/">分布式系统常见问题</a></li>
+                
+                    <li class="file"><a href="/Blog/Cloud/秒杀问题及解决方案/">秒杀问题及解决方案</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            DB
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/DB/Explain工具/">Explain工具</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MongoDB基础/">MongoDB基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MVCC与BufferPool缓存机制/">MVCC与BufferPool缓存机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL主从架构/">MySQL主从架构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL事务隔离级别与锁机制/">MySQL事务隔离级别与锁机制</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL内部组件结构/">MySQL内部组件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL基础/">MySQL基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/MySQL常用SQL总结/">MySQL常用SQL总结</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/ShardingSphere基础/">ShardingSphere基础</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/分库分表/">分库分表</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化一/">索引优化一</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化三/">索引优化三</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引优化二/">索引优化二</a></li>
+                
+                    <li class="file"><a href="/Blog/DB/索引的原理与使用/">索引的原理与使用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Java
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            VM
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/VM/JVM内存池/">JVM内存池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Minor&Major&Full GC/">Minor&Major&Full GC</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Class文件结构/">Class文件结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/Java内存区域/">Java内存区域</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/OutOfMemoryError异常/">OOM异常实验</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/内存非配与回收策略/">内存分配与回收策略</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集器/">垃圾收集器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/堆中对象分配&布局&访问/">堆中对象分配&布局&访问</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/垃圾收集算法/">垃圾收集算法及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令/">字节码指令</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/字节码指令手册/">字节码指令手册</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/对象是否存活/">对象是否存活</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/方法调用/">方法调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/属性表集合/">属性表集合</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/常量池/">常量池</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/理解GC日志/">理解GC日志</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载器/">类加载器</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/运行时栈帧结构/">运行时栈帧结构</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/VM/类加载过程/">类加载过程</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            基础
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK8/">HashMap源码分析JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/Java实用工具库/">Java实用工具库</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/HashMap源码分析JDK7/">HashMap源码分析JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/lambda常用总结/">lambda常用总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/位运算/">位运算</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/PriorityQueue源码/">PriorityQueue源码</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/动态代理/">动态代理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/反射基础/">反射基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/时间及日期总结/">Java8时间及日期</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/基础/注解实现及应用/">注解实现及应用</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/工具/Java中调用Groovy脚本/">Java中调用Groovy脚本</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/JAVA实用工具/">JAVA实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM2/">国密SM2</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/工具/国密SM4/">国密SM4</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            并发
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列二/">BlockingQueue阻塞队列二</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/AQS与ReentrantLock/">AQS与ReentrantLock</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Callable与Future/">Callable与Future</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK7/">ConcurrentHashMap源码JDK7</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Condition原理/">Condition原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java内存模型/">Java内存模型</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ConcurrentHashMap源码JDK8/">ConcurrentHashMap源码JDK8</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Java与线程/">Java与线程</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/BlockingQueue阻塞队列一/">BlockingQueue阻塞队列一</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ReentrantReadWriteLock原理/">ReentrantReadWriteLock原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ScheduledThreadPoolExecutor/">ScheduledThreadPoolExecutor</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Synchronized总结/">Synchronized总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/ThreadLocal原理/">ThreadLocal原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/原子性、可见性、有序性/">原子性、可见性、有序性</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Unsafe应用/">Unsafe应用</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/Volatile原理/">Volatile原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全/">线程安全</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程安全实现方式/">线程安全实现方式</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/同步工具类/">同步工具类</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/锁优化/">锁优化</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/线程池原理/">线程池原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/并发/操作系统底层/">操作系统底层</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM内存参数设置/">JVM内存参数设置</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优工具/">JVM调优工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM整体概览/">JVM整体概览</a></li>
+                
+                    <li class="file"><a href="/Blog/Java/JVM调优思路/">JVM调优思路</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Maven
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Maven/Maven仓库/">Maven仓库</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven Assembly标签全解/">Maven Assembly标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven基础/">Maven基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven加密JAR包/">Maven加密JAR包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven个性化打包/">Maven个性化打包</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven属性/">Maven属性</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用/">Maven常用</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用工具/">Maven常用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常见问题总结/">Maven常见问题总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven常用插件/">Maven常用插件</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件基础/">Maven插件基础</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven插件编写/">Maven插件编写</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven标签全解/">Maven标签全解</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven生命周期/">Maven生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Maven/Maven聚合与继承/">Maven聚合与继承</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Spring
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            SpringBoot
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot Jar包启动原理/">SpringBoot Jar包启动原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot资源加载/">SpringBoot资源加载</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot自动装配原理/">SpringBoot自动装配原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringBoot/SpringBoot启动原理/">SpringBoot启动原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP切面类解析/">AOP切面类解析</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/AOP创建代理与调用/">AOP创建代理与调用</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/BeanDefinition解析注册/">BeanDefinition解析注册</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的生命周期/">Bean的生命周期</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Hystrix总结/">Hystrix总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Bean的加载过程/">Bean的加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器/">IoC容器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring Gzip压缩/">Spring Gzip压缩</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/IoC容器加载过程/">IoC容器加载过程</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc异步/">SpringMvc异步原理及实现</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/SpringMvc处理分发请求原理/">SpringMvc处理分发请求原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/Spring线程池跨线程数据共享/">Spring线程池跨线程数据共享</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事件监听器/">事件监听器</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务解析原理/">事务解析原理</a></li>
+                
+                    <li class="file"><a href="/Blog/Spring/事务调用原理/">事务调用原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Test
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/Test/IT测试总结/">IT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/UT测试总结/">UT测试总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/JMeter日常总结/">JMeter日常总结</a></li>
+                
+                    <li class="file"><a href="/Blog/Test/LoadRunner日常总结/">LoadRunner日常总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            中间件
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Mybatis
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis缓存原理/">Mybatis缓存原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis执行SQL原理/">Mybatis执行SQL原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis集成到Spring原理/">Mybatis集成到Spring原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Mybatis/Mybatis配置文件解析原理/">Mybatis配置文件解析原理</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Tomcat
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/BIO和NIO底层原理对比/">BIO和NIO底层原理对比</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理响应过程/">Tomcat处理响应过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat启动过程/">Tomcat启动过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat处理请求过程/">Tomcat处理请求过程</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat工作原理/">Tomcat工作原理</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat热部署热加载/">Tomcat热部署热加载</a></li>
+                
+                    <li class="file"><a href="/Blog/中间件/Tomcat/Tomcat整体架构/">Tomcat整体架构</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            云原生
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/云原生/Docker基础/">Docker基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker Compose基础/">Docker Compose基础</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Docker搭建Prometheus&Grafana/">Docker搭建Prometheus&Grafana</a></li>
+                
+                    <li class="file"><a href="/Blog/云原生/Kubernetes基础/">Kubernetes基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            杂记
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Git
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt基本概念/">Git基本概念</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/GIt常用命令/">Git常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Git/分支管理理解/">分支管理理解</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Linux
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux常用命令/">Linux常用命令</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux基础/">Linux基础</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Shell基础/">Shell基础</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/Linux磁盘与文件系统/">Linux磁盘与文件系统</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/Linux/零拷贝技术/">零拷贝技术</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            协议族
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCPIP四层&五层模型/">TCP/IP四层&五层模型</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/以太网/">以太网</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/网络基础知识/">网络基础知识</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/地址解析协议/">地址解析协议ARP</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/TCP&UDP协议/">TCP&UDP协议</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTP协议/">HTTP协议</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/协议族/HTTPs协议/">HTTPs协议</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            工具
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/杂记/工具/SonarQube配置总结/">SonarQube配置总结</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/IDEA快捷的使用/">IDEA的快捷使用</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/Win实用工具/">Win实用工具</a></li>
+                
+                    <li class="file"><a href="/Blog/杂记/工具/XSD使用总结/">XSD实用总结</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            算法
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/算法/二叉搜索树/">二叉搜索树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/图基础/">图基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/基础算法/">基础算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/平衡二叉树/">平衡二叉树</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/排序算法/">排序算法</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/树基础/">树基础</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-动态规划/">经典算法-动态规划</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-栈/">经典算法-栈</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法-链表/">经典算法-链表</a></li>
+                
+                    <li class="file"><a href="/Blog/算法/经典算法/">经典算法</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            设计模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            创建型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/单例模式/">单例模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/原型模式/">原型模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/工厂模式/">工厂模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/创建型模式/建造者模式/">建造者模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            结构型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/外观模式/">外观模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/代理模式/">代理模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/组合模式/">组合模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/装饰模式/">装饰模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/适配器模式/">适配器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/享元模式/">享元模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/结构型模式/桥梁模式/">桥梁模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            行为型模式
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/命令模式/">命令模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/备忘录模式/">备忘录模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/模板方法模式/">模板方法模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/状态模式/">状态模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/中介者模式/">中介者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/策略模式/">策略模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/观察者模式/">观察者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/责任链模式/">责任链模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/迭代器模式/">迭代器模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/访问者模式/">访问者模式</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/行为型模式/解释器模式/">解释器模式</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/设计模式/SOLID基本原则/">SOLID基本原则</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式概览/">设计模式概览</a></li>
+                
+                    <li class="file"><a href="/Blog/设计模式/设计模式对比/">设计模式对比</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            语言
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            CPP
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/语言/CPP/IO流/">IO流</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Go
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/语言/Go/Go基础/">Go基础</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="directory">
+                        <a href="#" data-role="directory">
+                            <i class="fa fa-folder"></i>
+                            &nbsp;
+                            Python
+                        </a>
+                        
+            <ul class="unstyled" id="tree">
+                
+                    <li class="file"><a href="/Blog/语言/Python/Excel文件数据抽取/">Excel文件数据抽取</a></li>
+                
+            </ul>
+        
+                    </li>
+                
+            </ul>
+        
+                    </li>
+                
+                    <li class="file"><a href="/Blog/index/"></a></li>
+                
+            </ul>
+        
+    </div>
+    <script>
+        $(document).ready(function () {
+            var iconFolderOpenClass = 'fa-folder-open';
+            var iconFolderCloseClass = 'fa-folder';
+            var iconAllExpandClass = 'fa-angle-double-down';
+            var iconAllPackClass = 'fa-angle-double-up';
+            // Handle directory-tree expansion:
+            // 左键单独展开目录
+            $(document).on('click', '#categories a[data-role="directory"]', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var subtree = $(this).siblings('ul');
+                icon.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideUp({duration: 100});
+                    }
+                    icon.addClass(iconFolderCloseClass);
+                } else {
+                    if (typeof subtree != 'undefined') {
+                        subtree.slideDown({duration: 100});
+                    }
+                    icon.addClass(iconFolderOpenClass);
+                }
+            });
+            // 右键展开下属所有目录
+            $('#categories a[data-role="directory"]').bind("contextmenu", function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconFolderOpenClass);
+                var listNode = $(this).siblings('ul');
+                var subtrees = $.merge(listNode.find('li ul'), listNode);
+                var icons = $.merge(listNode.find('.fa'), icon);
+                icons.removeClass(iconFolderOpenClass).removeClass(iconFolderCloseClass);
+                if (expanded) {
+                    subtrees.slideUp({duration: 100});
+                    icons.addClass(iconFolderCloseClass);
+                } else {
+                    subtrees.slideDown({duration: 100});
+                    icons.addClass(iconFolderOpenClass);
+                }
+            })
+            // 展开关闭所有目录按钮
+            $(document).on('click', '#allExpand', function (event) {
+                event.preventDefault();
+
+                var icon = $(this).children('.fa');
+                var expanded = icon.hasClass(iconAllExpandClass);
+                icon.removeClass(iconAllExpandClass).removeClass(iconAllPackClass);
+                if (expanded) {
+                    $('#sidebar .fa.fa-folder').removeClass('fa-folder').addClass('fa-folder-open')
+                    $('#categories li ul').slideDown({duration: 100});
+                    icon.addClass(iconAllPackClass);
+                } else {
+                    $('#sidebar .fa.fa-folder-open').removeClass('fa-folder-open').addClass('fa-folder')
+                    $('#categories li ul').slideUp({duration: 100});
+                    icon.addClass(iconAllExpandClass);
+                }
+            });
+        });
+    </script>
+
+    
+</aside>
+<div id="toTop" class="fa fa-angle-up"></div>
+
+        
+        <section id="main"><article id="post-Cloud/MQ/RocketMQ/RocketMQ高级特性" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+                    <div class="article-meta">
+                        
+    <div class="article-category">
+        <i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/Cloud/">Cloud</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/MQ/">MQ</a><i class="fa fa-angle-right"></i><a class="article-category-link" href="/categories/Cloud/MQ/RocketMQ/">RocketMQ</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/RocketMQ/">RocketMQ</a>
+    </div>
+
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ高级特性/">
+            <time datetime="2021-11-29T16:00:00.000Z" itemprop="datePublished">2021-11-30</time>
+        </a>
+    </div>
+
+
+                        
+                    </div>
+                
+                
+    
+        <h1 class="article-title" itemprop="name">
+            RocketMQ高级特性
+        </h1>
+    
+
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+            
+            
+                    
+            
+            
+                <h4 id="消息模型"><a href="#消息模型" class="headerlink" title="消息模型"></a>消息模型</h4><p>RocketMQ主要由<strong><code>Producer</code></strong>、<strong><code>Broker</code></strong>、<strong><code>Consumer</code></strong>三部分组成，Producer负责<strong>生产</strong>消息，Consumer负责<strong>消费</strong>消息，Broker负责<strong>存储</strong>消息。</p>
+<p>Broker在实际部署过程中对应一台服务器，<strong>每个<code>Broker</code>可存储多个<code>Topic</code>消息</strong>，<strong>每个<code>Topic</code>消息</strong>也可<strong>分片存储于不同的Broker</strong>。<strong><code>MessageQueue</code>用于存储消息的物理地址</strong>，每个Topic中的消息地址<strong>存储于多个MessageQueue中</strong>。<strong><code>ConsumerGroup</code>由多个<code>Consumer</code> 实例构成</strong>。</p>
+<p><strong>每个<code>Broker</code>下都会生成对应的<code>Topic</code>的文件夹，每个<code>Topic</code>文件夹下会为每个队列生成一个以队列<code>id</code>作为文件名的文件夹，在文件夹内才是对应的<code>MessageQueue</code>文件</strong>。</p>
+<h4 id="消息生产者"><a href="#消息生产者" class="headerlink" title="消息生产者"></a>消息生产者</h4><p>RocketMQ提供多种发送方式，<strong>同步发送</strong>、<strong>异步发送</strong>、<strong>顺序发送</strong>、<strong>单向发送</strong>。<strong>同步</strong>和<strong>异步</strong>方式均<strong>需要<code>Broker</code>返回确认信息</strong>，单向发送不需要；</p>
+<p>生产者中会把<strong>同一类<code>Producer</code>组成一个集合</strong>，叫做<strong>生产者组</strong>，这类Producer<strong>发送同一类消息</strong>且<strong>发送逻辑一致</strong>。若发送的是<strong>事务消息</strong>且原始生产者在发送之后崩溃，则Broker服务器会联系<strong>同一生产者组</strong>的<strong>其他生产者实例</strong>以<strong>提交</strong>或<strong>回溯消费</strong>。</p>
+<h4 id="消息消费者"><a href="#消息消费者" class="headerlink" title="消息消费者"></a>消息消费者</h4><p>一个消息消费者会从<strong><code>Broker</code></strong>服务器<strong>拉取消息</strong>，从用户应用的角度而言提供了<strong>两种消费形式</strong>：<strong>拉取式消费</strong>、<strong>推动式消费</strong>。</p>
+<ul>
+<li><strong>拉取式消费</strong>的应用通常<strong>主动调用<code>Consumer</code>的拉消息方法</strong>从Broker服务器拉消息、主动权由应用控制。一旦获取了批量消息，应用就会启动消费过程。</li>
+<li><strong>推动式消费</strong>模式下Broker收到数据后会<strong>主动推送给消费端</strong>，该消费模式一般<strong>实时性较高</strong>，底层也是通过拉取模式来实现的，<strong>与<code>Broker</code>建立长连接达到消息实时接收的效果</strong>。</li>
+</ul>
+<p>消费者同样会把<strong>同一类<code>Consumer</code>组成一个集合</strong>，叫做<strong>消费者组</strong>，这类Consumer通常<strong>消费同一类消息</strong>且<strong>消费逻辑一致</strong>。消费者组使得在消息消费方面，实现<strong>负载均衡</strong>和<strong>容错</strong>的目标变得非常容易。<strong>消费者组的消费者实例必须订阅完全相同的<code>Topic</code></strong>。RocketMQ支持<strong>两种消息模式</strong>：<strong>集群消费<code>Clustering</code></strong>和<strong>广播消费<code>Broadcasting</code></strong>。</p>
+<ul>
+<li><strong>集群消费模式</strong>：相同Consumer Group的每个Consumer实例<strong>平均分摊消息</strong>。不同的Consumer Group全量接收消息。</li>
+<li><strong>广播消费模式</strong>：相同Consumer Group的每个Consumer实例<strong>都接收全量的消息</strong>。</li>
+</ul>
+<h4 id="Topic"><a href="#Topic" class="headerlink" title="Topic"></a>Topic</h4><p><strong><code>Topic</code></strong>表示一类消息的集合，每个Topic包含若干条消息，每条消息只能属于一个主题，是RocketMQ进行<strong>消息订阅的基本单位</strong>。</p>
+<p>同一个Topic下的数据，会<strong>分片</strong>保存到不同的Broker上，而<strong>每一个分片单位</strong>为<strong><code>MessageQueue</code></strong>。<strong><code>MessageQueue</code></strong>是生产者发送消息与消费者消费消息的<strong>最小单位</strong>。</p>
+<h4 id="Broker-Server"><a href="#Broker-Server" class="headerlink" title="Broker Server"></a>Broker Server</h4><p><strong>消息中转角色</strong>，负责<strong>存储</strong>消息、<strong>转发</strong>消息。代理服务器在RocketMQ系统中负责接<strong>收从生产者发送来的消息</strong>并存储、同时<strong>为消费者的拉取请求作准备</strong>。代理服务器也<strong>存储消息相关元数据</strong>，包括<strong>消费者组</strong>、<strong>消费进度偏移</strong>和<strong>主题</strong>和<strong>队列消息</strong>等。Broker Server要保证<strong>高可用</strong>需要<strong>搭建主从集群架构</strong>。RocketMQ中有<strong>普通集群</strong>和<strong>Dledger高可用集群</strong>两种Broker架构模式。</p>
+<h5 id="普通集群"><a href="#普通集群" class="headerlink" title="普通集群"></a>普通集群</h5><p>该集群模式下会<strong>给每个节点分配一个固定角色</strong>，<strong><code>Master</code></strong>负责<strong>响应客户端的请求</strong>并<strong>存储消息</strong>。<strong><code>Slave</code></strong>则只负责对<strong><code>Master</code></strong>的消息进行<strong>同步保存</strong>，并<strong>响应部分客户端的读请求</strong>，消息同步方式分为<strong>同步同步</strong>和<strong>异步同步</strong>。该集群模式下<strong>各节点角色无法进行切换</strong>，即Master节点挂了，则这一组Broker就不可用了，<strong><code>Slave</code></strong>不会顶上去成为Master。</p>
+<h5 id="Dledger高可用集群"><a href="#Dledger高可用集群" class="headerlink" title="Dledger高可用集群"></a>Dledger高可用集群</h5><p>Dledger是<strong><code>RocketMQ 4.5</code></strong>引入的实现高可用集群的一项技术。该模式下<strong>集群会随机选出一个节点作为Master</strong>，当Master节点挂了后，会从Slave中自动选出一个节点升级成为Master。</p>
+<p>Dledger会<strong>从集群中选举出<code>Master</code>节点</strong>，<strong>完成<code>Master</code>节点往<code>Slave</code>节点的消息同步</strong>，且<strong>接管</strong>Broker的<strong><code>CommitLog</code>消息存储</strong>。Dledger是使用<strong><code>Raft</code>算法</strong>来进行节点选举的。</p>
+<p>每个节点有<strong><code>Leader</code></strong>、<strong><code>Follower</code></strong>、<strong><code>Candidate</code></strong>三个状态，正常运行情况下，集群中会有一个leader，其他都是Follower且只响应Leader和Candidate的请求，而客户端的请求全部由Leader处理，即使有客户端请求到了一个Follower也会<strong>将请求转发到<code>Leader</code></strong>。</p>
+<p>集群刚启动时每个节点都是Follower状态，之后集群内部会发送一个timeout信号，所有Follower转成Candidate去拉取选票，获得大多数选票的节点选为Leader，其他候选人转为Follower。若一个timeout信号发出时，没有选出Leader，将会重新开始一次新的选举。<strong><code>Leader</code>节点</strong>会往其他节点<strong>发送心跳信号</strong>，确认其Leader状态。</p>
+<p>然后<strong>启动定时器</strong>，若<strong>指定时间内未收到<code>Leader</code>心跳</strong>，则<strong>转为<code>Candidate</code>状态</strong>，然后向其他成员发起投票请求，若收到半数以上成员的投票，则Candidate会晋升为Leader，然后<strong>Leader也有可能会退化成Follower</strong>。</p>
+<p>在Raft协议中会<strong>将时间分为一些任意时间长度的时间片段</strong>叫做<strong><code>term</code></strong>。term会使用一个<strong>全局唯一</strong>，<strong>连续递增</strong>的编号作为标识，起到一个<strong>逻辑时钟</strong>的作用。</p>
+<p><img src="../../../../../images/MQ/RaftTerms.png" alt></p>
+<p>在<strong>每个<code>term</code>时间片</strong>里都会<strong>进行新的选举</strong>，每个<strong><code>Candidate</code></strong>都会努力争取成为Leader。Leader节点<strong>在一个term时间片</strong>里会保持Leader状态，同一时间段内，集群中只会有一个Leader。某些情况下形成不了多数派，那该term可能直到结束都没有leader，直到下一个term再重新发起选举，也就没有了Zookeeper中的脑裂问题。而在每次重新选举的过程中， Leader也有可能会退化成为Follower。在<strong>该集群中<code>Leader</code>节点会不断变化</strong>。</p>
+<p>每次选举的过程中，每个节点都会存储当前term编号，并在节点之间进行交流时带上自己的term编号。若一个节点发现他的编号比另外一个小，则会将自己的编号更新为较大的那一个。若Leader或Candidate发现自己的编号不是最新的，则会<strong>自动转成<code>Follower</code></strong>。若<strong>接收到的请求term编号小于自己的编号term将会拒绝执行</strong>。</p>
+<p>在选举过程中，Raft协议会通过心跳机制发起Leader选举。节点都是从Follower状态开始，若收到了来自Leader或Candidate的心跳RPC请求，则会保持Follower状态，避免争抢成为Candidate。而Leader会往其他节点发送心跳信号，来确认自己的地位。若<strong><code>Follower</code>两个<code>timeout</code>信号内没有收到<code>Leader</code>的心跳信号</strong>，则会认为Leader挂了，发起新一轮选举。</p>
+<p>选举开始后，每个Follower会增加自己当前的term，并将自己转为Candidate。然后向其他节点发起投票请求，请求时默认投自己一票。之后Candidate状态可能会发生以下三种变化：</p>
+<ul>
+<li><strong>赢得选举成为<code>Leader</code></strong>：若在一个term内收到了大多数的选票，将会在接下的剩余term时间内称为Leader，然后就可通过发送心跳确立自己的地位。每一个Server在一个term内只能投一张选票，并且<strong>按先到先得</strong>的原则投出</li>
+<li><strong>其他节点成为Leader</strong>：在等待投票时，可能会收到其他Server发出心跳信号，说明Leader已产生。这时通过比较自己的term编号和RPC过来的term编号，若<strong>比对方大说明Leader的term过期</strong>，则拒绝该RPC并继续<strong>保持候选人身份</strong>，若<strong>对方编号不比自己小</strong>则承认对方的地位,转为follower。</li>
+<li><strong>选票被瓜分选举失败</strong>：若<strong>无Candidate获取大多数选票</strong>，则无Leader产生，Candidate们等待超时后发起另一轮选举，为防止下一次选票还被瓜分，Raft采用<strong>随机<code>Election Timeout</code>即随机休眠时间</strong>机制防止选票被持续瓜分。通过将timeout随机设为一段区间上的某个值，因此很大概率会有某个Candidate率先超时然后赢得大部分选票。</li>
+</ul>
+<p>以三个节点的集群为例，集群启动时三个节点都是Follower，发起投票后三个节点都会给自己投票，一轮投票下来三个节点的term都是1，选举不出Leader；三个节点会进入随机休眠，然后开始新一轮投票；</p>
+<p>Dledger还会<strong>采用Raft协议进行多副本消息同步</strong>，<strong>数据同步</strong>会通过<strong><code>uncommitted</code>阶段</strong>和<strong><code>commited</code>阶段</strong>两个阶段来完成。</p>
+<p>Leader Broker上的Dledger收到一条数据后，会标记为<strong><code>uncommitted</code>状态</strong>，然后他通过自己的DledgerServer组件把该uncommitted数据发给Follower Broker的<strong><code>DledgerServer</code></strong>组件。</p>
+<p>Follower Broker的<strong><code>DledgerServer</code></strong>收到uncommitted消息后，必须<strong>返回一个<code>Ack</code></strong>给Leader Broker的Dledger。若Leader Broker收到<strong>超过半数</strong>的Follower Broker返回的<strong><code>Ack</code></strong>之后，就会把消息<strong>标记为<code>committed</code>状态</strong>。</p>
+<p>Leader Broker上的<strong><code>DledgerServer</code></strong>就会<strong>发送<code>committed</code>消息</strong>给Follower Broker上的DledgerServer，<strong>让他们把消息也标记为<code>committed</code>状态</strong>。</p>
+<h3 id="消息存储"><a href="#消息存储" class="headerlink" title="消息存储"></a>消息存储</h3><p>分布式队列因为有<strong>高可靠性</strong>的要求，所以数据要进行<strong>持久化存储</strong>。RocketMQ采用的是类似于Kafka的<strong>文件存储机制</strong>，即<strong>直接用磁盘文件来保存消息</strong>，而不需要借助MySQL这一类<strong>索引工具</strong>。</p>
+<ul>
+<li>MQ收到一条消息后，需要向生产者返回一个ACK响应，并将消息存储起来。</li>
+<li>MQ Push一条消息给消费者后，等待消费者的ACK响应，需要将消息标记为已消费。若没有标记为消费，MQ会不断尝试往消费者推送这条消息。</li>
+<li>MQ需要<strong>定期删除一些过期的消息</strong>，这样才能保证服务一直可用。</li>
+</ul>
+<p>目前的高性能磁盘，<strong>顺序写速度</strong>可以达到<strong><code>600MB/s</code></strong>， 超过一般网卡传输速度。但是<strong>磁盘随机写速度</strong>只有大概<strong><code>100KB/s</code></strong>，<strong><code>RocketMQ</code>的消息用顺序写</strong>保证了消息存储的速度。</p>
+<p>Linux操作系统分为<strong>用户态</strong>和<strong>内核态</strong>，<strong>文件操作</strong>、<strong>网络操作</strong>需要涉及这<strong>两种形态的切换</strong>，免不了进行<strong>数据复制</strong>。一台服务器把本机磁盘文件的内容发送到客户端，一般分为<strong>读取本地文件内容</strong>、<strong>将读取的内容通过网络发送出去</strong>两个步骤。看似简单的操作，实际进行了<strong><code>4</code> 次数据复制</strong>：</p>
+<ul>
+<li>从<strong>磁盘</strong>复制数据到<strong>内核态</strong>内存</li>
+<li>从<strong>内核态</strong>内存复制到<strong>用户态</strong>内存</li>
+<li>然后从<strong>用户态</strong>内存复制到<strong>网络驱动</strong>的<strong>内核态</strong>内存</li>
+<li>最后从<strong>网络驱动的内核态</strong>内存复制到<strong>网卡</strong>中进行传输</li>
+</ul>
+<p>通过使用<strong><code>mmap</code></strong>方式，可<strong>省去向用户态</strong>内存复制，提高速度。这种机制在Java中是通过<strong><code>NIO</code></strong>包中的<strong><code>MappedByteBuffer</code></strong>实现的。RocketMQ充分利用该特性，也就是所谓的<strong>零拷贝</strong>技术，<strong>提高消息存盘</strong>和<strong>网络发送速度</strong>。</p>
+<p>采用<strong><code>MappedByteBuffer</code></strong>这种<strong>内存映射</strong>的方式有几个限制：<strong>一次只能映射<code>1.5~2G</code>的文件至用户态的虚拟内存</strong>，这也是为何<strong>RocketMQ默认设置单个CommitLog日志数据文件为1G的原因</strong>。</p>
+<p><strong>零拷贝</strong>在Java NIO中提供了<strong><code>mmap</code></strong>和<strong><code>sendfile</code></strong>两种实现方式，<strong><code>mmap</code>适合比较小的文件</strong>，<strong><code>sendfile</code>适合传递比较大的文件</strong>。</p>
+<h4 id="消息存储结构"><a href="#消息存储结构" class="headerlink" title="消息存储结构"></a>消息存储结构</h4><p>RocketMQ消息的存储分为三个部分：</p>
+<ul>
+<li><strong><code>CommitLog</code></strong>：<strong>存储消息的元数据</strong>，所有消息都会<strong>顺序</strong>存入到<strong><code>CommitLog</code></strong>文件当中。<strong><code>CommitLog</code></strong>由多个文件组成，<strong>每个文件固定大小<code>1G</code></strong>，<strong>以第一条消息的偏移量为文件名</strong>。</li>
+<li><strong><code>ConsumerQueue</code></strong>：<strong>存储消息在<code>CommitLog</code>的索引</strong>，一个<strong><code>MessageQueue</code></strong>一个文件，记录当前<strong><code>MessageQueue</code></strong>被哪些消费者组消费到了哪一条<strong><code>CommitLog</code></strong>。<strong>每个<code>Broker</code>下都会生成对应的<code>Topic</code>的文件夹，每个<code>Topic</code>文件夹下会为每个队列生成一个以队列<code>id</code>作为文件名的文件夹，在文件夹内才是对应的<code>MessageQueue</code>文件</strong>。</li>
+<li><strong><code>IndexFile</code></strong>：为了消息查询提供了一种<strong>通过<code>key</code>或时间区间来查询消息的方法</strong>，这种通过<strong><code>IndexFile</code></strong>来查找消息的方法不影响发送与消费消息的主流程</li>
+</ul>
+<p><img src="../../../../../images/MQ/RocketMQ消息存储结构.png" alt></p>
+<ul>
+<li><strong><code>abort</code></strong>：该文件是RocketMQ用来<strong>判断程序是否正常关闭的一个标识文件</strong>。正常情况下<strong>在启动时创建关闭服务时删除</strong>。若遇到服务器宕机或<strong><code>kill -9</code></strong>等一些<strong>非正常关闭服务的情况</strong>，该abort文件不会删除，RocketMQ就可判断上一次服务是非正常关闭，做一些数据恢复的操作。</li>
+<li><strong><code>checkpoint</code></strong>：<strong>数据存盘检查点</strong>。</li>
+<li><strong><code>config/*.json</code></strong>：将<strong><code>Topic</code>配置</strong>、<strong>消费者组配置</strong>、消费者组<strong>消息偏移量Offset</strong>等<strong>关键配置信息</strong>进行存盘保存。</li>
+</ul>
+<h4 id="刷盘机制"><a href="#刷盘机制" class="headerlink" title="刷盘机制"></a>刷盘机制</h4><p>RocketMQ需要将消息<strong>存储到磁盘</strong>上才能<strong>保证断电后消息不丢失</strong>，才可以让<strong>存储的消息量超出内存的限制</strong>。为了提高性能，会<strong>尽量保证磁盘的顺序写</strong>。消息在写入磁盘时有<strong><code>SYNC_FLUSH</code>同步刷盘</strong>和<strong><code>ASYNC_FLUSH</code>异步刷盘</strong>两种写磁盘的方式。通过Broker配置文件中<strong><code>flushDiskType</code></strong>参数设置。</p>
+<p><img src="../../../../../images/MQ/RocketMQ同步刷盘和异步刷盘.png" alt></p>
+<ul>
+<li><p><strong>同步刷盘</strong>：<strong>返回写成功状态时，消息已经被写入磁盘</strong>。消息写入内存的<strong><code>PAGECACHE</code></strong>后，<strong>立刻通知刷盘线程刷盘</strong>， 等待刷盘完成，刷盘线程执行完成后唤醒等待的线程，返回消息写成功的状态。</p>
+</li>
+<li><p><strong>异步刷盘</strong>：返回写成功状态时，<strong>消息可能只是被写入了内存的<code>PAGECACHE</code></strong>，<strong>写操作的返回快吞吐量大</strong>；当内存里的消息量积累到一定程度时，统一触发写磁盘动作快速写入。</p>
+</li>
+</ul>
+<h4 id="主从复制"><a href="#主从复制" class="headerlink" title="主从复制"></a>主从复制</h4><p>若Broker以集群方式部署，会有一个Master节点和多个Slave节点，消息需要从Master复制到Slave上。而消息复制的方式分为<strong>同步复制</strong>和<strong>异步复制</strong>。通过Broker配置文件里的<strong><code>brokerRole</code></strong>参数进行设置，该参数可以被设置成<strong><code>ASYNC_MASTER</code></strong>、 <strong><code>SYNC_MASTER</code></strong>、<strong><code>SLAVE</code></strong>三个值中的一个。</p>
+<ul>
+<li><p><strong>同步复制</strong>：<strong>等Master和Slave都写入消息成功后</strong>才反馈给客户端写入成功的状态。若Master故障Slave上有全部数据备份，很容易恢复数据。<strong>同步复制会增大数据写入延迟降低系统的吞吐量</strong>。</p>
+</li>
+<li><p><strong>异步复制</strong>：<strong>Master写入消息成功</strong>就反馈给客户端写入成功的状态，再异步将消息复制给Slave节点。系统拥有<strong>较低延迟</strong>和<strong>较高吞吐量</strong>。但若Master故障而有些<strong>数据没有完成复制就会造成数据丢失</strong>。</p>
+</li>
+</ul>
+<h4 id="负载均衡"><a href="#负载均衡" class="headerlink" title="负载均衡"></a>负载均衡</h4><h5 id="Producer负载均衡"><a href="#Producer负载均衡" class="headerlink" title="Producer负载均衡"></a>Producer负载均衡</h5><p>Producer发送消息时，<strong>默认</strong>会<strong>轮询目标<code>Topic</code>下的所有<code>MessageQueue</code></strong>，并采用<strong>递增取模方式</strong>往不同的<strong><code>MessageQueue</code></strong>上发送消息，让消息平均落在不同的Queue上。由于<strong><code>MessageQueue</code></strong>是<strong>分布在不同的<code>Broker</code>上</strong>，故消息也会发送到不同的Broker上。生产者在发送消息时，可指定一个<strong><code>MessageQueueSelector</code></strong>，通过该对象来将消息发送到指定的MessageQueue上，<strong>可通过该方式保证消息局部有序</strong>。</p>
+<p><img src="../../../../../images/MQ/RocketMQ发送者队列轮询.png" alt></p>
+<h5 id="Consumer负载均衡"><a href="#Consumer负载均衡" class="headerlink" title="Consumer负载均衡"></a>Consumer负载均衡</h5><p>Consumer也是以<strong><code>MessageQueue</code></strong>为单位来进行负载均衡，分为<strong>集群模式</strong>和<strong>广播模式</strong>。广播模式下每条消息都会投递给订阅了Topic的所有消费者实例，在Consumer分配Queue时，所有Consumer都分到所有的Queue。</p>
+<p><strong>集群消费模式</strong>每条消息只需要投递到<strong>订阅该<code>Topic</code>的<code>Consumer Group</code>下的一个实例</strong>，RocketMQ采用<strong>主动拉取方式</strong>拉取并消费消息，在<strong>拉取时需明确指定拉取哪一条<code>MessageQueue</code></strong>。</p>
+<p><strong>每当实例的数量有变更</strong>，都会<strong>触发一次所有实例的负载均衡</strong>，这时会按照<strong><code>Queue</code>的数量</strong>和<strong>实例的数量平均分配<code>Queue</code>给每个实例</strong>。</p>
+<p>每次分配时都会将<strong><code>MessageQueue</code></strong>和<strong>消费者<code>ID</code>进行排序</strong>，再用不同的<strong>分配算法</strong>进行分配。内置的分配的算法共有六种，分别对应<strong><code>AllocateMessageQueueStrategy</code>下的六种实现类</strong>，<strong>可在<code>Consumer</code>中直接指定</strong>。<strong>默认</strong>情况下使用的是最简单的<strong>平均分配策略</strong>。</p>
+<ul>
+<li><strong><code>AllocateMachineRoomNearby</code></strong>：<strong>将同机房的Consumer和Broker优先分配在一起</strong>。该策略可通过一个<strong><code>machineRoomResolver</code></strong>对象来定制Consumer和Broker的<strong>机房解析规则</strong>。还需要引入另外一个分配策略来对同机房的Broker和Consumer进行分配。一般用<strong>平均分配策略</strong>或<strong>轮询分配策略</strong>。</li>
+<li><strong><code>AllocateMessageQueueAveragely</code></strong>：<strong>平均分配</strong>，将所有MessageQueue平均分给每一个消费者</li>
+<li><strong><code>AllocateMessageQueueAveragelyByCircle</code></strong>： <strong>轮询分配</strong>，轮流的给一个消费者分配一个MessageQueue。</li>
+<li><strong><code>AllocateMessageQueueByConfig</code></strong>： 直接<strong>指定一个<code>messageQueue</code>列表</strong>，类似于广播模式，直接指定所有队列。</li>
+<li><strong><code>AllocateMessageQueueByMachineRoom</code></strong>：<strong>按逻辑机房的概念进行分配</strong>。对BrokerName和ConsumerIdc有定制化的配置。</li>
+<li><strong><code>AllocateMessageQueueConsistentHash</code></strong>：<strong>一致性哈希策略</strong>只需要指定一个虚拟节点数，用一个<strong>哈希环算法</strong>，虚拟节点是为了让Hash数据在环上分布更为均匀。</li>
+</ul>
+<p><img src="../../../../../images/MQ/RocketMQ Consumer平均分配.png" alt="Consumer平均分配"></p>
+<h4 id="消息重试"><a href="#消息重试" class="headerlink" title="消息重试"></a>消息重试</h4><p><strong>广播模式的消息是不存在消息重试机制</strong>，消息消费失败后不会再重新进行发送，继续消费新的消息。对于普通消息，当消费者消费消息失败后，可<strong>通过设置返回状态达到消息重试的结果</strong>。</p>
+<p><strong>集群消费方式下</strong>，消息消费失败后期望消息重试，需要在<strong>消息监听器接口</strong>的实现中明确进行配置，有<strong>返回<code>Action.ReconsumeLater</code></strong>、<strong>返回<code>NULL</code></strong>、<strong>抛出异常</strong>三种配置方式。</p>
+<p>重试消息会进入一个<strong><code>%RETRY%+ConsumeGroup</code></strong>队列中，默认允许每条消息<strong>最多重试<code>16</code>次</strong>，<strong>重试时间跟延迟消息的延迟级别是对应的</strong>，不过取的是延迟级别的后16级别。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">重试次数</th>
+<th style="text-align:center">与上次重试的间隔时间</th>
+<th style="text-align:center">重试次数</th>
+<th style="text-align:center">与上次重试的间隔时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">10秒</td>
+<td style="text-align:center">9</td>
+<td style="text-align:center">7分钟</td>
+</tr>
+<tr>
+<td style="text-align:center">2</td>
+<td style="text-align:center">30秒</td>
+<td style="text-align:center">10</td>
+<td style="text-align:center">8分钟</td>
+</tr>
+<tr>
+<td style="text-align:center">3</td>
+<td style="text-align:center">1分钟</td>
+<td style="text-align:center">11</td>
+<td style="text-align:center">9分钟</td>
+</tr>
+<tr>
+<td style="text-align:center">4</td>
+<td style="text-align:center">2分钟</td>
+<td style="text-align:center">12</td>
+<td style="text-align:center">10分钟</td>
+</tr>
+<tr>
+<td style="text-align:center">5</td>
+<td style="text-align:center">3分钟</td>
+<td style="text-align:center">13</td>
+<td style="text-align:center">20分钟</td>
+</tr>
+<tr>
+<td style="text-align:center">6</td>
+<td style="text-align:center">4分钟</td>
+<td style="text-align:center">14</td>
+<td style="text-align:center">30分钟</td>
+</tr>
+<tr>
+<td style="text-align:center">7</td>
+<td style="text-align:center">5分钟</td>
+<td style="text-align:center">15</td>
+<td style="text-align:center">1小时</td>
+</tr>
+<tr>
+<td style="text-align:center">8</td>
+<td style="text-align:center">6分钟</td>
+<td style="text-align:center">16</td>
+<td style="text-align:center">2小时</td>
+</tr>
+</tbody>
+</table>
+<p>若消息<strong>重试<code>16</code>次后仍然失败</strong>，消息将不再投递转为<strong>进入死信队列</strong>，可通过<strong><code>consumer.setMaxReconsumeTimes(20)</code></strong>自定义重试次数，当定制的<strong>重试次数超过<code>16</code>次后</strong>，消息<strong>重试时间间隔均为<code>2</code>小时</strong>。</p>
+<p><strong>消息最大重试次数的设置对相同<code>GroupID</code>下的所有<code>Consumer</code>实例有效</strong>。且<strong>最后启动的<code>Consumer</code>会覆盖之前启动的<code>Consumer</code>的配置</strong>。</p>
+<h4 id="死信队列"><a href="#死信队列" class="headerlink" title="死信队列"></a>死信队列</h4><p>当一条<strong>消息消费失败会自动进行消息重试</strong>，若消息<strong>超过最大重试次数</strong>，RocketMQ认为该消息有问题，但不会立刻将该消息丢弃，而是将其发送到这个消费者组对应的一种特殊队列<strong>死信队列</strong>。死信队列名称<strong><code>%DLQ%+ConsumGroup</code></strong>。</p>
+<ul>
+<li><strong>一个死信队列对应一个<code>ConsumGroup</code></strong>，而不是对应某个消费者实例。</li>
+<li>若一个<strong><code>ConsumeGroup</code>没有产生死信队列</strong>，RocketMQ就不会为其创建相应的死信队列。</li>
+<li><strong>一个死信队列包含了该<code>ConsumeGroup</code>里的所有死信消息</strong>，而<strong>不区分该消息<code>Topic</code></strong>。</li>
+<li>死信队列中的消息<strong>不会再被消费者正常消费</strong>。</li>
+<li><strong>死信队列的有效期跟正常消息相同</strong>，<strong>默认<code>3</code>天</strong>，对应broker.conf中的<strong><code>fileReservedTime</code></strong>属性。超过该最长时间的消息都会被删除，而不管消息是否消费过。</li>
+</ul>
+<p>通常一条消息进入了死信队列，意味着消息在消费处理的过程中出现了比较严重的错误，且无法自行恢复。此时，一般需要人工去查看死信队列中的消息，对错误原因进行排查。然后对死信消息进行处理，比如转发到正常的Topic重新进行消费或者丢弃。</p>
+<h4 id="消息幂等"><a href="#消息幂等" class="headerlink" title="消息幂等"></a>消息幂等</h4><ul>
+<li><strong>发送时消息重复</strong>：当一条消息已被成功发送到服务端并完成持久化，此时出现了网络闪断或者客户端宕机，导致服务端对客户端应答失败。 若此时生产者意识到消息发送失败并尝试再次发送消息，消费者后续会收到两条内容相同且<strong><code>MessageID</code>也相同</strong>的消息。</li>
+<li><strong>投递时消息重复</strong>：消息已投递到消费者并完成业务处理，当客户端给服务端反馈应答的时候网络闪断。 为了保证消息至少被消费一次，RocketMQ服务端将在网络恢复后再次尝试投递之前已被处理过的消息，消费者后续会收到两条内容相同并且<strong><code>MessageID</code>也相同</strong>的消息。</li>
+<li><strong>负载均衡时消息重复</strong>：包括但不限于网络抖动、Broker重启以及订阅方应用重启，当RocketMQ的Broker或客户端重启、扩容或缩容时，会<strong>触发<code>Rebalance</code></strong>，此时消费者可能会收到重复消息。</li>
+</ul>
+<p>在RocketMQ中，<strong>无法保证每个消息只被投递一次</strong>，所以要在业务上自行来保证消息消费的幂等性。RocketMQ的<strong>每条消息都有一个唯一的<code>MessageId</code></strong>，该参数在<strong>多次投递的过程中是不会改变</strong>，业务上可用MessageId来作为判断幂等的关键依据。</p>
+<p><strong><code>MessageId</code>无法保证全局唯一</strong>，也会有冲突的情况。所以在一些对幂等性要求严格的场景，<strong>最好是使用业务上唯一的一个标识</strong>如订单ID。而该业务标识可使用<strong><code>Message</code>的<code>Key</code>来进行传递</strong>。</p>
+<h4 id="消息零丢失"><a href="#消息零丢失" class="headerlink" title="消息零丢失"></a>消息零丢失</h4><ul>
+<li>生产者使用事务消息机制。</li>
+<li>Broker配置同步刷盘+Dledger主从架构</li>
+<li>消费者不要使用异步消费。</li>
+<li>整个MQ挂了之后准备降级方案</li>
+</ul>
+<h4 id="消息积压处理"><a href="#消息积压处理" class="headerlink" title="消息积压处理"></a>消息积压处理</h4><p>若Topic下的MessageQueue配置得是足够多的，每个Consumer实际上会分配多个MessageQueue来进行消费。可通过<strong>增加<code>Consumer</code>服务节点数量</strong>来加快消息的消费，等积压消息消费完了，再恢复成正常情况。<strong>最极限</strong>的情况是<strong>把Consumer的节点个数设置成跟MessageQueue的个数相同</strong>。此时再继续增加Consumer的服务节点就没有用了。</p>
+<p>若Topic下的MessageQueue配置不够多，就不能用上面这种增加Consumer节点个数的方法。若要快速处理积压的消息，可<strong>创建一个新的<code>Topic</code></strong>，<strong>配置足够多的<code>MessageQueue</code></strong>，把所有消费者节点的目标Topic转向新的Topic，并<strong>紧急上线一组新的消费者</strong>，<strong>只负责消费旧Topic中的消息，并转储到新的Topic中</strong>，在新的Topic上就可以通过<strong>增加消费者个数来提高消费速度</strong>了。</p>
+<p>若RocketMQ原本是采用的普通方式搭建主从架构，而现在想要中途改为使用Dledger高可用集群，这时若不想历史消息丢失，就<strong>需要先将消息进行对齐</strong>，也就是要消费者把所有的消息都消费完，再来切换主从架构。因为Dledger集群会接管RocketMQ原有的CommitLog日志，切换主从架构时，若有消息没有消费完，这些消息是存在旧的CommitLog中的，就无法再进行消费了。该场景下也是需要尽快的处理掉积压的消息。</p>
+
+        </div>
+        
+    <footer class="article-footer">
+    </footer>
+    </div>
+</article>
+
+
+    
+    <nav id="article-nav">
+        
+            <a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ生产者源码/" id="article-nav-newer" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Newer</strong>
+                <div class="article-nav-title">
+                    
+                        RocketMQ生产者源码
+                    
+                </div>
+            </a>
+        
+        
+            <a href="/Blog/Cloud/MQ/RocketMQ/RocketMQ基础/" id="article-nav-older" class="article-nav-link-wrap">
+                <strong class="article-nav-caption">Older</strong>
+                <div class="article-nav-title">RocketMQ基础</div>
+            </a>
+        
+    </nav>
+
+
+
+
+
+    
+    
+
+
+
+
+    <!-- baidu url auto push script -->
+    <script type="text/javascript">
+        !function () {
+            var e = /([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi, r = window.location.href,
+                o = document.referrer;
+            if (!e.test(r)) {
+                var n = "//api.share.baidu.com/s.gif";
+                o ? (n += "?r=" + encodeURIComponent(document.referrer), r && (n += "&l=" + r)) : r && (n += "?l=" + r);
+                var t = new Image;
+                t.src = n
+            }
+        }(window);
+    </script>
+</section>
+    </div>
+    <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            YaoYingLong &copy; 2022
+            <!-- <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-nd/4.0/80x15.png" /></a> -->
+            <br> Powered by <a href="http://hexo.io/" target="_blank" rel="external nofollow noopener noreferrer">Hexo</a>. Theme - <a href="https://github.com/zthxxx/hexo-theme-Wikitten" rel="external nofollow noopener noreferrer" target="_blank">wikitten</a>
+        </div>
+    </div>
+</footer>
+    
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+    
+        <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ["$","$"], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            processEscapes: true,
+            TeX: {
+                equationNumbers: {
+                  autoNumber: 'AMS'
+                }
+            }
+        }
+    });
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax();
+        for (var i = 0; i < all.length; ++i)
+            all[i].SourceElement().parentNode.className += ' has-jax';
+    });
+
+
+</script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+</div>
+</body>
