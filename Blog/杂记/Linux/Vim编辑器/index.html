@@ -20,7 +20,7 @@
 <meta property="og:site_name" content="YingLong">
 <meta property="og:description" content="Linux中文本编辑器有emacs、pico、nano、joe、vim等，所有Unix Like系统都会内建vi文本编辑器，其他文本编辑器不一定会存在，很多个别软件的编辑接口都会主动呼出vi，如crontab、visudo、edquota等指令，且vi程序简单编辑速度快速； vi是老式的文本处理器，vim可视为vi的进阶版加入了正规匹配、多文件编辑、区块复制等额外功能，且vim具有程序编辑能力可主">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2024-03-07T14:22:14.937Z">
+<meta property="og:updated_time" content="2024-03-10T13:48:40.378Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Vim编辑器">
 <meta name="twitter:description" content="Linux中文本编辑器有emacs、pico、nano、joe、vim等，所有Unix Like系统都会内建vi文本编辑器，其他文本编辑器不一定会存在，很多个别软件的编辑接口都会主动呼出vi，如crontab、visudo、edquota等指令，且vi程序简单编辑速度快速； vi是老式的文本处理器，vim可视为vi的进阶版加入了正规匹配、多文件编辑、区块复制等额外功能，且vim具有程序编辑能力可主">
@@ -1296,7 +1296,7 @@
     <div class="article-date">
         <i class="fa fa-calendar"></i>
         <a href="/Blog/杂记/Linux/Vim编辑器/">
-            <time datetime="2024-03-05T16:00:00.000Z" itemprop="datePublished">2024-03-06</time>
+            <time datetime="2024-03-09T16:00:00.000Z" itemprop="datePublished">2024-03-10</time>
         </a>
     </div>
 
@@ -1715,7 +1715,145 @@
 </tr>
 </tbody>
 </table>
-<h4 id="多文件编辑"><a href="#多文件编辑" class="headerlink" title="多文件编辑"></a>多文件编辑</h4>
+<h4 id="多文件编辑"><a href="#多文件编辑" class="headerlink" title="多文件编辑"></a>多文件编辑</h4><p>vi可以使用<strong><code>:r filename</code></strong>来读入某个文件的内容，但是将整个文件读入，若想只要部分内容，通常要开两个vim窗口来复制，每个vim都是独立的，因此无法在A文件中执行nyy复制，再到B文件中通过p快捷键粘贴复制内容；这时多文件编辑就派上用场了；若想<strong>同时编辑多个文件</strong>则<strong>直接在<code>vim</code>后面接多个文件路径</strong>即可，例：vim /etc/hostname /etc/hosts即同时编辑hosts和hostname文件；vim中使用<strong><code>:files</code></strong>查看编辑的文件数据；</p>
+<table>
+<thead>
+<tr>
+<th>按键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>:n</code></strong></td>
+<td>编辑<strong>下一个</strong>文件</td>
+</tr>
+<tr>
+<td><strong><code>:N</code></strong></td>
+<td>编辑<strong>上一个</strong>文件</td>
+</tr>
+<tr>
+<td><strong><code>:files</code></strong></td>
+<td>列出当前vim<strong>开启的所有文件</strong></td>
+</tr>
+</tbody>
+</table>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/hostname /etc/hosts</span><br><span class="line">:files</span><br><span class="line">  1 %a   "hosts"                        第 4 行</span><br><span class="line">  2      "hostname"                     第 0 行</span><br></pre></td></tr></table></figure>
+<h4 id="多窗口"><a href="#多窗口" class="headerlink" title="多窗口"></a>多窗口</h4><p>vim中可通过在底行模式中输入<strong><code>:sp filename</code></strong>开启多窗口，filename是可选参数，若仅输入<strong><code>:sp</code></strong>则是在多个窗口<strong>打开同一个文件</strong>；两个文件同时在一个屏幕上面显示，还可利用<strong><code>ctrl+w+↑</code></strong>及<strong><code>ctrl+w+↓</code></strong>在两个窗口之间移动，分区窗口的常用指令如下：</p>
+<table>
+<thead>
+<tr>
+<th>按键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>:sp [filename]</code></strong></td>
+<td>开启一个新窗口若<strong>有filename</strong>则在<strong>新窗口开启一个新文件</strong>，否则表示两个窗口为同一个文件内容</td>
+</tr>
+<tr>
+<td><strong><code>[ctrl]+w+ j</code></strong><br><strong><code>ctrl]+w+↓</code></strong></td>
+<td>先按下<strong><code>ctrl</code></strong>不放再按下<strong><code>w</code></strong>后<strong>放开所有的按键</strong>，然后再按下<strong><code>j</code></strong>或<strong>向下箭头</strong>键，则<strong>光标移动到下方窗口</strong></td>
+</tr>
+<tr>
+<td><strong><code>ctrl+w+k</code></strong><br><strong><code>ctrl+w+↑</code></strong></td>
+<td>操作同上，<strong>光标移动到上面的窗口</strong></td>
+</tr>
+<tr>
+<td><strong><code>ctrl+w+q</code>退出当前窗口</strong></td>
+<td>若结束下方的窗口可通过<strong><code>ctrl+w+↓</code></strong>，移动到下方窗口后通过<strong><code>:q</code>退出窗口</strong>，也可通过<strong><code>ctrl+w+q</code>退出窗口</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="vim补全功能"><a href="#vim补全功能" class="headerlink" title="vim补全功能"></a>vim补全功能</h4><table>
+<thead>
+<tr>
+<th>组合按键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>[ctrl]+x -&gt; [ctrl]+n</code></strong></td>
+<td>通过目前<strong>正在编辑</strong>的<strong>文件的内容文字</strong>作为<strong>关键词</strong>，予以补齐</td>
+</tr>
+<tr>
+<td><strong><code>[ctrl]+x -&gt; [ctrl]+f</code></strong></td>
+<td>以<strong>当前目录内的文件名</strong>作为<strong>关键词</strong>，予以补齐</td>
+</tr>
+<tr>
+<td><strong><code>[ctrl]+x -&gt; [ctrl]+o</code></strong></td>
+<td>以<strong>扩展名</strong>作为语法补充，以vim内建的关键词，予以补齐</td>
+</tr>
+</tbody>
+</table>
+<h4 id="vim环境设定与记录"><a href="#vim环境设定与记录" class="headerlink" title="vim环境设定与记录"></a>vim环境设定与记录</h4><p>vim会主动记录操作记录到<strong><code>~/.viminfo</code></strong>文件中，该文件是自动生成，vim环境设定参数很多，可以在底行模式执行<strong><code>:set all</code></strong>命令查看当前设定值；可以通过<strong>配置文件<code>~/.vimrc</code></strong>来直接设置默认的习惯的vim操作环境配置；</p>
+<table>
+<thead>
+<tr>
+<th>按键</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>:set nu</code></strong><br><strong><code>:set nonu</code></strong></td>
+<td><strong>设定与取消行号</strong></td>
+</tr>
+<tr>
+<td><strong><code>:set hlsearch</code></strong><br><strong><code>:set nohlsearch</code></strong></td>
+<td><strong><code>hlsearch</code></strong>即<strong><code>high light search</code></strong>即<strong>高亮搜索</strong>，设定<strong>是否将搜索字符串反白</strong>，<strong>默认为<code>hlsearch</code></strong></td>
+</tr>
+<tr>
+<td><strong><code>:set autoindent</code></strong><br><strong><code>:set noautoindent</code></strong></td>
+<td>是否<strong>自动缩进</strong>，即按下Enter编辑新的一行时，光标不会在行首，而是在<strong>与上一行第一个非空格符处对齐</strong></td>
+</tr>
+<tr>
+<td><strong><code>:set backup</code></strong></td>
+<td>是否<strong>自动储存备份</strong>，一般是<strong><code>nobackup</code></strong>，若设定backup则当变更任何一个文件时，则源文件会被另存为一个文件名为<br><strong><code>filename~</code></strong>的文件，如设定<strong><code>:set backup</code></strong>编辑修改hosts时，在同目录下则会产生hosts~ 文件，记录原始的hosts文件内容；</td>
+</tr>
+<tr>
+<td><strong><code>:set ruler</code></strong></td>
+<td><strong>右下角的一些状态栏是否显示</strong></td>
+</tr>
+<tr>
+<td><strong><code>:set showmode</code></strong></td>
+<td><strong>左下角的状态栏是否显示<code>--INSERT--</code>之类的字样</strong></td>
+</tr>
+<tr>
+<td><strong><code>:set backspace=2</code></strong></td>
+<td>编辑模式中可使用<strong>退格键backspace</strong>来<strong>删除任意字符</strong>，但某些distribution则不许，则可通过backspace来设定，<br>当置为<strong><code>2</code></strong>时<strong>可删除任意值</strong>；<strong><code>0</code>或<code>1</code></strong>时<strong>仅可删除刚刚输入的字符</strong>而无法删除原本就已经存在的文字</td>
+</tr>
+<tr>
+<td><strong><code>:set all</code></strong></td>
+<td>显示目前所有的环境参数设定值</td>
+</tr>
+<tr>
+<td><strong><code>:set</code></strong></td>
+<td>显示<strong>与系统默认值不同的设定参数</strong>，一般是有修改过的设定参数</td>
+</tr>
+<tr>
+<td><strong><code>:syntax on</code></strong><br><strong><code>:syntax off</code></strong></td>
+<td><strong>是否根据程序相关语法显示不同颜色</strong></td>
+</tr>
+<tr>
+<td><strong><code>:set bg=dark</code></strong><br><strong><code>:set bg=light</code></strong></td>
+<td>可用以<strong>显示不同的颜色色调</strong>，<strong>预设</strong>为<strong><code>light</code></strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="中文编码问题"><a href="#中文编码问题" class="headerlink" title="中文编码问题"></a>中文编码问题</h4><p>因为编码问题vim很可能无法正常显示中文，中文编码有big5和utf8两种，若文件是使用big5编码制作，但是在vim终端使用utf8编辑，由于编码不同，中文内容会乱码；</p>
+<ul>
+<li><strong>Linux默认支持的语系数据</strong>与<strong><code>/etc/locale.conf</code>配置文件</strong>有关</li>
+<li><strong>终端bash的语系</strong>与<strong><code>LANG, LC_ALL</code></strong>两个变量有关</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span> 修改语系编码</span><br><span class="line">LANG=zh_TW.big5</span><br><span class="line">export LC_ALL=zh_TW.big5</span><br></pre></td></tr></table></figure>
+<p>可通过iconv指令将语系编码进行转换</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">iconv --list</span><br><span class="line">iconv -f 原本编码 -t 新编码 filename [-o newfile]</span><br><span class="line">选项与参数：</span><br><span class="line">    --list：列出iconv支持的语系数据</span><br><span class="line">    -f：即from即来源，后接原本的编码格式</span><br><span class="line">    -t：即to即后来的新编码格式</span><br><span class="line">    -o file：若要保留原本的文件，则使用-o 新文件名，可以建立新编码文件</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span> 将繁体中文utf8转换为简体中文utf8</span><br><span class="line">iconv -f utf8 -t big5 vi.utf8 | iconv -f big5 -t gb2312 | iconv -f gb2312 -t utf8 -o vi.gb.utf8</span><br></pre></td></tr></table></figure>
+<h4 id="Dos与Linux换行符"><a href="#Dos与Linux换行符" class="headerlink" title="Dos与Linux换行符"></a>Dos与Linux换行符</h4><p><strong><code>DOS</code></strong>使用的换行字符为<strong><code>^M$</code></strong>，即<strong><code>CR(^M)</code></strong>与<strong><code>LF($)</code></strong>两个符号，Linux下只有<strong><code>LF($)</code></strong>这一个换行符，可通过<strong><code>dos2unix</code></strong>工具来进行格式转换；</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dos2unix [-kn] file [newfile]</span><br><span class="line">unix2dos [-kn] file [newfile]</span><br><span class="line">选项与参数</span><br><span class="line">    -k：保留该文件原本的mtime时间格式</span><br><span class="line">    -n：保留原本的旧档，将转换后的内容输出到新文件</span><br></pre></td></tr></table></figure>
+
         </div>
         
     <footer class="article-footer">
