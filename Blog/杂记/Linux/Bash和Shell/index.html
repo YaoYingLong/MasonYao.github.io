@@ -22,7 +22,7 @@
 <meta property="og:locale" content="en">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Linux/变量内容删除示例.png">
 <meta property="og:image" content="https://yaoyinglong.github.io/images/Linux/变量内容删除示例2.png">
-<meta property="og:updated_time" content="2024-06-23T14:29:22.033Z">
+<meta property="og:updated_time" content="2024-07-07T14:01:59.039Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Bash与Shell">
 <meta name="twitter:description" content="当我们使用计算机来播放音乐时，其实是使用shell发送指令给Kernel内核，由Kernel控制硬件来完成音乐播放；操作系统其实是一组软件，由于这组软件在控制整个硬件与管理系统的活动监测，若这组软件能被用户随意操作，若使用者应用不当，将会使得整个系统崩溃，故不能够随便被一些没有管理能力的终端用户随意使用；所以就有了在操作系统上面发展的应用程序，用户可通过应用程序来控制内核，让内核来完成所需要的硬件">
@@ -759,7 +759,7 @@
                 
                     <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
                 
-                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                    <li class="file"><a href="/Blog/Spring/Spring初始化扩展/">Spring扩展点</a></li>
                 
                     <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
                 
@@ -1537,14 +1537,14 @@
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">history [-raw] histfiles</span><br><span class="line">选项与参数：</span><br><span class="line">	-n ：要列出最近的n笔命令行表</span><br><span class="line">    -c ：将目前的shell中的所有history内容全部消除</span><br><span class="line">    -a ：将目前新增的history指令新增入histfiles中，若没有加histfiles则预设写入~/.bash_history</span><br><span class="line">    -r ：将histfiles的内容读到目前这个shell的history记忆中</span><br><span class="line">    -w ：将目前的history记忆内容写入histfiles中</span><br><span class="line">    </span><br><span class="line"><span class="meta">#</span> 列出目前内存中所有history记忆的命令</span><br><span class="line">history</span><br><span class="line"></span><br><span class="line">echo $&#123;HISTSIZE&#125;</span><br><span class="line"></span><br><span class="line">!number</span><br><span class="line">!command</span><br><span class="line">!!</span><br><span class="line">选项与参数：</span><br><span class="line">    number ：执行第几笔指令的意思</span><br><span class="line">    command ：由最近的指令向前搜寻指令串开头为 command的那个指令，并执行</span><br><span class="line">    !! ：执行上一个指令</span><br></pre></td></tr></table></figure>
 <p>同一账号同时多次登录的history写入问题，如同时开好几个bash，因为所有的bash都有自己的1000条记录在内存中，等到注销时才会更新到<strong><code>~/.bash_history</code></strong>中，最后注销的bash会最后写入数据，如此其他的bash的指令操作都会被覆盖更新；通过通过值开单个bash，再用工作控制job control来切换不同的工作，这样就能将所有下达过的命令记录，也方便系统管理员进行指令的debug；</p>
 <p>历史命令无法记录指令下达时间；可以通过<strong><code>~/.bash_logout</code></strong>来进行<strong><code>history</code></strong>的记录，并加上<strong><code>date</code></strong>来增加时间参数；</p>
-<h3 id="bash操作环境"><a href="#bash操作环境" class="headerlink" title="bash操作环境"></a>bash操作环境</h3><p>指令执行过程的顺序，可通过<strong><code>type -a 命令</code></strong>命令查询到命令的搜索顺序：</p>
+<h3 id="bash操作环境"><a href="#bash操作环境" class="headerlink" title="bash操作环境"></a>bash操作环境</h3><h5 id="路径与指令搜索顺序"><a href="#路径与指令搜索顺序" class="headerlink" title="路径与指令搜索顺序"></a>路径与指令搜索顺序</h5><p>指令执行过程的顺序，可通过<strong><code>type -a 命令</code></strong>命令查询到命令的搜索顺序：</p>
 <ul>
-<li>以<strong>相对/绝对路径</strong>执行指令</li>
-<li><strong>由alias</strong>找到该指令执行</li>
+<li>以<strong>相对/绝对路径</strong>执行指令：即在执行命令时，会优先搜索当前所在的目录</li>
+<li><strong>由alias</strong>找到该指令执行：</li>
 <li>由<strong>bash内建</strong>的指令来执行</li>
 <li>通过<strong><code>$PATH</code></strong>变量顺<strong>序搜索到的第一个指令</strong>来执行</li>
 </ul>
-<p>bash<strong>进站</strong>与<strong>欢迎</strong>信息<strong><code>/etc/issue</code></strong>、<strong><code>/etc/motd</code></strong>，除了<strong><code>/etc/issue</code></strong>还有提供给<strong><code>telnet</code></strong>远程登录使用的<strong><code>/etc/issue.net</code></strong>；若想让使用者登入后取得一些信息，可将信息写入<strong><code>/etc/motd</code></strong>文件中；</p>
+<h5 id="bash进站与欢迎信息"><a href="#bash进站与欢迎信息" class="headerlink" title="bash进站与欢迎信息"></a>bash<strong>进站</strong>与<strong>欢迎</strong>信息</h5><p>bash<strong>进站</strong>与<strong>欢迎</strong>信息<strong><code>/etc/issue</code></strong>、<strong><code>/etc/motd</code></strong>，除了<strong><code>/etc/issue</code></strong>还有提供给<strong><code>telnet</code></strong>远程登录使用的<strong><code>/etc/issue.net</code></strong>；若想让使用者登入后取得一些信息，可将信息写入<strong><code>/etc/motd</code></strong>文件中；</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[eleven@eleven ~]$ cat /etc/issue</span><br><span class="line">\S</span><br><span class="line">Kernel \r on an \m</span><br><span class="line"></span><br><span class="line">issue内的各代码意义：</span><br><span class="line">    \d 本地端时间的日期；</span><br><span class="line">    \l 显示第几个终端机接口；</span><br><span class="line">    \m 显示硬件的等级 (i386/i486/i586/i686...)；</span><br><span class="line">    \n 显示主机的网络名称；</span><br><span class="line">    \O 显示 domain name；</span><br><span class="line">    \r 操作系统的版本 (相当于 uname -r)</span><br><span class="line">    \t 显示本地端时间的时间；</span><br><span class="line">    \S 操作系统的名称；</span><br><span class="line">    \v 操作系统的版本</span><br></pre></td></tr></table></figure>
 <p>登录系统后为什么都没有做，但一进入bash就取得一堆有用的变量，是因为系统有一些环境配置文件，让bash在启动时直接读取这些配置文件，以规划好bash的操作环境，而这些配置文件又分为<strong>系统配置文</strong>件以及<strong>用户配置文件</strong>。要注意的<strong>是命令别名啦、自定义变量</strong>等，在<strong>注销bash后就会失效</strong>，想要保留设置，需要将这些设定写入配置文件才行；</p>
 <ul>
@@ -1554,7 +1554,22 @@
 <p>上面两种获取到的bash是不一样的，因为读取的配置文件不一样，login shell只会读取<strong><code>/etc/profile</code></strong>和<strong><code>~/.bash_profile</code>或<code>~/.bash_login</code>或`~/.profile</strong>`两个配置文件；</p>
 <ul>
 <li><strong><code>/etc/profile</code></strong>：系统整体的设定，最好不要修改这个文件</li>
-<li><strong><code>~/.bash_profile</code>或<code>~/.bash_login</code>或<code>~/.profile</code></strong>：属于使用者个人设定  </li>
+<li><strong><code>~/.bash_profile</code>或<code>~/.bash_login</code>或<code>~/.profile</code></strong>：属于使用者个人设定，只会读取三个文件其中的一个，首先读取<strong><code>~/.bash_profile</code></strong>，若不存在则读取<strong><code>~/.bash_login</code></strong>，若不存在再读取<strong><code>~/.profile</code></strong>；</li>
+</ul>
+<p><strong><code>/etc/profile</code></strong>是一个全局的shelll配置文件，<strong>用于设置系统中所有用户的环境变量和初始配置</strong>，当用户登录时同首先读取该配置文件，其可以<strong>利用使用者的标识符uid</strong>决定很多重要变量数据，这也是<strong>每个使用者登录取得bash时一定会读取的配置文件</strong>，可以通过该配置<strong>为所有使用者设定整体环境</strong>；该配置文件主要变量：</p>
+<ul>
+<li><strong><code>PATH</code></strong>：会依据UID决定PATH变量要不要含有sbin的系统指令目录</li>
+<li><strong><code>MAIL</code></strong>：依据账号设定好使用者的mailbox到/var/spool/mail/账号名</li>
+<li><strong><code>USER</code></strong>：根据用户的账号设定此一变量内容</li>
+<li><strong><code>HOSTNAME</code></strong>：依据主机的hostname指令决定此一变量内容</li>
+<li><strong><code>HISTSIZE</code></strong>：历史命令记录笔数，CentOS 7.x设定为1000</li>
+<li><strong><code>umask</code></strong>：包括root默认为022而一般用户为002等</li>
+</ul>
+<p><strong><code>/etc/profile</code></strong>配置文件还会执行外部的配置文件，调用顺序如下：</p>
+<ul>
+<li><strong><code>/etc/profile.d/*.sh</code></strong>：在/etc/profile.d/目录内且扩展名为.sh，使用者具有<strong><code>r</code>的权限</strong>，则该文件就会被/etc/profile执行，CentOS 7.x中该目录下的文件规范了bash操作接口的颜色、语系、ll与ls命令别名、vi命令别名、which命令别名等等，可<strong>通过在该目录下创建.sh文件为所有用户创建命令别名</strong>；</li>
+<li><strong><code>/etc/locale.conf</code></strong>：改文件是在<strong><code>/etc/profile.d/lang.sh</code></strong>中被执行，决定bash预设使用的语系；</li>
+<li><strong><code>/usr/share/bash-completion/completions/*</code></strong>：命令补齐、文件名补齐、指令的选项/参数补齐功能，就是该目录中找到响应的指令来完成的；该目录内容是由<strong><code>/etc/profile.d/bash_completion.sh</code></strong> 文件载入；</li>
 </ul>
 <h3 id="数据重导向"><a href="#数据重导向" class="headerlink" title="数据重导向"></a>数据重导向</h3><h3 id="管线命令"><a href="#管线命令" class="headerlink" title="管线命令"></a>管线命令</h3>
         </div>

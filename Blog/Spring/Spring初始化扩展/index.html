@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     
     <title>
-        Spring初始化扩展 |
+        Spring扩展点 |
         
         YingLong</title>
     
@@ -15,14 +15,14 @@
     <meta name="description" content="经常需要在容器启动时做一些钩子动作，比如注册消息消费者，监听配置等。 容器刷新完成扩展点监听容器刷新完成扩展点ApplicationListener&amp;lt;ContextRefreshedEvent&amp;gt;容器刷新成功意味着所有的Bean已初始化完成，当容器刷新之后Spring将会调用容器内所有实现了ApplicationListener&amp;lt;ContextRefreshedEvent&amp;gt;的">
 <meta name="keywords" content="Spring">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Spring初始化扩展">
+<meta property="og:title" content="Spring扩展点">
 <meta property="og:url" content="https://yaoyinglong.github.io/Blog/Spring/Spring初始化扩展/index.html">
 <meta property="og:site_name" content="YingLong">
 <meta property="og:description" content="经常需要在容器启动时做一些钩子动作，比如注册消息消费者，监听配置等。 容器刷新完成扩展点监听容器刷新完成扩展点ApplicationListener&amp;lt;ContextRefreshedEvent&amp;gt;容器刷新成功意味着所有的Bean已初始化完成，当容器刷新之后Spring将会调用容器内所有实现了ApplicationListener&amp;lt;ContextRefreshedEvent&amp;gt;的">
 <meta property="og:locale" content="en">
-<meta property="og:updated_time" content="2021-06-21T13:31:45.062Z">
+<meta property="og:updated_time" content="2024-07-31T14:56:29.272Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Spring初始化扩展">
+<meta name="twitter:title" content="Spring扩展点">
 <meta name="twitter:description" content="经常需要在容器启动时做一些钩子动作，比如注册消息消费者，监听配置等。 容器刷新完成扩展点监听容器刷新完成扩展点ApplicationListener&amp;lt;ContextRefreshedEvent&amp;gt;容器刷新成功意味着所有的Bean已初始化完成，当容器刷新之后Spring将会调用容器内所有实现了ApplicationListener&amp;lt;ContextRefreshedEvent&amp;gt;的">
     
 
@@ -756,7 +756,7 @@
                 
                     <li class="file"><a href="/Blog/Spring/SpringMvc加载机制/">SpringMvc加载机制</a></li>
                 
-                    <li class="file active"><a href="/Blog/Spring/Spring初始化扩展/">Spring初始化扩展</a></li>
+                    <li class="file active"><a href="/Blog/Spring/Spring初始化扩展/">Spring扩展点</a></li>
                 
                     <li class="file"><a href="/Blog/Spring/Spring整体架构/">Spring整体架构</a></li>
                 
@@ -1309,7 +1309,7 @@
                 
     
         <h1 class="article-title" itemprop="name">
-            Spring初始化扩展
+            Spring扩展点
         </h1>
     
 
@@ -1346,6 +1346,8 @@
 <h4 id="通过构造函数注入"><a href="#通过构造函数注入" class="headerlink" title="通过构造函数注入"></a>通过构造函数注入</h4><p><code>Spring</code>也支持通过构造函数注入，我们可以把搞事情的代码写在构造函数中，同样能达到目的</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Log</span>4j2</span><br><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ConstructorExampleBean</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Environment environment;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ConstructorExampleBean</span><span class="params">(Environment environment)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.environment = environment;</span><br><span class="line">        log.info(Arrays.asList(environment.getDefaultProfiles()));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p><code>Bean</code>初始化完成扩展点执行顺序是：<strong>构造函数注入</strong>，<strong><code>@PostConstruct</code>注解</strong>，<strong><code>InitializingBean</code>接口</strong>，<strong><code>@Bean</code>注解的初始化方法</strong>。</p>
+<h4 id="SmartLifecycle"><a href="#SmartLifecycle" class="headerlink" title="SmartLifecycle"></a>SmartLifecycle</h4><p>可以定义一个<strong><code>SmartLifecycle</code></strong>来监听<strong><code>ApplicationContext</code></strong>的启动和关闭</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ElevenLifecycle</span> <span class="keyword">implements</span> <span class="title">SmartLifecycle</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">boolean</span> isRunning = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		System.out.println(<span class="string">"启动"</span>);</span><br><span class="line">		isRunning = <span class="keyword">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">stop</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 要触发stop()，要调用context.close()，或者注册关闭钩子（context.registerShutdownHook();）</span></span><br><span class="line">		System.out.println(<span class="string">"停止"</span>);</span><br><span class="line">		isRunning = <span class="keyword">false</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isRunning</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> isRunning;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
         </div>
         
